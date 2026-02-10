@@ -146,6 +146,46 @@
         </t>
     </template>
 
+    <template id="hrmis_nav_links" name="HRMIS Nav Links">
+        <t t-set="current_employee" t-value="request.env.user.employee_ids[:1] or None"/>
+        <t t-set="is_hrmis_employee" t-value="request.env.user.has_group('custom_login.group_hrmis_employee_self')"/>
+
+        <nav class="hrmis-nav">
+            <a t-attf-class="hrmis-nav__item #{'is-active' if active_menu == 'user_profile' else ''}"
+               t-att-href="current_employee and ('/hrmis/staff/%s' % current_employee.id) or '/hrmis/services'">
+                User profile
+            </a>
+
+            <a t-att-class="'hrmis-nav__item' + (' is-active' if active_menu == 'leave_requests' else '')"
+               t-att-href="((not is_hrmis_employee) or (current_employee and current_employee.profile_complete))
+                            and ('/hrmis/staff/%s/leave?tab=new' % current_employee.id) or '#'"
+               t-att-data-tooltip="is_hrmis_employee and (not current_employee or not current_employee.profile_complete) and 'Complete your profile first' or ''"
+               t-attf-style="cursor: #{ 'not-allowed' if is_hrmis_employee and (not current_employee or not current_employee.profile_complete) else 'pointer' }">
+                Leave requests
+            </a>
+
+            <t t-if="not request.env.user.has_group('custom_login.group_section_officer')">
+                <a t-att-class="'hrmis-nav__item' + (' is-active' if active_menu == 'transfer_requests' else '')"
+                   t-att-href="((not is_hrmis_employee) or (current_employee and current_employee.profile_complete)) and '/hrmis/transfer?tab=new' or '#'"
+                   t-attf-style="cursor: #{ 'not-allowed' if is_hrmis_employee and (not current_employee or not current_employee.profile_complete) else 'pointer' }">
+                    Transfer requests
+                </a>
+            </t>
+
+            <a t-att-class="'hrmis-nav__item' + (' is-active' if active_menu == 'disciplinary_actions' else '')"
+               t-att-href="((not is_hrmis_employee) or (current_employee and current_employee.profile_complete)) and '/hrmis/disciplinary?tab=history' or '#'"
+               t-attf-style="cursor: #{ 'not-allowed' if is_hrmis_employee and (not current_employee or not current_employee.profile_complete) else 'pointer' }">
+                Disciplinary actions
+            </a>
+
+            <a t-att-class="'hrmis-nav__item' + (' is-active' if active_menu == 'promotion_requests' else '')"
+               t-att-href="((not is_hrmis_employee) or (current_employee and current_employee.profile_complete)) and '/hrmis/promotion?tab=history' or '#'"
+               t-attf-style="cursor: #{ 'not-allowed' if is_hrmis_employee and (not current_employee or not current_employee.profile_complete) else 'pointer' }">
+                Promotion Requests
+            </a>
+        </nav>
+    </template>
+
     <template id="hrmis_ui_layout" name="HRMIS UI Layout">
         <t t-call="website.layout">
             <t t-set="no_header" t-value="True"/>
@@ -153,166 +193,120 @@
             <t t-set="body_class" t-value="'hrmis-ui'"/>
 
             <div class="hrmis-app">
-                <div class="hrmis-topbar">
-                    <div class="hrmis-topbar__left">
-                        <button class="hrmis-nav-toggle js-hrmis-nav-toggle"
+                <!-- Top navbar (Bootstrap) -->
+                <nav class="navbar navbar-dark hrmis-navbar sticky-top">
+                    <div class="container-fluid">
+                        <button class="navbar-toggler d-lg-none"
                                 type="button"
-                                aria-label="Toggle menu"
-                                aria-expanded="false">
-                            <i class="fa fa-bars" aria-hidden="true"></i>
+                                data-bs-toggle="offcanvas"
+                                data-bs-target="#hrmisOffcanvasNav"
+                                aria-controls="hrmisOffcanvasNav"
+                                aria-label="Toggle navigation">
+                            <span class="navbar-toggler-icon"></span>
                         </button>
-                        <t t-if="active_menu == 'services'">
-                            <div class="hrmis-topbar__title">Facility Name<br/>District</div>
-                        </t>
-                    </div>
-                    <!-- <div class="hrmis-topbar__center">
-                        <form class="hrmis-search" action="/hrmis/staff" method="get">
-                            <input class="hrmis-search__input" type="text" name="q" placeholder="Search staff"/>
-                        </form>
-                    </div> -->
-                    <div class="hrmis-topbar__right">
-                        <div class="hrmis-notifications">
-                      
-                         <button class="hrmis-bell js-hrmis-bell" type="button" aria-label="Notifications">
-                                <i class="fa fa-bell hrmis-bell__icon" aria-hidden="true"></i>
-                                <span class="hrmis-bell__badge js-hrmis-bell-badge" style="display:none;">0</span>
-                            </button>
-                            <div class="hrmis-notif-dropdown js-hrmis-notif-dropdown" style="display:none;">
-                               
-                                <div class="hrmis-notif-dropdown__head">
-                                    <div class="hrmis-notif-dropdown__title">Notifications</div>
-                                    <button class="hrmis-notif-dropdown__action js-hrmis-notif-read-all" type="button">
-                                        Mark all read
-                                    </button>
-                                </div>
-                                <div class="hrmis-notif-dropdown__list js-hrmis-notif-list">
-                                    <div class="hrmis-notif-empty">Loading…</div>
-                                </div>
-                                <div class="hrmis-notif-dropdown__foot">
-                                    <a class="hrmis-notif-dropdown__link" href="/hrmis/notifications">View all</a>
-                                </div>
-                            </div>
-                        </div>
-                        <t t-if="current_employee">
-                            <div class="hrmis-user-stack">
-                                <a class="hrmis-user-link" t-att-href="'/hrmis/staff/%s' % current_employee.id">
-                                    <div class="hrmis-user">
-                                        <div class="hrmis-user__avatar">
-                                            <img t-att-alt="current_employee.name"
-                                                 t-att-src="'/web/image/hr.employee.public/%s/avatar_1024/' % current_employee.id"/>
-                                        </div>
-                                       
-                                        <div class="hrmis-user__meta">
-                                            <div class="hrmis-user__label">Username</div>
-                                            <div class="hrmis-user__value">
-                                                <t t-esc="request.env.user.name"/>
-                                            </div>
-                                            <div>
-                                            <t t-if="request.session.uid">
-                                    <a href="/web/session/logout?redirect=/web/login"
-                                       class="btn btn-outline-danger btn-sm hrmis-logout"
-                                       style="font-weight: 600; border-radius: 8px;">
-                                        Logout
-                                    </a>
-                                </t>
-                                            </div>
-                                        </div>
+
+                        <div class="d-flex align-items-center gap-2 ms-auto flex-wrap justify-content-end">
+                            <div class="hrmis-notifications">
+                                <button class="hrmis-bell js-hrmis-bell" type="button" aria-label="Notifications">
+                                    <i class="fa fa-bell hrmis-bell__icon" aria-hidden="true"></i>
+                                    <span class="hrmis-bell__badge js-hrmis-bell-badge" style="display:none;">0</span>
+                                </button>
+                                <div class="hrmis-notif-dropdown js-hrmis-notif-dropdown" style="display:none;">
+                                    <div class="hrmis-notif-dropdown__head">
+                                        <div class="hrmis-notif-dropdown__title">Notifications</div>
+                                        <button class="hrmis-notif-dropdown__action js-hrmis-notif-read-all" type="button">
+                                            Mark all read
+                                        </button>
                                     </div>
-                                </a>
-                                
-                            </div>
-                        </t>
-                        <t t-else="">
-                            <div class="hrmis-user-stack">
-                                <div class="hrmis-user-link">
-                                    <div class="hrmis-user">
-                                        <div class="hrmis-user__avatar"></div>
-                                        <div class="hrmis-user__meta">
-                                            <div class="hrmis-user__label">Username</div>
-                                            <div class="hrmis-user__value">
-                                                <t t-esc="request.env.user.name"/>
-                                            </div>
-                                            <div>
-                                              <t t-if="request.session.uid">
-                                    <a href="/web/session/logout?redirect=/web/login"
-                                       class="btn btn-outline-danger btn-sm hrmis-logout"
-                                       style="font-weight: 600; border-radius: 8px;">
-                                        Logout
-                                    </a>
-                                </t>
-                                            </div>
-                                        </div>
+                                    <div class="hrmis-notif-dropdown__list js-hrmis-notif-list">
+                                        <div class="hrmis-notif-empty">Loading…</div>
+                                    </div>
+                                    <div class="hrmis-notif-dropdown__foot">
+                                        <a class="hrmis-notif-dropdown__link" href="/hrmis/notifications">View all</a>
                                     </div>
                                 </div>
                             </div>
-                        </t>
-                    </div>
-                </div>
 
-                <div class="hrmis-body">
-                    <div class="hrmis-drawer-backdrop js-hrmis-drawer-backdrop" aria-hidden="true"></div>
-                    <aside class="hrmis-sidebar">
-                        <div class="hrmis-brand">
-                              <div class="hrmis-brand__seal">
-                                <img src="/custom_login/static/src/img/logo.png" alt="HRMIS Logo"/>
-                            </div>
-                            <div class="hrmis-brand__text">
-                                <div class="hrmis-brand__title">SINDH<br/>HUMAN RESOURCE<br/>MANAGEMENT<br/>INFORMATION SYSTEM</div>
+                            <div class="d-flex align-items-center gap-2">
+                                <t t-set="current_employee" t-value="request.env.user.employee_ids[:1] or None"/>
+                                <t t-if="current_employee">
+                                    <a class="hrmis-user-link" t-att-href="'/hrmis/staff/%s' % current_employee.id">
+                                        <div class="hrmis-user">
+                                            <div class="hrmis-user__avatar">
+                                                <img t-att-alt="current_employee.name"
+                                                     t-att-src="'/web/image/hr.employee.public/%s/avatar_1024/' % current_employee.id"/>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </t>
+                                <div class="text-end" style="line-height:1.1;">
+                                    <div class="small" style="opacity:.9;">Username</div>
+                                    <div style="font-weight:700;"><t t-esc="request.env.user.name"/></div>
+                                    <t t-if="request.session.uid">
+                                        <a href="/web/session/logout?redirect=/web/login"
+                                           class="btn btn-outline-light btn-sm mt-1"
+                                           style="font-weight:600;">
+                                            Logout
+                                        </a>
+                                    </t>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </nav>
 
-        <nav class="hrmis-nav">
-
-    <t t-set="current_employee" t-value="request.env.user.employee_ids[:1] or None"/>
-    <t t-set="is_hrmis_employee" t-value="request.env.user.has_group('custom_login.group_hrmis_employee_self')"/>
-
-    <a t-attf-class="hrmis-nav__item #{'is-active' if active_menu == 'user_profile' else ''}"
-       t-att-href="current_employee and ('/hrmis/staff/%s' % current_employee.id) or '/hrmis/services'">
-        User profile
-    </a>
-
-    <a t-att-class="'hrmis-nav__item' + (' is-active' if active_menu == 'leave_requests' else '')"
-       t-att-href="((not is_hrmis_employee) or (current_employee and current_employee.profile_complete))
-                    and ('/hrmis/staff/%s/leave?tab=new' % current_employee.id) or '#'"
-       t-att-data-tooltip="is_hrmis_employee and (not current_employee or not current_employee.profile_complete) and 'Complete your profile first' or ''"
-       t-attf-style="cursor: #{ 'not-allowed' if is_hrmis_employee and (not current_employee or not current_employee.profile_complete) else 'pointer' }">
-        Leave requests
-    </a>
-
-<t t-if="not request.env.user.has_group('custom_login.group_section_officer')">
-    <a t-att-class="'hrmis-nav__item' + (' is-active' if active_menu == 'transfer_requests' else '')"
-                               t-att-href="((not is_hrmis_employee) or (current_employee and current_employee.profile_complete)) and '/hrmis/transfer?tab=new' or '#'"
-                               t-attf-style="cursor: #{ 'not-allowed' if is_hrmis_employee and (not current_employee or not current_employee.profile_complete) else 'pointer' }">
-                                Transfer requests
-                            </a>
-                            </t>
-
-     <a t-att-class="'hrmis-nav__item' + (' is-active' if active_menu == 'disciplinary_actions' else '')"
-                               t-att-href="((not is_hrmis_employee) or (current_employee and current_employee.profile_complete)) and '/hrmis/disciplinary?tab=history' or '#'"
-                               t-attf-style="cursor: #{ 'not-allowed' if is_hrmis_employee and (not current_employee or not current_employee.profile_complete) else 'pointer' }">
-                                Disciplinary actions
-                            </a>
-
-                            <a t-att-class="'hrmis-nav__item' + (' is-active' if active_menu == 'promotion_requests' else '')"
-                               t-att-href="((not is_hrmis_employee) or (current_employee and current_employee.profile_complete)) and '/hrmis/promotion?tab=history' or '#'"
-                               t-attf-style="cursor: #{ 'not-allowed' if is_hrmis_employee and (not current_employee or not current_employee.profile_complete) else 'pointer' }">
-                                Promotion Requests
-                            </a>
-
-</nav>
-
-
-
+                <!-- Mobile offcanvas nav -->
+                <div class="offcanvas offcanvas-start hrmis-offcanvas d-lg-none"
+                     tabindex="-1"
+                     id="hrmisOffcanvasNav"
+                     aria-labelledby="hrmisOffcanvasNavLabel">
+                    <div class="offcanvas-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <img src="/custom_login/static/src/img/logo.png" alt="HRMIS Logo" style="width:40px;height:40px;object-fit:contain;"/>
+                            <div id="hrmisOffcanvasNavLabel" class="offcanvas-title" style="font-weight:800; color:#064526;">
+                                HRMIS Menu
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                    </div>
+                    <div class="offcanvas-body hrmis-sidebar">
+                        <t t-call="hr_holidays_updates.hrmis_nav_links"/>
                         <div class="hrmis-powered">
                             Powered by<br/>
                             Health Department,<br/>
                             Government of Sindh
                         </div>
-                    </aside>
+                    </div>
+                </div>
 
-                    <main class="hrmis-content">
-                        <t t-out="0"/>
-                    </main>
+                <!-- Main layout -->
+                <div class="container-fluid">
+                    <div class="row g-0">
+                        <aside class="col-lg-3 col-xl-2 d-none d-lg-block hrmis-sidebar-desktop">
+                            <div class="hrmis-sidebar">
+                                <div class="hrmis-brand">
+                                    <div class="hrmis-brand__seal">
+                                        <img src="/custom_login/static/src/img/logo.png" alt="HRMIS Logo"/>
+                                    </div>
+                                    <div class="hrmis-brand__text">
+                                        <div class="hrmis-brand__title">SINDH<br/>HUMAN RESOURCE<br/>MANAGEMENT<br/>INFORMATION SYSTEM</div>
+                                    </div>
+                                </div>
+
+                                <t t-call="hr_holidays_updates.hrmis_nav_links"/>
+
+                                <div class="hrmis-powered">
+                                    Powered by<br/>
+                                    Health Department,<br/>
+                                    Government of Sindh
+                                </div>
+                            </div>
+                        </aside>
+
+                        <main class="col-12 col-lg-9 col-xl-10 hrmis-content">
+                            <t t-out="0"/>
+                        </main>
+                    </div>
                 </div>
                 <div class="hrmis-footer-bar"></div>
             </div>
@@ -410,25 +404,29 @@
                                 <div class="hrmis-alert hrmis-alert--success"><t t-esc="success"/></div>
                             </t>
 
-                    <div class="hrmis-panel__header hrmis-panel__header--tabs hrmis-panel__header--tabs--profile">
-                        <a t-attf-class="hrmis-tab #{'is-active' if tab == 'personal' else ''}"
-                           t-att-href="'/hrmis/staff/%s?tab=personal' % employee.id">
-                            User profile
-                        </a>
-
-                        <t t-if="not request.env.user.has_group('custom_login.group_section_officer')">
-                            <a t-attf-class="hrmis-tab #{'is-active' if tab == 'posting' else ''}"
-                            t-att-href="'/hrmis/staff/%s?tab=posting' % employee.id">
-                                Posting and service history
-                            </a>
-                        </t>
-
-                        <t t-if="not request.env.user.has_group('custom_login.group_section_officer')">
-                            <a t-attf-class="hrmis-tab #{'is-active' if tab == 'qualifications' else ''}"
-                            t-att-href="'/hrmis/staff/%s?tab=qualifications' % employee.id">
-                                Trainings and qualifications
-                            </a>
-                        </t>
+                    <div class="hrmis-panel__header p-0">
+                        <ul class="nav nav-tabs flex-column flex-md-row w-100">
+                            <li class="nav-item flex-fill">
+                                <a t-attf-class="nav-link #{'active' if tab == 'personal' else ''}"
+                                   t-att-href="'/hrmis/staff/%s?tab=personal' % employee.id">
+                                    User profile
+                                </a>
+                            </li>
+                            <t t-if="not request.env.user.has_group('custom_login.group_section_officer')">
+                                <li class="nav-item flex-fill">
+                                    <a t-attf-class="nav-link #{'active' if tab == 'posting' else ''}"
+                                       t-att-href="'/hrmis/staff/%s?tab=posting' % employee.id">
+                                        Posting and service history
+                                    </a>
+                                </li>
+                                <li class="nav-item flex-fill">
+                                    <a t-attf-class="nav-link #{'active' if tab == 'qualifications' else ''}"
+                                       t-att-href="'/hrmis/staff/%s?tab=qualifications' % employee.id">
+                                        Trainings and qualifications
+                                    </a>
+                                </li>
+                            </t>
+                        </ul>
                     </div>
 
 
