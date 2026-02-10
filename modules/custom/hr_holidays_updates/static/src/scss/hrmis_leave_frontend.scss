@@ -191,6 +191,42 @@
     max-width: 160px;
   }
 }
+
+/* Ultra-small phones: keep topbar compact and aligned */
+@media (max-width: 480px) {
+  .hrmis-topbar {
+    grid-template-columns: auto 1fr;
+    column-gap: 10px;
+    row-gap: 8px;
+    padding: 10px 12px;
+    align-items: start;
+  }
+
+  .hrmis-topbar__right {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .hrmis-user-stack {
+    justify-content: flex-end;
+    width: auto;
+  }
+
+  .hrmis-user__label {
+    display: none;
+  }
+
+  .hrmis-user__value {
+    max-width: 120px;
+    font-size: 13px;
+  }
+
+  .hrmis-logout.btn {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}
 .hrmis-bell {
   position: relative;
   width: 44px;
