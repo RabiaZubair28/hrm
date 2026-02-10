@@ -43,19 +43,22 @@ class HrmisTransferRequestNotifications(models.Model):
                 continue
             rec._hrmis_push(user, "Transfer request update", body)
 
-    def _notify_manager(self, body: str):
+    def _notify_next_approver(self, users):
+        """Notify only the *current* approver(s) (i.e., whoever is active now)."""
         for rec in self:
-            mgr_emp = rec._responsible_manager_emp(rec.employee_id)
-            mgr_user = mgr_emp.user_id if mgr_emp else None
-            if not mgr_user:
+            users = users or self.env["res.users"].browse([])
+            users = users.filtered(lambda u: u and u.active)
+            if not users:
                 continue
-            # Don't notify requester as manager.
-            try:
-                if rec.employee_id and rec.employee_id.user_id and rec.employee_id.user_id.id == mgr_user.id:
-                    continue
-            except Exception:
-                pass
-            rec._hrmis_push(mgr_user, "Transfer request submitted", body)
+
+            desc = rec._transfer_description()
+            emp_name = rec.employee_id.name or "an employee"
+            approver_desc = desc.replace("Your", f"{emp_name}'s", 1)
+            rec._hrmis_push(
+                users,
+                "Transfer request pending approval",
+                f"{approver_desc} needs your action.",
+            )
 
     def action_submit(self):
         res = super().action_submit()
@@ -63,11 +66,36 @@ class HrmisTransferRequestNotifications(models.Model):
             if rec.state == "submitted":
                 desc = rec._transfer_description()
                 rec._notify_employee(f"{desc} has been submitted.")
-                emp_name = rec.employee_id.name or "an employee"
-                # _transfer_description returns "Your transfer request from {fac}, {dist} to {fac}, {dist}"
-                # Replace "Your" with employee name for SO/manager view
-                mgr_desc = desc.replace("Your", f"{emp_name}'s", 1)
-                rec._notify_manager(f"{mgr_desc} needs your action.")
+        return res
+
+    def action_approve(self, comment=None):
+        """
+        Send transfer alerts to approvers *step-by-step*.
+
+        After an approver approves (action_approve button), notify ONLY the newly-current
+        next approver (DS -> AS -> ...). This avoids sending alerts to everyone on submit.
+        """
+        before_active_by_id = {
+            rec.id: set(rec._get_active_pending_users().ids) for rec in self
+        }
+
+        res = super().action_approve(comment=comment)
+
+        for rec in self:
+            after_users = rec._get_active_pending_users()
+            after_ids = set(after_users.ids)
+            before_ids = before_active_by_id.get(rec.id, set())
+
+            # Only notify when the "current approver" changes (i.e., chain advanced).
+            if not after_ids or after_ids == before_ids:
+                continue
+
+            # Safety: never re-notify the approver who just approved.
+            if rec.env.user.id in after_ids:
+                continue
+
+            rec._notify_next_approver(after_users)
+
         return res
 
     @api.model_create_multi

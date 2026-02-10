@@ -1097,7 +1097,7 @@ class HrmisSectionOfficerManageRequestsController(http.Controller):
                     subtype_xmlid="mail.mt_comment",
                     author_id=request.env.user.partner_id.id,
                 )
-            tr.action_approve()
+            tr.action_approve(comment=comment or None)
         except UserError as e:
             return request.redirect(
                 "/hrmis/manage/requests?tab=transfer_requests&error=%s" % http.url_quote(e.name)
@@ -1136,7 +1136,7 @@ class HrmisSectionOfficerManageRequestsController(http.Controller):
                     "/hrmis/manage/requests?tab=transfer_requests&success=Transfer+request+dismissed"
                 )
 
-            tr.action_approve_by_user(comment=comment)
+            tr.action_approve(comment=comment or None)
             return request.redirect(
                 "/hrmis/manage/requests?tab=transfer_requests&success=Transfer+request+approved"
             )
