@@ -1,0 +1,71 @@
+<odoo>
+    <template id="custom_profile_patch"
+              inherit_id="hr_holidays_updates.hrmis_staff_profile">
+
+        <xpath expr="//div[@id='hrmis_user_profile_block']//div[contains(@class,'hrmis-kv__item')][.//div[contains(@class,'hrmis-kv__k') and contains(.,'Facility')]]" position="replace">
+            <t t-if="not request.env.user.has_group('custom_login.group_section_officer')">
+                <div class="hrmis-kv__item">
+                    <div class="hrmis-kv__k">Facility</div>
+                    <div class="hrmis-kv__v">
+                        <t t-esc="(('facility_id' in employee._fields and employee.facility_id and employee.facility_id.name) or ('hrmis_facility_id' in employee._fields and employee.hrmis_facility_id and employee.hrmis_facility_id.name) or '')"/>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+
+         <xpath expr="//div[@id='hrmis_user_profile_block']//div[contains(@class,'hrmis-kv__item')][.//div[contains(@class,'hrmis-kv__k') and contains(.,'District')]]" position="replace">
+            <t t-if="not request.env.user.has_group('custom_login.group_section_officer')">
+                <div class="hrmis-kv__item">
+                    <div class="hrmis-kv__k">District</div>
+                    <div class="hrmis-kv__v">
+                        <t t-esc="(('district_id' in employee._fields and employee.district_id and employee.district_id.name) or ('hrmis_district_id' in employee._fields and employee.hrmis_district_id and employee.hrmis_district_id.name) or '')"/>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+        
+         <xpath expr="//div[@id='hrmis_user_profile_block']//div[contains(@class,'hrmis-kv__item')][.//div[contains(@class,'hrmis-kv__k') and contains(.,'Designation')]]" position="replace">
+            <t t-if="not request.env.user.has_group('custom_login.group_section_officer')">
+                <div class="hrmis-kv__item">
+                    <div class="hrmis-kv__k">Designation</div>
+                    <div class="hrmis-kv__v">
+                        <t t-esc="(employee.hrmis_designation and employee.hrmis_designation.name) or ''"/>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+
+         <xpath expr="//div[@id='hrmis_user_profile_block']//div[contains(@class,'hrmis-kv__item')][.//div[contains(@class,'hrmis-kv__k') and contains(.,'Joining Date')]]" position="after">
+            <t t-if="request.env.user.has_group('custom_login.group_section_officer')">
+                <div class="hrmis-kv__item">
+                    <div class="hrmis-kv__k">Section</div>
+                    <div class="hrmis-kv__v">
+                        <t t-esc="('section_id' in employee._fields and employee.section_id and employee.section_id.name) or ''"/>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+    <xpath expr="//div[@id='hrmis_user_profile_block']" position="inside">
+            <t t-if="request.env.user.has_group('custom_login.group_section_officer') and employee.id == request.env.user.employee_ids[0].id">
+                <div class="hrmis-kv__item">
+                    <div class="hrmis-kv__k">SO Signature</div>
+                    <div class="hrmis-kv__v">
+                        <form t-att-action="'/hrmis/employee/%s/upload_signature' % employee.id" 
+                              method="post" enctype="multipart/form-data" style="margin-bottom:8px;">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <input type="file" name="so_signature" accept="image/*"/>
+                            <button type="submit" class="hrmis-btn hrmis-btn--primary">Upload</button>
+                        </form>
+
+                        
+
+                        <t t-if="not employee.so_signature">
+                            <span style="color:#999;">No signature uploaded</span>
+                        </t>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+
+    </template>
+</odoo>

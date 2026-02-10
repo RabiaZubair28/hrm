@@ -1,0 +1,156 @@
+<odoo noupdate="1">
+ 
+    <record id="user_shafique_ahmed" model="res.users">
+        <field name="name">Mr. Shafique Ahmed Ujjan</field>
+        <field name="login">so_i</field>
+        <field name="email">shafique.ahmed@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_syed_faraz_ali" model="res.users">
+        <field name="name">Syed Faraz Ali</field>
+        <field name="login">so_iii</field>
+        <field name="email">syed.faraz@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_ishfaque_hussain" model="res.users">
+        <field name="name">Mr. Ishfaque Hussain Shah</field>
+        <field name="login">so_iv</field>
+        <field name="email">ishfaque.hussain@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_abdul_sami_mangi" model="res.users">
+        <field name="name">Mr. Abdul Sami Mangi</field>
+        <field name="login">so_v</field>
+        <field name="email">abdul.mangi@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_shahid_hussain" model="res.users">
+        <field name="name">Mr. Shahid Hussain Mirani</field>
+        <field name="login">so_vi</field>
+        <field name="email">shahid.hussain@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_waqar_hussain" model="res.users">
+        <field name="name">Mr. Waqar Hussain</field>
+        <field name="login">so_vii</field>
+        <field name="email">waqar.hussain@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_warda_nayab" model="res.users">
+        <field name="name">Ms. Warda Nayab</field>
+        <field name="login">so_c_i</field>
+        <field name="email">warda.nayab@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_saleem_afsar" model="res.users">
+        <field name="name">Mr. Saleem Afsar PS/SO</field>
+        <field name="login">so_c_ii</field>
+        <field name="email">saleem.afsar@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_sunny_kumar" model="res.users">
+        <field name="name">Mr. Sunny Kumar</field>
+        <field name="login">so_nc</field>
+        <field name="email">sunny.kumar@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <!-- New user -->
+    <record id="user_khursheed_ahmed" model="res.users">
+        <field name="name">Mr. Khursheed Ahmed</field>
+        <field name="login">so_b_i</field>
+        <field name="email">khursheed.ahmed@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+     <record id="user_additional_secretary_health" model="res.users">
+        <field name="name">Additional Secretary Health</field>
+        <field name="login">as_health</field>
+        <field name="email">as.health@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_deputy_secretary_health" model="res.users">
+        <field name="name">Deputy Secretary Health</field>
+        <field name="login">ds_health</field>
+        <field name="email">ds.health@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_section_secretary_health" model="res.users">
+        <field name="name">Special Secretary Health</field>
+        <field name="login">ss_health</field>
+        <field name="email">ss.health@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+
+    <record id="user_section_minister_health" model="res.users">
+        <field name="name">Minister of Health</field>
+        <field name="login">minister_health</field>
+        <field name="email">minister.health@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_medical_superintendent" model="res.users">
+        <field name="name">Medical Superintendent</field>
+        <field name="login">ms_health</field>
+        <field name="email">ms.health@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+ 
+    <record id="user_secretary_health" model="res.users">
+        <field name="name">Secretary Health</field>
+        <field name="login">secretary_health</field>
+        <field name="email">secretary.health@example.com</field>
+        <field name="temp_password">Temp123</field>
+        <field name="hrmis_role">section_officer</field>
+    </record>
+    <record id="user_humza" model="res.users">
+        <field name="name">Humza</field>
+        <field name="login">humza</field>
+        <field name="email">xyz1@example.com</field>
+        <field name="temp_password">123</field>
+        <field name="hrmis_role">employee</field>
+        <field name="manager_id">4</field>
+    </record>
+    <record id="user_rabia" model="res.users">
+        <field name="name">Rabia</field>
+        <field name="login">rabia</field>
+        <field name="email">xyz2@example.com</field>
+        <field name="temp_password">123</field>
+        <field name="hrmis_role">employee</field>
+        <field name="manager_id">4</field>
+    </record>
+    <record id="user_aneeqa" model="res.users">
+        <field name="name">Aneeqa</field>
+        <field name="login">aneeqa</field>
+        <field name="email">xyz3@example.com</field>
+        <field name="temp_password">123</field>
+        <field name="hrmis_role">employee</field>
+        <field name="manager_id">4</field>
+    </record>
+ 
+</odoo>

@@ -1,0 +1,37 @@
+<odoo>
+    <template id="leave_letter_add_download_notification_form"
+              inherit_id="hr_holidays_updates.hrmis_leave_form">
+
+        <xpath expr="//a[contains(@class,'hrmis-btn--outline') and contains(@t-att-href, 'history-view')]" position="replace">
+
+            <t t-if="lv.state in ('validate','validate2')
+             and lv.leave_notification_id
+              and lv.holiday_status_id.name != 'Casual Leave'">
+                <a t-att-href="'/leave_letter/pdf/%s' % lv.leave_notification_id.id"
+                   class="hrmis-btn hrmis-btn--outline"
+                   style="margin-left:8px;"
+                   target="_blank">
+                    Download 
+                </a>
+            </t>
+            <t t-else="">
+    <span style="
+        display: inline-block;
+        font-size: 12px;
+        color: #888;
+        padding: 6px 12px;
+        border: 1px dashed #ccc;
+        border-radius: 6px;
+        background: #f5f5f5;
+        min-width: 100px;
+        text-align: center;
+        white-space: normal;
+        overflow-wrap: break-word;">
+        No notification available
+    </span>
+</t>
+
+        </xpath>
+
+    </template>
+</odoo>

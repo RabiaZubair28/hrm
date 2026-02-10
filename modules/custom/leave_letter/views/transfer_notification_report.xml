@@ -1,0 +1,12 @@
+<!-- leave_letter/views/leave_notification_report.xml -->
+<odoo>
+ <record id="action_transfer_notification_pdf" model="ir.actions.report">
+    <field name="name">Transfer Letter</field>
+    <field name="model">transfer.notification</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">leave_letter.transfer_notification_pdf</field>
+    <field name="report_file">leave_letter.transfer_notification_pdf</field>
+    <field name="binding_type">report</field>
+    <field name="print_report_name">'%s' % (object.name.replace("/","-"))</field>
+</record>
+</odoo>

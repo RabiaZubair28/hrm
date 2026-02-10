@@ -1,0 +1,18 @@
+<odoo>
+
+    <record id="cadre_Generalist" model="hrmis.cadre">
+        <field name="name">Generalist</field>
+        <field name="code">generalist</field>
+    </record>
+
+    <record id="cadre_health_management" model="hrmis.cadre">
+        <field name="name">Health Management</field>
+        <field name="code">health_management</field>
+    </record>
+
+    <record id="cadre_specialist" model="hrmis.cadre">
+        <field name="name">Specialist</field>
+        <field name="code">Specialist</field>
+    </record>
+
+</odoo>

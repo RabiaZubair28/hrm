@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- <record id="view_res_users_form_custom" model="ir.ui.view">
+        <field name="name">res.users.form.custom.fields</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='login']" position="after">
+                <group string="HRMIS User Details">
+                    <field name="cnic"/>
+                    <field name="cadre"/>
+                    <field name="manager_id"/>
+                    <field name="temp_password"/>
+                    <field name="is_temp_password"/>
+                    <field name="onboarding_state" readonly="1"/>
+                 
+                </group>
+            </xpath>
+
+        
+            <xpath expr="//page[@name='access_rights']" position="inside">
+    <group>
+        <field name="hrmis_role"/>
+    </group>
+</xpath>
+
+
+        </field>
+    </record> -->
+   <record id="view_res_users_form_custom" model="ir.ui.view">
+        <field name="name">res.users.form.custom.fields</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+
+            <!-- HRMIS fields after login -->
+            <xpath expr="//field[@name='login']" position="after">
+                <group string="HRMIS User Details">
+                    <field name="hrmis_cnic"/>
+                    <field name="hrmis_cadre" domain="[('active','=',True)]"/>
+
+
+                    <field name="manager_id"/>
+                    <field name="hrmis_role"/>   <!-- ✅ right here -->
+                    <field name="temp_password"/>
+                    <field name="is_temp_password"/>
+                    <field name="onboarding_state" readonly="1"/>
+                </group>
+            </xpath>
+
+        </field>
+    </record>
+</odoo>

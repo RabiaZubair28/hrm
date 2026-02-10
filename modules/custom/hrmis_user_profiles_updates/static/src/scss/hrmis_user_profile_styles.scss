@@ -1,0 +1,203 @@
+/* =========================================
+   HRMIS: Combobox polish (override)
+   Put in a NEW scss file
+   ========================================= */
+
+.hrmis-app {
+  --hrmis-green: #064526;
+  --hrmis-green-dark: #04381f;
+  --hrmis-border-soft: #cfd7da;
+  --hrmis-focus: rgba(6, 69, 38, 0.20);
+  --hrmis-input-bg: #f7fbf8;
+}
+
+/* Make the combobox feel like ONE control */
+.hrmis-app .scb {
+  width: 100%;
+  position: relative;
+}
+
+/* Remove input-group "split" look */
+.hrmis-app .scb .input-group {
+  border: 1px solid var(--hrmis-border-soft);
+  border-radius: 10px;
+  background: var(--hrmis-input-bg);
+  overflow: visible; /* IMPORTANT: don’t clip clear button */
+}
+
+/* Input styling */
+.hrmis-app .scb .scb-input.form-control {
+  height: 40px;
+  border: none !important;
+  background: transparent !important;
+  font-weight: 650;
+  color: #1b1f20;
+  padding-right: 72px; /* space for clear + caret */
+}
+
+/* Focus (whole group gets focus ring) */
+.hrmis-app .scb .scb-input.form-control:focus {
+  outline: none;
+  box-shadow: none !important;
+}
+
+.hrmis-app .scb:focus-within .input-group {
+  border-color: var(--hrmis-green);
+  box-shadow: 0 0 0 4px var(--hrmis-focus);
+  background: #fff;
+}
+
+/* --- Caret button --- */
+/* JS adds border-0, so we FORCE border back */
+.hrmis-app .scb .scb-toggle.btn {
+  height: 40px;
+  width: 42px !important;
+
+  border: none !important;
+  border-left: 1px solid var(--hrmis-border-soft) !important;
+
+  background: transparent !important;
+  color: var(--hrmis-green) !important;
+  font-weight: 900;
+}
+
+.hrmis-app .scb .scb-toggle.btn:hover {
+  background: rgba(6, 69, 38, 0.06) !important;
+}
+
+/* --- Clear button inside input (NO ugly circle) --- */
+.hrmis-app .scb .scb-clear {
+  position: absolute;
+  right: 48px;   /* just left of caret */
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 22px !important;
+  height: 22px !important;
+
+  border: none !important;
+  border-radius: 6px !important; /* subtle, not circle */
+  background: transparent !important;
+
+  color: var(--hrmis-green) !important;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0 !important;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  opacity: 0.75;
+}
+
+.hrmis-app .scb .scb-clear:hover {
+  opacity: 1;
+  background: rgba(6, 69, 38, 0.10) !important;
+}
+
+/* Hide Bootstrap input-group-text visuals (if present) */
+.hrmis-app .scb .input-group-text {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* --- Dropdown menu --- */
+.hrmis-app .scb .scb-menu.dropdown-menu {
+  border: 1px solid var(--hrmis-border-soft);
+  border-radius: 10px;
+  padding: 6px 0;
+  margin-top: 6px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+}
+
+/* items */
+.hrmis-app .scb .scb-item.dropdown-item {
+  font-weight: 650;
+  padding: 9px 12px;
+}
+
+.hrmis-app .scb .scb-item.dropdown-item:hover {
+  background: rgba(6, 69, 38, 0.08);
+}
+
+.hrmis-app .scb .scb-item.dropdown-item.active {
+  background: var(--hrmis-green) !important;
+  color: #fff !important;
+}
+
+/* =========================================
+   Apply/Reset match theme
+   ========================================= */
+.hrmis-app #tvFiltersForm .btn.btn-primary {
+  background: var(--hrmis-green) !important;
+  border-color: var(--hrmis-green) !important;
+  font-weight: 850;
+}
+.hrmis-app #tvFiltersForm .btn.btn-primary:hover {
+  background: var(--hrmis-green-dark) !important;
+  border-color: var(--hrmis-green-dark) !important;
+}
+
+.hrmis-app #tvFiltersForm .btn.btn-outline-secondary {
+  border-color: var(--hrmis-green) !important;
+  color: var(--hrmis-green) !important;
+  font-weight: 850;
+  background: #fff !important;
+}
+.hrmis-app #tvFiltersForm .btn.btn-outline-secondary:hover {
+  background: rgba(6, 69, 38, 0.08) !important;
+}
+
+/* =========================================
+   Pagination: remove purple, use theme
+   ========================================= */
+.hrmis-app .pagination .page-link {
+  color: var(--hrmis-green) !important;
+  border-color: var(--hrmis-border-soft) !important;
+  font-weight: 800;
+}
+
+.hrmis-app .pagination .page-link:hover {
+  background: rgba(6, 69, 38, 0.08) !important;
+  border-color: rgba(6, 69, 38, 0.25) !important;
+}
+
+.hrmis-app .pagination .page-item.active .page-link {
+  background: var(--hrmis-green) !important;
+  border-color: var(--hrmis-green) !important;
+  color: #fff !important;
+}
+
+.js-tv-acc-item {
+  transition: max-height 260ms ease, opacity 220ms ease, transform 220ms ease;
+  transform-origin: top;
+}
+
+.tv-acc-visible {
+  max-height: 2000px;
+  opacity: 1;
+  transform: scaleY(1);
+  margin-bottom: 10px;
+}
+
+.tv-acc-hidden {
+  max-height: 0;
+  opacity: 0;
+  transform: scaleY(0.98);
+  overflow: hidden;
+  margin: 0 !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+/* Make Reset button match SearchComboBox height */
+.tv-btn-sameheight {
+  height: 31px;         /* matches input-group-sm height nicely */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-weight: 600;
+}

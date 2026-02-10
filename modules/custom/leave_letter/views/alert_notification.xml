@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+  <template id="hrmis_notifications_add_download"
+            inherit_id="hr_holidays_updates.hrmis_notifications_page">
+
+    <xpath expr="//t[@t-foreach='notifications']//div[contains(@class,'hrmis-notif-item__main')]"
+           position="after">
+
+      <div class="hrmis-notif-item__actions"
+           style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+
+        <!-- TRANSFER download -->
+        <t t-if="n.get('res_model') == 'hrmis.transfer.request' and n.get('res_id')">
+          <t t-set="tr" t-value="request.env['hrmis.transfer.request'].sudo().browse(n.get('res_id'))"/>
+          <t t-if="tr and tr.exists()
+                   and tr.state == 'approved'
+                   and tr.transfer_notification_id">
+            <a t-att-href="'/transfer_letter/pdf/%s' % tr.transfer_notification_id.id"
+               class="hrmis-btn hrmis-btn--outline"
+               target="_blank">
+              Download
+            </a>
+          </t>
+        </t>
+
+        <!-- LEAVE download -->
+        <t t-elif="n.get('res_model') == 'hr.leave' and n.get('res_id')">
+          <t t-set="leave" t-value="request.env['hr.leave'].sudo().browse(n.get('res_id'))"/>
+          <t t-if="leave and leave.exists()
+                   and leave.state in ('validate','validate2')
+                   and leave.leave_notification_id">
+            <a t-att-href="'/leave_letter/pdf/%s' % leave.leave_notification_id.id"
+               class="hrmis-btn hrmis-btn--outline"
+               target="_blank">
+              Download
+            </a>
+          </t>
+        </t>
+
+      </div>
+
+    </xpath>
+
+  </template>
+
+</odoo>

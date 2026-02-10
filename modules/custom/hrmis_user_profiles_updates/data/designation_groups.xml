@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <data noupdate="1">
+
+
+    <record id="designation_group_dg_health" model="hrmis.designation.group">
+        <field name="name">DG Health</field>
+        <field name="code">DG Health</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_group_mo" model="hrmis.designation.group">
+        <field name="name">MO</field>
+        <field name="code">MO</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_group_nurse" model="hrmis.designation.group">
+        <field name="name">Nurse</field>
+        <field name="code">Nurse</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_group_smo_swmo" model="hrmis.designation.group">
+        <field name="name">SMO / SWMO</field>
+        <field name="code">SMO / SWMO</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_group_specialist" model="hrmis.designation.group">
+        <field name="name">Specialist</field>
+        <field name="code">Specialist</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_group_wmo" model="hrmis.designation.group">
+        <field name="name">WMO</field>
+        <field name="code">WMO</field>
+        <field name="active">True</field>
+    </record>
+
+  </data>
+</odoo>

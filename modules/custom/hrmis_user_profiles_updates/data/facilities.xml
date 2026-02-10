@@ -1,0 +1,1060 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <data noupdate="1">
+
+
+    <record id="facility_badin_bi0128" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL BADIN</field>
+        <field name="facility_code">BI0128</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_badin"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_badin_bi0129" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL MATLI BADIN</field>
+        <field name="facility_code">BI0129</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_badin"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_badin_bi0131" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL SHAHEED FAZIL RAHU BADIN</field>
+        <field name="facility_code">BI0131</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_badin"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_badin_bi0132" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL TANDO BAGO BADIN</field>
+        <field name="facility_code">BI0132</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_badin"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_dadu_dd0084" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL DADU</field>
+        <field name="facility_code">DD0084</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_dadu"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_dadu_dd0092" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL MEHAR DADU</field>
+        <field name="facility_code">DD0092</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_dadu"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_dadu_dd0093" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOPITAL K N SHAH DADU</field>
+        <field name="facility_code">DD0093</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_dadu"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_dadu_dd0094" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL JOHI DADU</field>
+        <field name="facility_code">DD0094</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_dadu"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_ghotki_go0068" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL GHOTKI</field>
+        <field name="facility_code">GO0068</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_ghotki"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_ghotki_go0069" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL GHOTKI</field>
+        <field name="facility_code">GO0069</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_ghotki"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_ghotki_go0070" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL UBAURO GHOTKI</field>
+        <field name="facility_code">GO0070</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_ghotki"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_ghotki_go0075" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL DAHARKI GHOTKI</field>
+        <field name="facility_code">GO0075</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_ghotki"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_hyderabad_hb0262" model="hrmis.facility.type">
+        <field name="name">POLICE HOSPITAL HYDERABAD</field>
+        <field name="facility_code">HB0262</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_hyderabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_hyderabad_hb0263" model="hrmis.facility.type">
+        <field name="name">SERVICES HOSPITAL HYDERABAD</field>
+        <field name="facility_code">HB0263</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_hyderabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_hyderabad_hb0264" model="hrmis.facility.type">
+        <field name="name">LIAQUAT MEDICAL COLLEGE HOSPITAL HYDERAB AD</field>
+        <field name="facility_code">HB0264</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_hyderabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_hyderabad_hb0284" model="hrmis.facility.type">
+        <field name="name">MS CDF HOSPITAL HYDERABAD</field>
+        <field name="facility_code">HB0284</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_hyderabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_hyderabad_hb0285" model="hrmis.facility.type">
+        <field name="name">MS SINDH GOVERNMENT HOSPITAL FAREDABAD H YDERABAD</field>
+        <field name="facility_code">HB0285</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_hyderabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_hyderabad_hb0286" model="hrmis.facility.type">
+        <field name="name">MS SHAH BHITAI HOSPITAL (HC) HYDERABAD</field>
+        <field name="facility_code">HB0286</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_hyderabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_hyderabad_hb0289" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL QASIMABAD HYDERABAD</field>
+        <field name="facility_code">HB0289</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_hyderabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_hyderabad_hb0290" model="hrmis.facility.type">
+        <field name="name">MS TANGA STAND HOSPITAL PHULELI HYDERABAD</field>
+        <field name="facility_code">HB0290</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_hyderabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_hyderabad_hb0292" model="hrmis.facility.type">
+        <field name="name">MS KOHSAR HOSPITAL LATIFABAD HYDERABAD</field>
+        <field name="facility_code">HB0292</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_hyderabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_hyderabad_hb0578" model="hrmis.facility.type">
+        <field name="name">PROVINCIAL HEALTH DEVELOPMENT CENTRE / HOSTEL HYDERABAD</field>
+        <field name="facility_code">HB0578</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_hyderabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_jacobabad_jk0074" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL JACOBABAD</field>
+        <field name="facility_code">JK0074</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_jacobabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_jacobabad_jk0075" model="hrmis.facility.type">
+        <field name="name">MEDICAL SUPERINDENT TALUKA HOSPITAL JACOBABAD</field>
+        <field name="facility_code">JK0075</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_jacobabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_jacobabad_jk0076" model="hrmis.facility.type">
+        <field name="name">TALUKA HOSPITAL GARHI KHAIRO JACOABAD</field>
+        <field name="facility_code">JK0076</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_jacobabad"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_jamshoro_jo0064" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL JAMSHORO @ KOTRI</field>
+        <field name="facility_code">JO0064</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_jamshoro"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_jamshoro_jo0066" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL THANU BULA KHAN JAMSHORO</field>
+        <field name="facility_code">JO0066</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_jamshoro"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_jamshoro_jo0067" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL MANJAND JAMSHORO</field>
+        <field name="facility_code">JO0067</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_jamshoro"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_jamshoro_jo0077" model="hrmis.facility.type">
+        <field name="name">MS 30 BEDED HOSPITAL NORIABAD JAMSHORO</field>
+        <field name="facility_code">JO0077</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_jamshoro"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_kamber_qs0076" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL MIROKHAN</field>
+        <field name="facility_code">QS0076</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_kamber"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_kamber_qs0077" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL KAMBAR @ SHAHDADKOT</field>
+        <field name="facility_code">QS0077</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_kamber"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_kamber_qs0078" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOPITAL SHAHDADKOT</field>
+        <field name="facility_code">QS0078</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_kamber"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_kamber_qs0079" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL WARAH</field>
+        <field name="facility_code">QS0079</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_kamber"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_kamber_qs0422" model="hrmis.facility.type">
+        <field name="name">SHAIKH ZAID 20 BEDDED HOSPITAL GHARTAL TALUKA WARAH DISTRICT KAMBER SHAHDADKOT</field>
+        <field name="facility_code">QS0422</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_kamber"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq0594" model="hrmis.facility.type">
+        <field name="name">DR.RUTH K.M PFAU, CIVIL HOSPITAL KARACHI</field>
+        <field name="facility_code">KQ0594</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq0595" model="hrmis.facility.type">
+        <field name="name">SINDH GOVERNMENT LYARI GENERAL HOSPITAL KARACHI</field>
+        <field name="facility_code">KQ0595</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq0597" model="hrmis.facility.type">
+        <field name="name">SERVICES HOSPITAL KARACHI</field>
+        <field name="facility_code">KQ0597</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq0609" model="hrmis.facility.type">
+        <field name="name">SINDH GOVERNMENT HOSPITAL KORANGI KARACHI</field>
+        <field name="facility_code">KQ0609</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq0610" model="hrmis.facility.type">
+        <field name="name">SINDH GOVERNMENT HOSPITAL SAUDABAD KARACHI</field>
+        <field name="facility_code">KQ0610</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq0611" model="hrmis.facility.type">
+        <field name="name">SINDH GOVERNMENT HOSPITAL LIAQUATABAD KARACHI</field>
+        <field name="facility_code">KQ0611</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq0612" model="hrmis.facility.type">
+        <field name="name">SINDH GOVERNMENT QATAR HOSPITAL KARACHI</field>
+        <field name="facility_code">KQ0612</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq0647" model="hrmis.facility.type">
+        <field name="name">SINDH GOVERNMENT HOSPITAL IBRAHIM HYDERI KARACHI</field>
+        <field name="facility_code">KQ0647</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq0648" model="hrmis.facility.type">
+        <field name="name">SINDH GOVERNMENT HOSPITAL NEW KARACHI</field>
+        <field name="facility_code">KQ0648</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq0649" model="hrmis.facility.type">
+        <field name="name">SINDH GOVERNMENT HOSPITAL CHILDREN KARAC HI</field>
+        <field name="facility_code">KQ0649</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq1781" model="hrmis.facility.type">
+        <field name="name">MALE SCHOOL OF NURSING LANDHI MEDICAL AT SINDH GOVERNMENT HOSPITAL KORANGI-5 KARACHI</field>
+        <field name="facility_code">KQ1781</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq1782" model="hrmis.facility.type">
+        <field name="name">MALE SCHOOL OF NURSING SINDH GOVT LYARI GENERAL HOSPITAL KARACHI</field>
+        <field name="facility_code">KQ1782</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq1783" model="hrmis.facility.type">
+        <field name="name">MALE SCHOOL OF NURSING AT SINDH GOVT: HOSPITAL LIAQUATABAD KARACHI</field>
+        <field name="facility_code">KQ1783</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq1790" model="hrmis.facility.type">
+        <field name="name">GENERAL NURSING &amp; MIDWIFERY TRAINING SCHOOL @ SINDH GOVT. HOSP: LIAQUATABAD KARACHI</field>
+        <field name="facility_code">KQ1790</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq2332" model="hrmis.facility.type">
+        <field name="name">JANAT GUL 36 BEDDED HOSPITAL / MATERNITY HOME SOHRAB GOTH KARACHI</field>
+        <field name="facility_code">KQ2332</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq2334" model="hrmis.facility.type">
+        <field name="name">STRENTHING / IMPROVEMENT OF 36 BEDDED HOSPITAL DUMBA GOTH KARACHI</field>
+        <field name="facility_code">KQ2334</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq2335" model="hrmis.facility.type">
+        <field name="name">STRENTHING / IMPROVEMENT OF SINDH GOVERNMENT 50 BEDDED HOSPITAL GADAP CITY KARACHI</field>
+        <field name="facility_code">KQ2335</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq2336" model="hrmis.facility.type">
+        <field name="name">STRENTHING / IMPROVEMENT OF SINDH GOVERNMENT HOSPITAL 2A CORRIDORE LANDHI KARACHI</field>
+        <field name="facility_code">KQ2336</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq2337" model="hrmis.facility.type">
+        <field name="name">STRENTHING / IMPROVEMENT OF SINDH GOVERNMENT HOSPITAL REHRI GOTH KARACHI</field>
+        <field name="facility_code">KQ2337</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq2739" model="hrmis.facility.type">
+        <field name="name">36 BEDDED HOSPITAL URBAN HEALTH CENTER MALIR CITY KARACHI</field>
+        <field name="facility_code">KQ2739</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq2994" model="hrmis.facility.type">
+        <field name="name">125 BEDDED PAKISTAN STEEL MILLS HOSPITAL GULSHAN-E-HADEED KARACHI</field>
+        <field name="facility_code">KQ2994</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_karachi_kq3029" model="hrmis.facility.type">
+        <field name="name">SINDH GOVERNMENT HOSPITAL PIB COLONY KARACHI</field>
+        <field name="facility_code">KQ3029</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_karachi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_kashmore_kk0060" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL KASHMORE</field>
+        <field name="facility_code">KK0060</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_kashmore"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_kashmore_kk0061" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL KASHMORE</field>
+        <field name="facility_code">KK0061</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_kashmore"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_khairpur_kx0101" model="hrmis.facility.type">
+        <field name="name">KHAIRPUR MEDICAL COLLEGE, HOSPITAL KHAIRPUR MIRS</field>
+        <field name="facility_code">KX0101</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_khairpur"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_khairpur_kx0111" model="hrmis.facility.type">
+        <field name="name">TALUKA HOSPITAL KOTDHEJHI KHAIRPUR</field>
+        <field name="facility_code">KX0111</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_khairpur"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_larkana_ln0133" model="hrmis.facility.type">
+        <field name="name">CHANDKA MEDICAL COLLEGE HOSPITAL LARKANA</field>
+        <field name="facility_code">LN0133</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_larkana"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_larkana_ln0134" model="hrmis.facility.type">
+        <field name="name">SHAIKH ZAID WOMEN HOSPITAL LARKANA</field>
+        <field name="facility_code">LN0134</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_larkana"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_larkana_ln0141" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL RATODERO LARKANA</field>
+        <field name="facility_code">LN0141</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_larkana"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_larkana_ln0142" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL DOKRI LARKANA</field>
+        <field name="facility_code">LN0142</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_larkana"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_larkana_ln0468" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL BAKRANI @ AREJA</field>
+        <field name="facility_code">LN0468</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_larkana"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_larkana_ln0479" model="hrmis.facility.type">
+        <field name="name">50 BEDDED HOSPITAL GARHI KHUDA BUX BHUTTO DISTRICT LARKANA</field>
+        <field name="facility_code">LN0479</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_larkana"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_matiari_my0063" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL MATIARI</field>
+        <field name="facility_code">MY0063</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_matiari"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_matiari_my0064" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL HALA MATIARI</field>
+        <field name="facility_code">MY0064</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_matiari"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_matiari_my0065" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL SAEEDABAD MATIARI</field>
+        <field name="facility_code">MY0065</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_matiari"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_mirpurkhas_mp0130" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL MIRPURKHAS</field>
+        <field name="facility_code">MP0130</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_mirpurkhas"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_mirpurkhas_mp0131" model="hrmis.facility.type">
+        <field name="name">GIBSON (CIVIL HOSPITAL ) MIRPURKHAS</field>
+        <field name="facility_code">MP0131</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_mirpurkhas"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_mirpurkhas_mp0132" model="hrmis.facility.type">
+        <field name="name">M S ( TALUKA HOSPITAL DIGRI) MURPURKHAS</field>
+        <field name="facility_code">MP0132</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_mirpurkhas"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_mirpurkhas_mp0133" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL KOT GHULAM MUHAMMAD M IRPURKHAS</field>
+        <field name="facility_code">MP0133</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_mirpurkhas"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_mirpurkhas_mp0135" model="hrmis.facility.type">
+        <field name="name">TALUKA HEADQUARTER HOSPITAL MIRWAH GORCHANI MIRPURKHAS</field>
+        <field name="facility_code">MP0135</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_mirpurkhas"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_mirpurkhas_mp0483" model="hrmis.facility.type">
+        <field name="name">SHAHEED MOHTARMA BENAZIR BHUTTO CHAIRITY HOSPITAL</field>
+        <field name="facility_code">MP0483</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_mirpurkhas"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_mithi_mx0068" model="hrmis.facility.type">
+        <field name="name">TALUKA HOSPITAL CHACHRO MITHI</field>
+        <field name="facility_code">MX0068</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_mithi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_mithi_mx0069" model="hrmis.facility.type">
+        <field name="name">TALUKA HOSPITAL DIPLO MITHI</field>
+        <field name="facility_code">MX0069</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_mithi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_mithi_mx0070" model="hrmis.facility.type">
+        <field name="name">TALUKA HOSPITAL NAGARPARKAR MITHI</field>
+        <field name="facility_code">MX0070</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_mithi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_mithi_mx0071" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL THARPARKAR@ MITHI</field>
+        <field name="facility_code">MX0071</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_mithi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_mithi_mx0386" model="hrmis.facility.type">
+        <field name="name">TALUKA HOSPITAL KHAME-JO-PAR DISTIRCT THARPARKAR</field>
+        <field name="facility_code">MX0386</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_mithi"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_naushehroferoze_nx0073" model="hrmis.facility.type">
+        <field name="name">GENERAL HOSPITAL SERVICES (GDS) NAUSHAHRO FEROZE</field>
+        <field name="facility_code">NX0073</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_naushehroferoze"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_naushehroferoze_nx0074" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL NAUSHEHRO FEROZE</field>
+        <field name="facility_code">NX0074</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_naushehroferoze"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_naushehroferoze_nx0075" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL MORO</field>
+        <field name="facility_code">NX0075</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_naushehroferoze"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_naushehroferoze_nx0076" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL KANDIARO</field>
+        <field name="facility_code">NX0076</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_naushehroferoze"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_naushehroferoze_nx0077" model="hrmis.facility.type">
+        <field name="name">(REGULAR SCHEME) CIVIL HOSPITAL NAUSHAHRO FEROZE</field>
+        <field name="facility_code">NX0077</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_naushehroferoze"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_naushehroferoze_nx0078" model="hrmis.facility.type">
+        <field name="name">(TB CLINIC) CIVIL HOSPITAL NAUSHAHRO FEROZE</field>
+        <field name="facility_code">NX0078</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_naushehroferoze"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_naushehroferoze_nx0080" model="hrmis.facility.type">
+        <field name="name">(TB CLINIC) CIVIL HOSPITAL MORO HOSPITAL MORO</field>
+        <field name="facility_code">NX0080</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_naushehroferoze"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_naushehroferoze_nx0081" model="hrmis.facility.type">
+        <field name="name">(EYE CLINIC) CIVIL HOSPITAL MORO</field>
+        <field name="facility_code">NX0081</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_naushehroferoze"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_nawabshah_sb0108" model="hrmis.facility.type">
+        <field name="name">PEOPLES MEDICAL COLLEGE HOSPITAL BENAZIR ABAD</field>
+        <field name="facility_code">SB0108</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_nawabshah"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_nawabshah_sb0119" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL SAKRAND (S) BENAZIR</field>
+        <field name="facility_code">SB0119</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_nawabshah"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sanghar_sn0081" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL DHQ HOSPITAL SANGHAR</field>
+        <field name="facility_code">SN0081</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sanghar"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sanghar_sn0082" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL SINJHORO SANGHAR</field>
+        <field name="facility_code">SN0082</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sanghar"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sanghar_sn0083" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL TANDO ADAM SANGHAR</field>
+        <field name="facility_code">SN0083</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sanghar"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sanghar_sn0084" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL KHIPRO SANGHAR</field>
+        <field name="facility_code">SN0084</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sanghar"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_shikarpur_sq0077" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL SHIKARPUR</field>
+        <field name="facility_code">SQ0077</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_shikarpur"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_shikarpur_sq0078" model="hrmis.facility.type">
+        <field name="name">GEN HOSPITAL CLINICS (MS TALUKA) SHIKARPUR</field>
+        <field name="facility_code">SQ0078</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_shikarpur"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_shikarpur_sq0082" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL SHIKARPUR</field>
+        <field name="facility_code">SQ0082</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_shikarpur"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_shikarpur_sq0083" model="hrmis.facility.type">
+        <field name="name">HEERA NAND GANGA BAI WOMEN HOSPITAL SHIKARPUR</field>
+        <field name="facility_code">SQ0083</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_shikarpur"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sujawal_sl0109" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL M/BATHORO SAJWAL</field>
+        <field name="facility_code">SL0109</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sujawal"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sujawal_sl0110" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL SIJAWAL SAJWAL</field>
+        <field name="facility_code">SL0110</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sujawal"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sujawal_sl0111" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL JATI SAJWAL</field>
+        <field name="facility_code">SL0111</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sujawal"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sukkur_sy0142" model="hrmis.facility.type">
+        <field name="name">GHULAM MUHAMMAD MAHAR MEDICAL COLLEGE HOSPITAL SUKKUR</field>
+        <field name="facility_code">SY0142</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sukkur"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sukkur_sy0143" model="hrmis.facility.type">
+        <field name="name">ANWAR PARACHA HOSPITAL SUKKUR</field>
+        <field name="facility_code">SY0143</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sukkur"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sukkur_sy0146" model="hrmis.facility.type">
+        <field name="name">GOVERNMENT HOSPITAL BAGARJI SUKKUR</field>
+        <field name="facility_code">SY0146</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sukkur"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sukkur_sy0154" model="hrmis.facility.type">
+        <field name="name">MEDICAL SUPRINDENTAL HOSPITAL PANO AKIL SUKKUR</field>
+        <field name="facility_code">SY0154</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sukkur"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_sukkur_sy0155" model="hrmis.facility.type">
+        <field name="name">MEDICAL SUPRINDENTAL HOSPITAL ROHRI SUKK UR</field>
+        <field name="facility_code">SY0155</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_sukkur"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_tando_allah_yar_tq0054" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL TANDO ALLAHYAR</field>
+        <field name="facility_code">TQ0054</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_tando_allah_yar"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_tando_m_khan_tn0075" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL TANDO MUHAMMAD KHAN</field>
+        <field name="facility_code">TN0075</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_tando_m_khan"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_tando_m_khan_tn0076" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITALS BHULRI SHAH KARIM T M KHAN</field>
+        <field name="facility_code">TN0076</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_tando_m_khan"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_tando_m_khan_tn0077" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITALS TANDO GULAM HYDER T M KHAN</field>
+        <field name="facility_code">TN0077</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_tando_m_khan"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_tando_m_khan_tn0254" model="hrmis.facility.type">
+        <field name="name">TEN (10) BEDED HOSPITAL BARCHANI DISTRICT TANDO MUHAMMAD KHAN</field>
+        <field name="facility_code">TN0254</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_tando_m_khan"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_thatta_tx0096" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL THATTA</field>
+        <field name="facility_code">TX0096</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_thatta"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_thatta_tx0097" model="hrmis.facility.type">
+        <field name="name">MS TALUKA HOSPITAL M/SAKRO THATTA</field>
+        <field name="facility_code">TX0097</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_thatta"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_umerkot_ut0064" model="hrmis.facility.type">
+        <field name="name">DHQ HOSPITAL UMERKOT</field>
+        <field name="facility_code">UT0064</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_umerkot"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_umerkot_ut0065" model="hrmis.facility.type">
+        <field name="name">TALUKA HOSPITAL SAMARO UMERKOT</field>
+        <field name="facility_code">UT0065</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_umerkot"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_umerkot_ut0066" model="hrmis.facility.type">
+        <field name="name">TALUKA HOSPITAL PITHORO UMERKOT</field>
+        <field name="facility_code">UT0066</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_umerkot"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="facility_umerkot_ut0067" model="hrmis.facility.type">
+        <field name="name">TALUKA HOSPITAL KUNRI UMERKOT</field>
+        <field name="facility_code">UT0067</field>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_umerkot"/>
+        <field name="category">hospital</field>
+        <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
+        <field name="active">True</field>
+    </record>
+
+  </data>
+</odoo>

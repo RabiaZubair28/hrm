@@ -1,0 +1,537 @@
+/** @odoo-module **/
+
+// Keep this file small: only enhance the HRMIS leave form.
+
+function _qs(root, sel) {
+  return root ? root.querySelector(sel) : null;
+}
+
+function _escapeHtml(s) {
+  return String(s || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function _setSelectOptions(selectEl, options, keepValue) {
+  if (!selectEl) return;
+  const current = keepValue ? selectEl.value : "";
+  // Keep the first placeholder option
+  const placeholder =
+    selectEl.querySelector("option[value='']")?.outerHTML ||
+    '<option value="">Select leave type</option>';
+  selectEl.innerHTML = placeholder;
+  for (const opt of options || []) {
+    const o = document.createElement("option");
+    o.value = String(opt.id);
+    o.textContent = opt.name;
+    // Best-effort: keep extra metadata if the API provides it
+    if (typeof opt.support_document !== "undefined") {
+      o.dataset.supportDocument = opt.support_document ? "1" : "0";
+    }
+    if (typeof opt.support_document_note !== "undefined") {
+      o.dataset.supportDocumentNote = opt.support_document_note || "";
+    }
+    selectEl.appendChild(o);
+  }
+  if (
+    keepValue &&
+    current &&
+    [...selectEl.options].some((o) => o.value === current)
+  ) {
+    selectEl.value = current;
+  } else {
+    selectEl.value = "";
+  }
+}
+
+function _renderApproverSteps(panelEl, steps) {
+  const emptyEl = _qs(panelEl, ".js-hrmis-approver-empty");
+  const stepsEl = _qs(panelEl, ".js-hrmis-approver-steps");
+  if (!stepsEl) return;
+
+  const has = Array.isArray(steps) && steps.length > 0;
+  if (emptyEl) emptyEl.style.display = has ? "none" : "";
+  stepsEl.style.display = has ? "" : "none";
+  if (!has) {
+    stepsEl.innerHTML = "";
+    return;
+  }
+
+  const html = [];
+  for (const st of steps) {
+    const stepNo = st?.step;
+    const approvers = st?.approvers || [];
+    html.push(
+      `<div class="hrmis-approver-step">
+        <div class="hrmis-approver-step__title">Step ${_escapeHtml(
+          stepNo,
+        )}</div>
+        <div class="hrmis-approver-step__list">
+          ${approvers
+            .map((a) => {
+              const name = _escapeHtml(a?.name || "");
+              const seq = _escapeHtml(a?.sequence ?? "");
+              const stype = _escapeHtml(a?.sequence_type || "sequential");
+              const job = _escapeHtml(a?.job_title || "");
+              const dept = _escapeHtml(a?.department || "");
+              const meta = [job, dept].filter(Boolean).join(" • ");
+              return `<div class="hrmis-approver-step__item">
+                <div class="hrmis-approver-step__row">
+                  <div class="hrmis-approver-step__name">${name}</div>
+                  <div class="hrmis-approver-step__badge">${stype}</div>
+                </div>
+                <div class="hrmis-approver-step__sub">Seq: ${seq}${
+                  meta ? ` — ${meta}` : ""
+                }</div>
+              </div>`;
+            })
+            .join("")}
+        </div>
+      </div>`,
+    );
+  }
+  stepsEl.innerHTML = html.join("");
+}
+
+function _ensureInlineAlert(formEl, kind) {
+  const cls =
+    kind === "success" ? "hrmis-alert--success" : "hrmis-alert--error";
+  const existing = formEl?.querySelector(`.hrmis-alert.${cls}`);
+  if (existing) return existing;
+
+  // Prefer inserting inside the form so it stays visible without relying on URL params.
+  const el = document.createElement("div");
+  el.className = `hrmis-alert ${cls} js-hrmis-inline-alert`;
+  el.style.display = "none";
+  const grid = formEl.querySelector(".hrmis-form__grid");
+  if (grid) {
+    formEl.insertBefore(el, grid);
+  } else {
+    formEl.prepend(el);
+  }
+  return el;
+}
+
+function _showInlineAlert(formEl, kind, msg) {
+  const el = _ensureInlineAlert(formEl, kind);
+  if (!el) return;
+  el.textContent = msg || "";
+  el.style.display = msg ? "" : "none";
+  if (msg) {
+    try {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch {
+      // ignore
+    }
+  }
+}
+
+async function _refreshApprovers(formEl) {
+  const url = formEl?.dataset?.leaveApproversUrl;
+  const employeeId = formEl?.dataset?.employeeId;
+  const leaveTypeEl = _qs(formEl, ".js-hrmis-leave-type");
+  const panelEl = document.querySelector(".js-hrmis-approver-panel");
+  if (!url || !employeeId || !leaveTypeEl || !panelEl) return;
+
+  const leaveTypeId = leaveTypeEl.value;
+  if (!leaveTypeId) {
+    _renderApproverSteps(panelEl, []);
+    return;
+  }
+
+  const params = new URLSearchParams({
+    employee_id: employeeId,
+    leave_type_id: leaveTypeId,
+  });
+
+  try {
+    const resp = await fetch(`${url}?${params.toString()}`, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (!resp.ok) {
+      _renderApproverSteps(panelEl, []);
+      return;
+    }
+    const data = await resp.json().catch(() => null);
+    if (!data || !data.ok) {
+      _renderApproverSteps(panelEl, []);
+      return;
+    }
+    _renderApproverSteps(panelEl, data.steps || []);
+  } catch {
+    _renderApproverSteps(panelEl, []);
+  }
+}
+
+async function _refreshLeaveTypes(formEl) {
+  const url = formEl?.dataset?.leaveTypesUrl;
+  const employeeId = formEl?.dataset?.employeeId;
+  const dateFromEl = _qs(formEl, ".js-hrmis-date-from");
+  const selectEl = _qs(formEl, ".js-hrmis-leave-type");
+  if (!url || !employeeId || !dateFromEl || !selectEl) return;
+
+  const params = new URLSearchParams({
+    employee_id: employeeId,
+    date_from: dateFromEl.value || "",
+  });
+
+  try {
+    const resp = await fetch(`${url}?${params.toString()}`, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (!resp.ok) return;
+    const data = await resp.json().catch(() => null);
+    if (!data || !data.ok) return;
+    _setSelectOptions(selectEl, data.leave_types || [], true);
+    _updateSupportDocUI(formEl);
+    // _refreshApprovers(formEl);
+  } catch {
+    // Ignore - keep UX stable if endpoint isn't reachable
+  }
+}
+
+function _updateSupportDocUI(formEl) {
+  const selectEl = _qs(formEl, ".js-hrmis-leave-type");
+  const boxEl = _qs(formEl, ".js-hrmis-support-doc");
+  const noteEl = _qs(formEl, ".js-hrmis-support-doc-note");
+  const fileEl = _qs(formEl, ".js-hrmis-support-doc-file");
+  const requiredMarkEl = _qs(formEl, ".js-hrmis-support-doc-required");
+  const labelEl = _qs(formEl, ".js-hrmis-support-doc-label");
+  if (!selectEl || !boxEl || !noteEl || !fileEl) return;
+
+  const opt = selectEl.selectedOptions?.[0];
+  const required = opt?.dataset?.supportDocument === "1";
+  const note = (opt?.dataset?.supportDocumentNote || "").trim();
+
+  // Always show the upload field; only toggle required + helper text.
+  if (requiredMarkEl) requiredMarkEl.style.display = required ? "" : "none";
+  if (labelEl) {
+    // Show the “label” next to the field title when required (e.g. “(Medical certificate)”)
+    labelEl.textContent = required && note ? ` (${note})` : "";
+  }
+  noteEl.textContent = required
+    ? note || "Please upload the required supporting document."
+    : "Optional.";
+  fileEl.required = !!required;
+}
+
+function _syncProfileTabsActiveClass() {
+  // The user profile page uses Bootstrap tabs which toggle `.active`.
+  // Requirement: the active tab must also carry `.is-active` (HRMIS styling hook).
+  const root = document;
+  const tabs = [...root.querySelectorAll(".hrmis-tabs--profile .hrmis-tab")];
+  if (!tabs.length) return;
+
+  const setActive = (activeEl) => {
+    for (const t of tabs) t.classList.remove("is-active");
+    if (activeEl) activeEl.classList.add("is-active");
+  };
+
+  // Initial state (page load)
+  setActive(root.querySelector(".hrmis-tabs--profile .hrmis-tab.active"));
+
+  // Bootstrap event (preferred)
+  root.addEventListener("shown.bs.tab", (ev) => {
+    const target = ev?.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (!target.closest(".hrmis-tabs--profile")) return;
+    if (!target.classList.contains("hrmis-tab")) return;
+    setActive(target);
+  });
+
+  // Fallback for pages without Bootstrap JS (best-effort).
+  root.addEventListener("click", (ev) => {
+    const target = ev?.target instanceof Element ? ev.target : null;
+    const btn = target?.closest?.(".hrmis-tabs--profile .hrmis-tab");
+    if (!(btn instanceof HTMLElement)) return;
+    // Bootstrap applies `.active` after click; defer to next tick.
+    setTimeout(() => {
+      setActive(
+        root.querySelector(".hrmis-tabs--profile .hrmis-tab.active") || btn,
+      );
+    }, 0);
+  });
+}
+
+function _syncEndDateMin(formEl) {
+  const dateFromEl = _qs(formEl, ".js-hrmis-date-from");
+  const dateToEl = _qs(formEl, ".js-hrmis-date-to");
+  if (!dateFromEl || !dateToEl) return;
+
+  const fromVal = (dateFromEl.value || "").trim();
+  if (!fromVal) return;
+
+  // HTML date input uses YYYY-MM-DD.
+  const fromDate = new Date(`${fromVal}T00:00:00`);
+  if (Number.isNaN(fromDate.getTime())) return;
+
+  // End date must be >= start date (allow 1-day leave).
+  const minTo = new Date(fromDate);
+  const yyyy = String(minTo.getFullYear()).padStart(4, "0");
+  const mm = String(minTo.getMonth() + 1).padStart(2, "0");
+  const dd = String(minTo.getDate()).padStart(2, "0");
+  const minVal = `${yyyy}-${mm}-${dd}`;
+
+  dateToEl.min = minVal;
+
+  const curTo = (dateToEl.value || "").trim();
+  if (curTo && curTo < minVal) {
+    dateToEl.value = minVal;
+  }
+  if (!curTo) {
+    // If empty, keep it empty; user will pick. (Template defaults to today though.)
+    // No-op.
+  }
+}
+
+function _isLeapYear(y) {
+  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+}
+
+function _toYmd(d) {
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
+  const yyyy = String(d.getUTCFullYear()).padStart(4, "0");
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function _parseYmdToUtcDate(ymd) {
+  const s = String(ymd || "").trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!y || !mo || !d) return null;
+  // UTC to avoid timezone off-by-one issues.
+  return new Date(Date.UTC(y, mo - 1, d));
+}
+
+function _addYearsSafeUtc(baseUtcDate, years) {
+  if (!(baseUtcDate instanceof Date) || Number.isNaN(baseUtcDate.getTime()))
+    return null;
+  const y0 = baseUtcDate.getUTCFullYear();
+  const m0 = baseUtcDate.getUTCMonth() + 1;
+  const d0 = baseUtcDate.getUTCDate();
+  const y = y0 + Number(years || 0);
+  let d = d0;
+  // Match Python/dateutil behavior for Feb 29 on non-leap years => Feb 28.
+  if (m0 === 2 && d0 === 29 && !_isLeapYear(y)) d = 28;
+  return new Date(Date.UTC(y, m0 - 1, d));
+}
+
+function _syncDateInputsEnabledAndRange(formEl) {
+  const leaveTypeEl = _qs(formEl, ".js-hrmis-leave-type");
+  const dateFromEl = _qs(formEl, ".js-hrmis-date-from");
+  const dateToEl = _qs(formEl, ".js-hrmis-date-to");
+  if (!leaveTypeEl || !dateFromEl || !dateToEl) return;
+
+  const leaveTypeId = String(leaveTypeEl.value || "").trim();
+  const lprTypeId = String(formEl?.dataset?.lprLeaveTypeId || "").trim();
+  const dobStr = String(formEl?.dataset?.employeeDob || "").trim();
+
+  // Disable dates until a leave type is selected.
+  const enabled = !!leaveTypeId;
+  dateFromEl.disabled = !enabled;
+  dateToEl.disabled = !enabled;
+  if (!enabled) return;
+
+  // Default behavior: keep current "min=today" (as set by template) and let
+  // the server enforce other constraints.
+  const todayLocal = new Date();
+  const todayUtc = new Date(
+    Date.UTC(
+      todayLocal.getFullYear(),
+      todayLocal.getMonth(),
+      todayLocal.getDate(),
+    ),
+  );
+
+  if (!lprTypeId || leaveTypeId !== lprTypeId) {
+    // Reset any LPR constraints.
+    const minDefault =
+      dateFromEl.getAttribute("data-default-min") || dateFromEl.min;
+    const maxDefault = dateFromEl.getAttribute("data-default-max") || "";
+    if (!dateFromEl.getAttribute("data-default-min"))
+      dateFromEl.setAttribute("data-default-min", minDefault || "");
+    if (!dateToEl.getAttribute("data-default-min"))
+      dateToEl.setAttribute("data-default-min", dateToEl.min || "");
+
+    dateFromEl.min = minDefault || "";
+    dateToEl.min = dateFromEl.min || "";
+    dateFromEl.max = maxDefault || "";
+    dateToEl.max = "";
+    _syncEndDateMin(formEl);
+    return;
+  }
+
+  // LPR selected: restrict selectable dates to [59th birthday, 60th birthday).
+  const dobUtc = _parseYmdToUtcDate(dobStr);
+  if (!dobUtc) {
+    // DOB missing: keep inputs enabled but warn (server will block on submit too).
+    _showInlineAlert(
+      formEl,
+      "error",
+      "Date of birth is required to apply for LPR leave.",
+    );
+    return;
+  }
+
+  const startAllowed = _addYearsSafeUtc(dobUtc, 59);
+  const endExclusive = _addYearsSafeUtc(dobUtc, 60);
+  if (!startAllowed || !endExclusive) return;
+
+  const endAllowed = new Date(endExclusive.getTime() - 24 * 60 * 60 * 1000);
+  // The website flow already blocks using today's date, so avoid offering it in the picker.
+  const tomorrowUtc = new Date(todayUtc.getTime() + 24 * 60 * 60 * 1000);
+  const minUtc =
+    startAllowed.getTime() > tomorrowUtc.getTime() ? startAllowed : tomorrowUtc;
+
+  const minStr = _toYmd(minUtc);
+  const maxStr = _toYmd(endAllowed);
+
+  if (maxStr && minStr && maxStr < minStr) {
+    // No selectable range.
+    dateFromEl.disabled = true;
+    dateToEl.disabled = true;
+    _showInlineAlert(formEl, "error", "you cannot take LPR in these dates");
+    return;
+  }
+
+  dateFromEl.min = minStr;
+  dateToEl.min = minStr;
+  dateFromEl.max = maxStr;
+  dateToEl.max = maxStr;
+
+  // Clamp existing values into range.
+  const curFrom = (dateFromEl.value || "").trim();
+  const curTo = (dateToEl.value || "").trim();
+  let newFrom = curFrom;
+  let newTo = curTo;
+  if (!newFrom || newFrom < minStr) newFrom = minStr;
+  if (maxStr && newFrom > maxStr) newFrom = maxStr;
+  if (!newTo || newTo < newFrom) newTo = newFrom;
+  if (maxStr && newTo > maxStr) newTo = maxStr;
+  dateFromEl.value = newFrom;
+  dateToEl.value = newTo;
+
+  _showInlineAlert(formEl, "error", "");
+}
+
+function _init() {
+  const formEl = document.querySelector(".hrmis-leave-request-form");
+  _syncProfileTabsActiveClass();
+  if (!formEl) return;
+
+  // Submit via AJAX so validation errors (especially overlaps) do not navigate away.
+  formEl.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+
+    _showInlineAlert(formEl, "error", "");
+    _showInlineAlert(formEl, "success", "");
+
+    const submitBtn = formEl.querySelector('button[type="submit"]');
+    const prevBtnText = submitBtn?.textContent;
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      const fd = new FormData(formEl);
+      const resp = await fetch(formEl.action, {
+        method: "POST",
+        body: fd,
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok || !data || data.ok === false) {
+        // If the server returns HTML (e.g., proxy/CSRF errors), JSON parsing fails
+        // and `data` will be null. Provide a slightly more useful fallback.
+        let msg = data?.error;
+        // If we got redirected to an HTML page with ?error=..., surface that message.
+        if (!msg) {
+          try {
+            const u = new URL(resp?.url || "", window.location.origin);
+            const err = u.searchParams.get("error");
+            if (err) msg = err;
+          } catch {
+            // ignore
+          }
+        }
+        if (!msg) {
+          msg = `Could not submit leave request${resp?.status ? ` (HTTP ${resp.status})` : ""}`;
+        }
+        _showInlineAlert(formEl, "error", msg);
+        return;
+      }
+
+      const redirect = data?.redirect;
+      if (redirect) {
+        window.location.href = redirect;
+      } else {
+        _showInlineAlert(formEl, "success", "Leave request submitted");
+      }
+    } catch {
+      _showInlineAlert(formEl, "error", "Could not submit leave request");
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        if (typeof prevBtnText === "string")
+          submitBtn.textContent = prevBtnText;
+      }
+    }
+  });
+
+  const dateFromEl = _qs(formEl, ".js-hrmis-date-from");
+  if (dateFromEl) {
+    dateFromEl.addEventListener("change", () => {
+      _syncEndDateMin(formEl);
+      _refreshLeaveTypes(formEl);
+    });
+    dateFromEl.addEventListener("blur", () => {
+      _syncEndDateMin(formEl);
+      _refreshLeaveTypes(formEl);
+    });
+  }
+
+  const leaveTypeEl = _qs(formEl, ".js-hrmis-leave-type");
+  if (leaveTypeEl) {
+    leaveTypeEl.addEventListener("change", () => {
+      _updateSupportDocUI(formEl);
+      _syncDateInputsEnabledAndRange(formEl);
+    });
+  }
+
+  _updateSupportDocUI(formEl);
+  // _refreshApprovers(formEl);
+  // Ensure the leave-type dropdown reflects newly approved allocations
+  // even when the user navigates back to this page (BFCache) or doesn't
+  // change the date field after approvals.
+  _syncEndDateMin(formEl);
+  _refreshLeaveTypes(formEl);
+  _syncDateInputsEnabledAndRange(formEl);
+}
+
+// In some Odoo pages, assets can load after DOMContentLoaded.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", _init);
+} else {
+  _init();
+}
+
+// Handle browser back/forward cache (page restored without a full reload).
+window.addEventListener("pageshow", () => {
+  const formEl = document.querySelector(".hrmis-leave-request-form");
+  if (!formEl) return;
+  _refreshLeaveTypes(formEl);
+});

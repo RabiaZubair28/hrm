@@ -1,0 +1,10 @@
+<odoo>
+    <template id="hrmis_ui_layout_hide_transfer_for_dho"
+              inherit_id="hr_holidays_updates.hrmis_ui_layout">
+
+        <xpath expr="//a[contains(@t-att-href, '/hrmis/transfer')]" position="attributes">
+            <attribute name="t-if">not request.env.user.has_group('custom_login.group_ms_dho')</attribute>
+        </xpath>
+
+    </template>
+</odoo>

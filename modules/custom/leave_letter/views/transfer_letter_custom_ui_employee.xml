@@ -1,0 +1,38 @@
+<odoo>
+    <template id="transfer_letter_add_download_notification_form"
+              inherit_id="hrmis_transfer.hrmis_transfer_history">
+
+        <xpath expr="//a[contains(@class,'hrmis-btn--outline') and contains(@t-att-href, 'history-view')]" position="replace">
+
+            <div>
+                <t t-if="tr.state == 'approved' and tr.transfer_notification_id">
+                    <a t-att-href="'/transfer_letter/pdf/%s' % tr.transfer_notification_id.id"
+                       class="hrmis-btn hrmis-btn--outline"
+                       target="_blank">
+                        Download 
+                    </a>
+                </t>
+
+                <t t-else="">
+    <span style="
+        display: inline-block;
+        font-size: 12px;
+        color: #888;
+        padding: 6px 12px;
+        border: 1px dashed #ccc;
+        border-radius: 6px;
+        background: #f5f5f5;
+        min-width: 100px;
+        text-align: center;
+        white-space: normal;
+        overflow-wrap: break-word;">
+        No notification available
+    </span>
+</t>
+
+            </div>
+
+        </xpath>
+
+    </template>
+</odoo>
