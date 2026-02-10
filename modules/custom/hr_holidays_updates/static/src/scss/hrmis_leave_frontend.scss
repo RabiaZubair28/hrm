@@ -35,7 +35,7 @@
   display: grid;
   /* Let the right side (notifications + user stack) take what it needs,
      and allow the center search column to shrink to avoid overlap. */
-  grid-template-columns: 320px minmax(0, 1fr) minmax(0, max-content);
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: center;
   padding: 0 24px;
   position: sticky;
@@ -181,6 +181,7 @@
   .hrmis-topbar__right {
     justify-content: flex-start;
     flex-wrap: wrap;
+    gap: 10px;
   }
   .hrmis-user-stack {
     flex-wrap: wrap;
@@ -236,6 +237,27 @@
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
   z-index: 950;
   color: #1b1f20;
+}
+
+@media (max-width: 640px) {
+  .hrmis-notif-dropdown {
+    position: fixed;
+    top: 92px; /* below topbar */
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - 120px);
+  }
+  .hrmis-notif-dropdown__list {
+    max-height: calc(100vh - 220px);
+  }
+  .hrmis-notif-item {
+    grid-template-columns: 1fr;
+  }
+  .hrmis-notif-item__actions {
+    justify-content: flex-start;
+  }
 }
 .hrmis-notif-dropdown__head,
 .hrmis-notif-dropdown__foot {
@@ -1315,9 +1337,35 @@
     border-right: none !important;
     border-bottom: 2px solid #2a2f31;
     white-space: normal;
+    text-align: center;
   }
   .hrmis-panel__header--tabs .hrmis-tab:last-child {
     border-bottom: none;
+  }
+
+  /* Center + full-width actions/buttons on profile related pages + modals */
+  .hrmis-form__actions {
+    justify-content: stretch;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .hrmis-btn--lg,
+  .hrmis-form__actions .hrmis-btn,
+  .hrmis-form__actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .modal-footer .btn,
+  .modal-footer .hrmis-btn {
+    width: 100%;
+    justify-content: center;
   }
 
   .hrmis-kv--grid .hrmis-kv__item {
