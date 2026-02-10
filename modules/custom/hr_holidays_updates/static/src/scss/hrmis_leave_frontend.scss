@@ -38,6 +38,33 @@
   grid-template-columns: 320px minmax(0, 1fr) minmax(0, max-content);
   align-items: center;
   padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 1400;
+}
+
+.hrmis-topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.hrmis-nav-toggle {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+.hrmis-nav-toggle i {
+  font-size: 18px;
+  line-height: 1;
 }
 
 .hrmis-topbar__right {
@@ -315,14 +342,41 @@
 
 .hrmis-body {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 1fr;
+  position: relative;
+}
+
+.hrmis-drawer-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1100;
 }
 
 .hrmis-sidebar {
   background: #ffffff;
   border-right: 1px solid #cfd7da;
-  min-height: calc(100vh - 92px);
+  min-height: 100vh;
   padding: 18px 16px 14px;
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 320px;
+  max-width: calc(100vw - 70px);
+  z-index: 1200;
+  transform: translateX(-105%);
+  transition: transform 220ms ease;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.hrmis-app.is-nav-open .hrmis-sidebar {
+  transform: translateX(0);
+}
+.hrmis-app.is-nav-open .hrmis-drawer-backdrop {
+  display: block;
 }
 
 .hrmis-brand {
@@ -1214,16 +1268,111 @@
     position: static;
   }
   
-  .hrmis-body {
+  .hrmis-content {
+    padding: 16px 14px;
+  }
+
+  .hrmis-panel__header--tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .hrmis-tab {
+    width: auto;
+    min-width: 220px;
+    white-space: normal;
+  }
+
+  .hrmis-kv--grid .hrmis-kv__item {
     grid-template-columns: 1fr;
+    row-gap: 4px;
   }
-  .hrmis-sidebar {
-    display: none;
+  .hrmis-kv--grid .hrmis-kv__k {
+    opacity: 0.75;
+    font-size: 12px;
+    white-space: normal;
   }
+
   .hrmis-kv--grid {
     grid-template-columns: 1fr;
   }
   .hrmis-kv--grid .hrmis-kv__item:nth-child(odd) {
     border-right: none;
+  }
+}
+
+/* Profile update requests: correct columns + responsive card layout */
+.hrmis-table--profile-requests .hrmis-table__head,
+.hrmis-table--profile-requests .hrmis-table__row {
+  grid-template-columns: 1.4fr 2.4fr 0.9fr 1.1fr 120px;
+}
+.hrmis-table--profile-requests .hrmis-table__row > div:nth-child(2) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: initial;
+}
+
+@media (max-width: 900px) {
+  .hrmis-table--profile-requests .hrmis-table__head {
+    display: none;
+  }
+  .hrmis-table--profile-requests .hrmis-table__row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px 12px;
+    margin: 12px 0;
+    border: 1px solid #cfd7da;
+    border-radius: 10px;
+  }
+  .hrmis-table--profile-requests .hrmis-table__row > div {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: initial;
+  }
+  .hrmis-table--profile-requests .hrmis-table__row > div::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 12px;
+    font-weight: 900;
+    opacity: 0.72;
+    margin-bottom: 4px;
+  }
+  .hrmis-table--profile-requests .hrmis-table__row > div[data-label="Employee"]::before {
+    display: none;
+  }
+}
+
+/* Profile approvals (compact 3-col table + mobile cards) */
+.hrmis-table--profile-approvals .hrmis-table__head,
+.hrmis-table--profile-approvals .hrmis-table__row {
+  grid-template-columns: 1.6fr 1.2fr 140px;
+}
+
+@media (max-width: 900px) {
+  .hrmis-table--profile-approvals .hrmis-table__head {
+    display: none;
+  }
+  .hrmis-table--profile-approvals .hrmis-table__row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px 12px;
+    margin: 12px 0;
+    border: 1px solid #cfd7da;
+    border-radius: 10px;
+  }
+  .hrmis-table--profile-approvals .hrmis-table__row > div {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: initial;
+  }
+  .hrmis-table--profile-approvals .hrmis-table__row > div::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 12px;
+    font-weight: 900;
+    opacity: 0.72;
+    margin-bottom: 4px;
+  }
+  .hrmis-table--profile-approvals .hrmis-table__row > div[data-label="Employee"]::before {
+    display: none;
   }
 }

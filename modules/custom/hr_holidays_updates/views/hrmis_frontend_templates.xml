@@ -155,6 +155,12 @@
             <div class="hrmis-app">
                 <div class="hrmis-topbar">
                     <div class="hrmis-topbar__left">
+                        <button class="hrmis-nav-toggle js-hrmis-nav-toggle"
+                                type="button"
+                                aria-label="Toggle menu"
+                                aria-expanded="false">
+                            <i class="fa fa-bars" aria-hidden="true"></i>
+                        </button>
                         <t t-if="active_menu == 'services'">
                             <div class="hrmis-topbar__title">Facility Name<br/>District</div>
                         </t>
@@ -244,6 +250,7 @@
                 </div>
 
                 <div class="hrmis-body">
+                    <div class="hrmis-drawer-backdrop js-hrmis-drawer-backdrop" aria-hidden="true"></div>
                     <aside class="hrmis-sidebar">
                         <div class="hrmis-brand">
                               <div class="hrmis-brand__seal">
