@@ -351,25 +351,39 @@ class HrmisTransferRequest(models.Model):
             if rec.env.user not in rec.pending_approver_ids:
                 raise UserError("You are not authorized to approve this request at this stage.")
 
-            # Capture current approver before approval (sequential -> single user).
-            before_users = rec._get_active_pending_users()
-
             rec.action_approve_by_user(comment=comment)
 
-            # Notify the newly-current next approver only (DS -> AS -> SS -> ...).
+        return True
+
+    def action_approve_by_user(self, comment=None):
+        """
+        Approve current step for current user, then notify ONLY the newly-current
+        next approver (DS -> AS -> SS -> Minister ...).
+
+        We hook here (not only `action_approve`) because different UIs/routes may
+        call `action_approve_by_user` directly.
+        """
+        before_active_by_id = {rec.id: set(rec._get_active_pending_users().ids) for rec in self}
+
+        res = super().action_approve_by_user(comment=comment)
+
+        for rec in self:
             after_users = rec._get_active_pending_users()
-            if not after_users:
-                continue
-            if set(after_users.ids) == set(before_users.ids):
-                continue
-            if rec.env.user.id in after_users.ids:
+            after_ids = set(after_users.ids)
+            before_ids = before_active_by_id.get(rec.id, set())
+
+            # Notify only when chain advanced to a different "current" approver.
+            if not after_ids or after_ids == before_ids:
                 continue
 
-            # Notification helper is mixed in via hrmis_transfer/models/transfer_notifications.py
+            # Don't notify the approver who just approved.
+            if rec.env.user.id in after_ids:
+                continue
+
             if hasattr(rec, "_notify_next_approver"):
                 rec._notify_next_approver(after_users)
 
-        return True
+        return res
 
 
     def action_reject(self):
