@@ -351,7 +351,23 @@ class HrmisTransferRequest(models.Model):
             if rec.env.user not in rec.pending_approver_ids:
                 raise UserError("You are not authorized to approve this request at this stage.")
 
+            # Capture current approver before approval (sequential -> single user).
+            before_users = rec._get_active_pending_users()
+
             rec.action_approve_by_user(comment=comment)
+
+            # Notify the newly-current next approver only (DS -> AS -> SS -> ...).
+            after_users = rec._get_active_pending_users()
+            if not after_users:
+                continue
+            if set(after_users.ids) == set(before_users.ids):
+                continue
+            if rec.env.user.id in after_users.ids:
+                continue
+
+            # Notification helper is mixed in via hrmis_transfer/models/transfer_notifications.py
+            if hasattr(rec, "_notify_next_approver"):
+                rec._notify_next_approver(after_users)
 
         return True
 

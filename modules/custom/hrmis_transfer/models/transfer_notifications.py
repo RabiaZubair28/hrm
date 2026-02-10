@@ -68,36 +68,6 @@ class HrmisTransferRequestNotifications(models.Model):
                 rec._notify_employee(f"{desc} has been submitted.")
         return res
 
-    def action_approve(self, comment=None):
-        """
-        Send transfer alerts to approvers *step-by-step*.
-
-        After an approver approves (action_approve button), notify ONLY the newly-current
-        next approver (DS -> AS -> ...). This avoids sending alerts to everyone on submit.
-        """
-        before_active_by_id = {
-            rec.id: set(rec._get_active_pending_users().ids) for rec in self
-        }
-
-        res = super().action_approve(comment=comment)
-
-        for rec in self:
-            after_users = rec._get_active_pending_users()
-            after_ids = set(after_users.ids)
-            before_ids = before_active_by_id.get(rec.id, set())
-
-            # Only notify when the "current approver" changes (i.e., chain advanced).
-            if not after_ids or after_ids == before_ids:
-                continue
-
-            # Safety: never re-notify the approver who just approved.
-            if rec.env.user.id in after_ids:
-                continue
-
-            rec._notify_next_approver(after_users)
-
-        return res
-
     @api.model_create_multi
     def create(self, vals_list):
         recs = super().create(vals_list)
