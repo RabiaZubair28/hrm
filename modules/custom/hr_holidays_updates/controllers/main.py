@@ -1898,7 +1898,7 @@ class HrmisProfileRequestController(http.Controller):
         leave_lines = []
         leave_calc_items = []  # (leave_type_id, start_date, end_date)
         # Hard-block these leave types even if posted manually
-        blocked_leave_type_keys = {"paidtimeoff", "sicktimeoff"}
+        blocked_leave_type_keys = {"paidtimeoff", "sicktimeoff", "unpaid"}
         for i in range(max(len(l_type), len(l_start), len(l_end))):
             leave_type_id = self._to_int(l_type[i] if i < len(l_type) else "")
             s = (l_start[i] if i < len(l_start) else "").strip()
@@ -1948,12 +1948,15 @@ class HrmisProfileRequestController(http.Controller):
             leave_calc_items.append((leave_type_id, sd, ed))
 
         # Auto-calculate Total Leaves Taken (UI field is read-only).
-        # Rules:
-        # - Half-pay leaves count as 0.5 per inclusive day
-        # - Earned/full-pay/LPR leaves count as 1.0 per inclusive day
+        # Rules (match HRMIS balance logic):
+        # - Half-pay leaves count as ceil(effective_days / 2.0)
+        # - Earned/full-pay/LPR leaves count as effective_days
         # - Without pay / EOL / unpaid / medical / maternity count as 0
         try:
+            import math
+
             total_taken = 0.0
+            LeaveModel = env["hr.leave"].sudo()
             LeaveType = env["hr.leave.type"].sudo()
             for lt_id, sd, ed in leave_calc_items:
                 lt = LeaveType.browse(int(lt_id)).exists()
@@ -1971,10 +1974,17 @@ class HrmisProfileRequestController(http.Controller):
                 else:
                     continue
 
-                days = float((ed - sd).days + 1)
-                total_taken += (days * factor)
+                eff = (
+                    float(LeaveModel._hrmis_effective_days(employee, sd, ed) or 0.0)
+                    if hasattr(LeaveModel, "_hrmis_effective_days")
+                    else float((ed - sd).days + 1)
+                )
+                if factor == 0.5:
+                    total_taken += float(math.ceil(eff / 2.0))
+                else:
+                    total_taken += eff
 
-            # Snap to 0.5 increments
+            # Keep a compact numeric value (UI uses step 0.5).
             total_taken = round(total_taken * 2.0) / 2.0
             vals["hrmis_leaves_taken"] = total_taken
         except Exception:

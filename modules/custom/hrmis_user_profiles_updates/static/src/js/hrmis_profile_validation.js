@@ -449,17 +449,25 @@ function _normLeaveTypeForCalc(name) {
     return String(name || "").trim().toLowerCase();
 }
 
-function _leaveFactorFromTypeName(name) {
+function _leaveContributionFromTypeName(name, effectiveDays) {
     const s = _normLeaveTypeForCalc(name);
     // Explicit 0-count types
-    if (s.includes("without pay") || s.includes("unpaid") || s.includes(" eol") || s.includes("eol")) return 0;
-    if (s.includes("medical") || s.includes("maternity")) return 0;
+    if (
+        s.includes("without pay") ||
+        s.includes("unpaid") ||
+        s.includes(" eol") ||
+        s.includes("eol") ||
+        s.includes("medical") ||
+        s.includes("maternity")
+    )
+        return 0;
 
-    // 0.5-count
-    if (s.includes("half pay")) return 0.5;
+    // Half-pay: follow backend rounding (upper-bound half), e.g. 3 days => 2.
+    if (s.includes("half pay")) return Math.ceil((Number(effectiveDays || 0) || 0) / 2);
 
-    // 1.0-count
-    if (s.includes("full pay") || s.includes("earned") || s.includes("lpr")) return 1.0;
+    // Full-pay / earned / LPR: 1:1 effective days.
+    if (s.includes("full pay") || s.includes("earned") || s.includes("lpr"))
+        return Number(effectiveDays || 0) || 0;
 
     // Default: don't count
     return 0;
@@ -490,16 +498,10 @@ function _recalcLeavesTaken(form) {
         if (_isEmpty(typeSel.value) || _isEmpty(start.value) || _isEmpty(end.value)) return;
 
         const optText = typeSel.selectedOptions?.[0]?.textContent || "";
-        const factor = _leaveFactorFromTypeName(optText);
-        if (!factor) return;
-
         const days = _daysInclusiveLocal(start.value, end.value);
         if (!days) return;
-        total += days * factor;
+        total += _leaveContributionFromTypeName(optText, days);
     });
-
-    // Snap to 0.5 increments
-    total = Math.round(total * 2) / 2;
 
     // Keep as number string. Always set something to satisfy "required".
     out.value = String(total);

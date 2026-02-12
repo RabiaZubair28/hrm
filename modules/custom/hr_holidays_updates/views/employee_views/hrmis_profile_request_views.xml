@@ -143,13 +143,6 @@
                 </div>
 
    
-              <div class="hrmis-field">
-                <label>Total Leaves Taken Since Joining (Days)<span class="req">*</span></label>
-                <input class="hrmis-input js-hrmis-leaves-taken" type="number" step="0.5" min="0" max="365"
-                       name="hrmis_leaves_taken" required="required" readonly="readonly"
-                       t-att-value="req.hrmis_leaves_taken or current_employee.hrmis_leaves_taken or 0"/>
-              </div>
-
               <!-- Contact + Merit (adjacent) -->
               <div class="hrmis-field">
                 <label>Contact Number<span class="req">*</span></label>
@@ -490,6 +483,7 @@
                     and ('compensatory' not in lt_name)
                     and ('paid time off' not in lt_name)
                     and ('sick time off' not in lt_name)
+                    and (lt_name.strip() != 'unpaid')
                 ">
                   <option t-att-value="lt.id"><t t-esc="lt.name"/></option>
                 </t>
@@ -510,6 +504,21 @@
         </div>
       </div>
     </template>
+
+    <div class="hrmis-field" style="margin-top:12px;">
+      <label>Total Leaves Taken Since Joining (Days)<span class="req">*</span></label>
+      <input class="hrmis-input js-hrmis-leaves-taken"
+             type="number"
+             step="0.5"
+             min="0"
+             max="365"
+             name="hrmis_leaves_taken"
+             required="required"
+             readonly="readonly"
+             style="background:#f3f4f6; color:#6c757d; opacity:0.75; filter: blur(0.15px);"
+             t-att-value="req.hrmis_leaves_taken or current_employee.hrmis_leaves_taken or 0"/>
+      <div class="hrmis-help" style="color:#6c757d;">Auto-calculated from Leave History.</div>
+    </div>
 
   </div>
 </div>
