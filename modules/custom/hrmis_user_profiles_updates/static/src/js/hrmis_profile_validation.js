@@ -402,6 +402,205 @@ function _todayLocalYmd() {
     return _toLocalYmd(d);
 }
 
+/* ---------------------------------------------------------
+ * Lightweight datepicker (for disabling arbitrary dates)
+ * --------------------------------------------------------- */
+let _hrmisDatePickerStyleInjected = false;
+let _hrmisDatePickerPopup = null;
+let _hrmisDatePickerState = null; // { input, monthDate, min, max, disabledRanges }
+
+function _injectHrmisDatePickerStyles() {
+    if (_hrmisDatePickerStyleInjected) return;
+    _hrmisDatePickerStyleInjected = true;
+    const css = `
+      .hrmis-datepop{position:absolute;z-index:100000;background:#fff;border:1px solid #e5e7eb;border-radius:12px;
+        box-shadow:0 8px 28px rgba(0,0,0,.12);padding:10px;min-width:280px;font-family:inherit}
+      .hrmis-datepop__head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+      .hrmis-datepop__btn{border:1px solid #e5e7eb;background:#f9fafb;border-radius:10px;padding:6px 10px;cursor:pointer}
+      .hrmis-datepop__btn:disabled{opacity:.5;cursor:not-allowed}
+      .hrmis-datepop__title{font-weight:700;color:#111827}
+      .hrmis-datepop__grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+      .hrmis-datepop__dow{font-size:12px;color:#6b7280;text-align:center;font-weight:700}
+      .hrmis-datepop__day{height:34px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer}
+      .hrmis-datepop__day[disabled]{opacity:.35;cursor:not-allowed;background:#f3f4f6}
+      .hrmis-datepop__day.is-selected{background:#2563eb;border-color:#2563eb;color:#fff}
+      .hrmis-datepop__day.is-today{border-color:#9ca3af}
+    `;
+    const style = document.createElement("style");
+    style.textContent = css;
+    document.head.appendChild(style);
+}
+
+function _ensureHrmisDatePickerPopup() {
+    _injectHrmisDatePickerStyles();
+    if (_hrmisDatePickerPopup) return _hrmisDatePickerPopup;
+    const el = document.createElement("div");
+    el.className = "hrmis-datepop";
+    el.style.display = "none";
+    document.body.appendChild(el);
+    _hrmisDatePickerPopup = el;
+
+    // Close on outside click / escape
+    document.addEventListener("mousedown", (ev) => {
+        if (!_hrmisDatePickerPopup || _hrmisDatePickerPopup.style.display === "none") return;
+        const t = ev.target;
+        if (t && (_hrmisDatePickerPopup.contains(t) || (_hrmisDatePickerState?.input && _hrmisDatePickerState.input.contains(t)))) return;
+        _closeHrmisDatePicker();
+    });
+    document.addEventListener("keydown", (ev) => {
+        if (ev.key === "Escape") _closeHrmisDatePicker();
+    });
+    return el;
+}
+
+function _closeHrmisDatePicker() {
+    if (_hrmisDatePickerPopup) _hrmisDatePickerPopup.style.display = "none";
+    _hrmisDatePickerState = null;
+}
+
+function _startOfMonth(d) {
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+function _daysInMonthLocal(d) {
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+}
+
+function _ymdForLocal(y, m0, day) {
+    // m0 is 0-based month
+    return _toLocalYmd(new Date(y, m0, day));
+}
+
+function _inDisabledRanges(ymd, ranges) {
+    if (!ymd || !ranges || !ranges.length) return false;
+    for (const r of ranges) {
+        if (!r || !r.start || !r.end) continue;
+        if (ymd >= r.start && ymd <= r.end) return true;
+    }
+    return false;
+}
+
+function _renderHrmisDatePicker() {
+    const popup = _ensureHrmisDatePickerPopup();
+    const st = _hrmisDatePickerState;
+    if (!popup || !st || !st.input) return;
+
+    const monthDate = _startOfMonth(st.monthDate || new Date());
+    const y = monthDate.getFullYear();
+    const m0 = monthDate.getMonth();
+    const selected = (st.input.value || "").trim();
+    const today = _todayLocalYmd();
+
+    // Header
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const title = `${monthNames[m0]} ${y}`;
+
+    // Determine prev/next month availability (based on min/max loosely)
+    const prevMonth = new Date(y, m0 - 1, 1);
+    const nextMonth = new Date(y, m0 + 1, 1);
+    const min = st.min || "";
+    const max = st.max || "";
+    const prevOk = !min || _toLocalYmd(new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0)) >= min;
+    const nextOk = !max || _toLocalYmd(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 1)) <= max;
+
+    popup.innerHTML = `
+      <div class="hrmis-datepop__head">
+        <button type="button" class="hrmis-datepop__btn js-prev"${prevOk ? "" : " disabled"}>&lt;</button>
+        <div class="hrmis-datepop__title">${title}</div>
+        <button type="button" class="hrmis-datepop__btn js-next"${nextOk ? "" : " disabled"}>&gt;</button>
+      </div>
+      <div class="hrmis-datepop__grid js-grid"></div>
+    `;
+
+    const grid = popup.querySelector(".js-grid");
+    if (!grid) return;
+    const dows = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+    for (const d of dows) {
+        const dow = document.createElement("div");
+        dow.className = "hrmis-datepop__dow";
+        dow.textContent = d;
+        grid.appendChild(dow);
+    }
+
+    const firstDay = new Date(y, m0, 1).getDay();
+    const days = _daysInMonthLocal(monthDate);
+    // blanks
+    for (let i = 0; i < firstDay; i++) {
+        const blank = document.createElement("div");
+        grid.appendChild(blank);
+    }
+
+    for (let day = 1; day <= days; day++) {
+        const ymd = _ymdForLocal(y, m0, day);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "hrmis-datepop__day";
+        btn.textContent = String(day);
+
+        const disabled =
+            (min && ymd < min) ||
+            (max && ymd > max) ||
+            _inDisabledRanges(ymd, st.disabledRanges);
+        if (disabled) btn.disabled = true;
+        if (ymd === selected) btn.classList.add("is-selected");
+        if (ymd === today) btn.classList.add("is-today");
+
+        btn.addEventListener("click", () => {
+            st.input.value = ymd;
+            st.input.dispatchEvent(new Event("change", { bubbles: true }));
+            _closeHrmisDatePicker();
+        });
+        grid.appendChild(btn);
+    }
+
+    popup.querySelector(".js-prev")?.addEventListener("click", () => {
+        _hrmisDatePickerState.monthDate = prevMonth;
+        _renderHrmisDatePicker();
+    });
+    popup.querySelector(".js-next")?.addEventListener("click", () => {
+        _hrmisDatePickerState.monthDate = nextMonth;
+        _renderHrmisDatePicker();
+    });
+}
+
+function _openHrmisDatePicker(input, { min = "", max = "", disabledRanges = [] } = {}) {
+    const popup = _ensureHrmisDatePickerPopup();
+    if (!popup) return;
+    const rect = input.getBoundingClientRect();
+    _hrmisDatePickerState = {
+        input,
+        monthDate: _parseLocalYmd(input.value) || new Date(),
+        min,
+        max,
+        disabledRanges,
+    };
+    _renderHrmisDatePicker();
+    popup.style.left = `${Math.max(8, rect.left + window.scrollX)}px`;
+    popup.style.top = `${rect.bottom + window.scrollY + 6}px`;
+    popup.style.display = "block";
+}
+
+function _attachHrmisDatePicker(input, getOptions) {
+    if (!input || input._hrmisDatePickerAttached) return;
+    input._hrmisDatePickerAttached = true;
+    // Force our picker instead of native.
+    try { input.type = "text"; } catch { /* ignore */ }
+    input.setAttribute("inputmode", "none");
+    input.setAttribute("autocomplete", "off");
+    input.readOnly = true;
+    input.addEventListener("click", () => {
+        if (input.disabled) return;
+        const opts = (typeof getOptions === "function" ? getOptions() : {}) || {};
+        _openHrmisDatePicker(input, opts);
+    });
+    input.addEventListener("focus", () => {
+        // On focus, open as well (keyboard navigation).
+        if (input.disabled) return;
+        const opts = (typeof getOptions === "function" ? getOptions() : {}) || {};
+        _openHrmisDatePicker(input, opts);
+    });
+}
+
 function _rangesOverlapYmd(aStart, aEnd, bStart, bEnd) {
     // All args are YYYY-MM-DD; lexicographic compare is safe.
     if (_isEmpty(aStart) || _isEmpty(aEnd) || _isEmpty(bStart) || _isEmpty(bEnd)) return false;
@@ -480,12 +679,24 @@ function _syncLeaveRowDateConstraints(row) {
     start.max = yesterday;
     if (start.value && start.value > yesterday) start.value = yesterday;
 
+    // Attach datepicker with disabled ranges (other leaves)
+    _attachHrmisDatePicker(start, () => ({
+        min: "",
+        max: yesterday,
+        disabledRanges: _collectLeaveRanges(row),
+    }));
+
     // End date: only enable after a start date is chosen.
     if (!start.value) {
         end.disabled = true;
         end.min = "";
         end.max = today; // user requirement: "till today"
         if (end.value) end.value = "";
+        _attachHrmisDatePicker(end, () => ({
+            min: "",
+            max: today,
+            disabledRanges: _collectLeaveRanges(row),
+        }));
         _applyLeaveOverlapRule(row, start);
         return;
     }
@@ -499,6 +710,12 @@ function _syncLeaveRowDateConstraints(row) {
 
     // End date can be selected up to today.
     end.max = today;
+
+    _attachHrmisDatePicker(end, () => ({
+        min: end.min || "",
+        max: today,
+        disabledRanges: _collectLeaveRanges(row),
+    }));
 
     // If range is impossible, disable end input.
     if (end.min && end.max && end.min > end.max) {
