@@ -601,6 +601,22 @@ function _attachHrmisDatePicker(input, getOptions) {
     });
 }
 
+function _getAttr(input, name) {
+    try {
+        return (input && input.getAttribute && input.getAttribute(name)) || "";
+    } catch {
+        return "";
+    }
+}
+
+function _setDateBoundsAttrs(input, { min = "", max = "" } = {}) {
+    if (!input || !input.setAttribute) return;
+    if (min) input.setAttribute("min", min);
+    else input.removeAttribute("min");
+    if (max) input.setAttribute("max", max);
+    else input.removeAttribute("max");
+}
+
 function _rangesOverlapYmd(aStart, aEnd, bStart, bEnd) {
     // All args are YYYY-MM-DD; lexicographic compare is safe.
     if (_isEmpty(aStart) || _isEmpty(aEnd) || _isEmpty(bStart) || _isEmpty(bEnd)) return false;
@@ -676,25 +692,24 @@ function _syncLeaveRowDateConstraints(row) {
     // Start date: only allow dates strictly BEFORE today.
     const yesterday = _yesterdayLocalYmd();
     const today = _todayLocalYmd();
-    start.max = yesterday;
+    _setDateBoundsAttrs(start, { min: "", max: yesterday });
     if (start.value && start.value > yesterday) start.value = yesterday;
 
     // Attach datepicker with disabled ranges (other leaves)
     _attachHrmisDatePicker(start, () => ({
         min: "",
-        max: yesterday,
+        max: _getAttr(start, "max") || yesterday,
         disabledRanges: _collectLeaveRanges(row),
     }));
 
     // End date: only enable after a start date is chosen.
     if (!start.value) {
         end.disabled = true;
-        end.min = "";
-        end.max = today; // user requirement: "till today"
+        _setDateBoundsAttrs(end, { min: "", max: today }); // user requirement: "till today"
         if (end.value) end.value = "";
         _attachHrmisDatePicker(end, () => ({
             min: "",
-            max: today,
+            max: _getAttr(end, "max") || today,
             disabledRanges: _collectLeaveRanges(row),
         }));
         _applyLeaveOverlapRule(row, start);
@@ -706,27 +721,29 @@ function _syncLeaveRowDateConstraints(row) {
     // End date must be at least 7 days AFTER start date.
     // i.e. earliest end = (start + 7 days).
     const minEnd = _addDaysLocalYmd(start.value, 7);
-    end.min = minEnd || "";
+    _setDateBoundsAttrs(end, { min: minEnd || "", max: today });
 
     // End date can be selected up to today.
-    end.max = today;
+    // (already set via bounds)
 
     _attachHrmisDatePicker(end, () => ({
-        min: end.min || "",
-        max: today,
+        min: _getAttr(end, "min") || (minEnd || ""),
+        max: _getAttr(end, "max") || today,
         disabledRanges: _collectLeaveRanges(row),
     }));
 
     // If range is impossible, disable end input.
-    if (end.min && end.max && end.min > end.max) {
+    const endMin = _getAttr(end, "min") || "";
+    const endMax = _getAttr(end, "max") || "";
+    if (endMin && endMax && endMin > endMax) {
         end.disabled = true;
         end.value = "";
         return;
     }
 
     if (end.value) {
-        if (end.min && end.value < end.min) end.value = end.min;
-        if (end.max && end.value > end.max) end.value = end.max;
+        if (endMin && end.value < endMin) end.value = endMin;
+        if (endMax && end.value > endMax) end.value = endMax;
     }
     _applyLeaveOverlapRule(row, end);
 }
@@ -799,6 +816,33 @@ function _initDates(form) {
         const input = _qs(form, `[name="${name}"]`);
         if (input) input.setAttribute("max", today);
     });
+
+    // Apply the same calendar UI to these date fields too.
+    const dob = _qs(form, '[name="birthday"]');
+    const comm = _qs(form, '[name="hrmis_commission_date"]');
+    const join = _qs(form, '[name="hrmis_joining_date"]');
+
+    if (dob) {
+        _attachHrmisDatePicker(dob, () => ({
+            min: "",
+            max: _getAttr(dob, "max") || "",
+            disabledRanges: [],
+        }));
+    }
+    if (comm) {
+        _attachHrmisDatePicker(comm, () => ({
+            min: "",
+            max: _getAttr(comm, "max") || today,
+            disabledRanges: [],
+        }));
+    }
+    if (join) {
+        _attachHrmisDatePicker(join, () => ({
+            min: "",
+            max: _getAttr(join, "max") || today,
+            disabledRanges: [],
+        }));
+    }
 }
 
 /* ---------------------------------------------------------
