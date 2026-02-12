@@ -396,37 +396,51 @@ function _yesterdayLocalYmd() {
     return _toLocalYmd(d);
 }
 
+function _todayLocalYmd() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return _toLocalYmd(d);
+}
+
 function _syncLeaveRowDateConstraints(row) {
     const start = _qs(row, 'input[name="leave_start[]"]');
     const end = _qs(row, 'input[name="leave_end[]"]');
     if (!start || !end) return;
 
-    // Disable dates from today onwards (today + future).
+    // Start date: only allow dates strictly BEFORE today.
     const yesterday = _yesterdayLocalYmd();
+    const today = _todayLocalYmd();
     start.max = yesterday;
-    end.max = yesterday;
-
     if (start.value && start.value > yesterday) start.value = yesterday;
-    if (end.value && end.value > yesterday) end.value = yesterday;
 
+    // End date: only enable after a start date is chosen.
     if (!start.value) {
-        // No start date yet: only enforce "no today/future" for end date.
+        end.disabled = true;
         end.min = "";
-        end.max = yesterday;
+        end.max = today; // user requirement: "till today"
+        if (end.value) end.value = "";
         return;
     }
 
-    // End date must be >= start date.
-    end.min = start.value;
+    end.disabled = false;
 
-    // When selecting a starting date, disable the date 6 days after it (and beyond).
-    // i.e. end date can be at most (start + 5 days).
-    const cap = _addDaysLocalYmd(start.value, 5);
-    const maxEnd = _minYmd(yesterday, cap);
-    if (maxEnd) end.max = maxEnd;
+    // End date must be at least 7 days AFTER start date.
+    // i.e. earliest end = (start + 7 days).
+    const minEnd = _addDaysLocalYmd(start.value, 7);
+    end.min = minEnd || "";
+
+    // End date can be selected up to today.
+    end.max = today;
+
+    // If range is impossible, disable end input.
+    if (end.min && end.max && end.min > end.max) {
+        end.disabled = true;
+        end.value = "";
+        return;
+    }
 
     if (end.value) {
-        if (end.value < end.min) end.value = end.min;
+        if (end.min && end.value < end.min) end.value = end.min;
         if (end.max && end.value > end.max) end.value = end.max;
     }
 }
@@ -682,25 +696,26 @@ function _validateRepeatables(form) {
         if (_isEmpty(end?.value)) { _showError(end, "End date is required"); hasError = true; }
 
         const yesterday = _yesterdayLocalYmd();
+        const today = _todayLocalYmd();
         if (!_isEmpty(start?.value) && !_isEmpty(yesterday) && start.value > yesterday) {
-            _showError(start, "Start date cannot be today or a future date");
+            _showError(start, "Start date must be before today");
             hasError = true;
         }
-        if (!_isEmpty(end?.value) && !_isEmpty(yesterday) && end.value > yesterday) {
-            _showError(end, "End date cannot be today or a future date");
+        if (!_isEmpty(end?.value) && !_isEmpty(today) && end.value > today) {
+            _showError(end, "End date cannot be after today");
             hasError = true;
         }
 
         if (!_isEmpty(start?.value) && !_isEmpty(end?.value)) {
-            const maxEnd = _minYmd(yesterday, _addDaysLocalYmd(start.value, 5));
-            if (!_isEmpty(maxEnd) && end.value > maxEnd) {
-                _showError(end, "End date cannot be more than 6 days after Start date");
-                hasError = true;
-            }
             const s = new Date(start.value + "T00:00:00");
             const e = new Date(end.value + "T00:00:00");
             if (e < s) {
                 _showError(end, "End date cannot be earlier than Start date");
+                hasError = true;
+            }
+            const minEnd = _addDaysLocalYmd(start.value, 7);
+            if (!_isEmpty(minEnd) && end.value < minEnd) {
+                _showError(end, "End date must be at least 7 days after Start date");
                 hasError = true;
             }
         }
