@@ -485,6 +485,29 @@ function _inDisabledRanges(ymd, ranges) {
     return false;
 }
 
+function _nextEnabledYmd(fromYmd, toYmd, disabledRanges) {
+    // Returns first YYYY-MM-DD in [fromYmd, toYmd] that is not disabled. Empty string if none.
+    if (_isEmpty(fromYmd) || _isEmpty(toYmd)) return "";
+    const from = _parseLocalYmd(fromYmd);
+    const to = _parseLocalYmd(toYmd);
+    if (!from || !to) return "";
+    from.setHours(0, 0, 0, 0);
+    to.setHours(0, 0, 0, 0);
+    if (from.getTime() > to.getTime()) return "";
+
+    const d = new Date(from);
+    // Hard cap iterations for safety (50 years)
+    const maxIter = 365 * 50;
+    let i = 0;
+    while (d.getTime() <= to.getTime() && i < maxIter) {
+        const ymd = _toLocalYmd(d);
+        if (!_inDisabledRanges(ymd, disabledRanges)) return ymd;
+        d.setDate(d.getDate() + 1);
+        i++;
+    }
+    return "";
+}
+
 function _getAttrSafe(input, name) {
     try {
         return (input && input.getAttribute && input.getAttribute(name)) || "";
@@ -845,10 +868,26 @@ function _syncLeaveRowDateConstraints(row) {
     // End date can be selected up to today.
     end.max = today;
 
+    // Default end date: set to the first enabled day at (start + 7).
+    // This respects already-used leave ranges as well as min/max bounds.
+    const disabledRanges = _collectLeaveRanges(row);
+    const curEnd = (end.value || "").trim();
+    const minBound = (end.min || "").trim();
+    const maxBound = (end.max || "").trim();
+    const needsDefault =
+        _isEmpty(curEnd) ||
+        (minBound && curEnd < minBound) ||
+        (maxBound && curEnd > maxBound) ||
+        _inDisabledRanges(curEnd, disabledRanges);
+    if (needsDefault && minBound && maxBound && minBound <= maxBound) {
+        const next = _nextEnabledYmd(minBound, maxBound, disabledRanges);
+        if (next) end.value = next;
+    }
+
     _attachHrmisLeaveDatePicker(end, () => ({
         min: _getAttrSafe(end, "min") || (minEnd || ""),
         max: _getAttrSafe(end, "max") || today,
-        disabledRanges: _collectLeaveRanges(row),
+        disabledRanges,
         openTo: (minEnd || start.value || joinMin || ""),
     }));
 
