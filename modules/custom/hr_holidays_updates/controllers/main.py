@@ -1947,6 +1947,28 @@ class HrmisProfileRequestController(http.Controller):
             })
             leave_calc_items.append((leave_type_id, sd, ed))
 
+        # Block overlaps across leave history rows (no reused days).
+        try:
+            ranges = [(sd, ed) for (_, sd, ed) in leave_calc_items]
+            ranges.sort(key=lambda r: (r[0], r[1]))
+            prev_s = None
+            prev_e = None
+            for s0, e0 in ranges:
+                if prev_s is None:
+                    prev_s, prev_e = s0, e0
+                    continue
+                # Inclusive overlap: if the next start is <= previous end, they share at least one day.
+                if prev_e and s0 and s0 <= prev_e:
+                    return self._render_profile_form_error(
+                        employee,
+                        req,
+                        env,
+                        "Leave History: Overlapping leave dates are not allowed (you cannot reuse the same day in multiple rows).",
+                    )
+                prev_s, prev_e = s0, e0
+        except Exception:
+            pass
+
         # Auto-calculate Total Leaves Taken (UI field is read-only).
         # Rules (match HRMIS balance logic):
         # - Half-pay leaves count as ceil(effective_days / 2.0)

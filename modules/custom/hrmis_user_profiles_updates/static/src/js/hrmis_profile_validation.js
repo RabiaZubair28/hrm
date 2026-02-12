@@ -402,6 +402,73 @@ function _todayLocalYmd() {
     return _toLocalYmd(d);
 }
 
+function _rangesOverlapYmd(aStart, aEnd, bStart, bEnd) {
+    // All args are YYYY-MM-DD; lexicographic compare is safe.
+    if (_isEmpty(aStart) || _isEmpty(aEnd) || _isEmpty(bStart) || _isEmpty(bEnd)) return false;
+    return !(aEnd < bStart || aStart > bEnd);
+}
+
+function _collectLeaveRanges(excludeRow) {
+    const out = [];
+    _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
+        if (excludeRow && row === excludeRow) return;
+        const start = _qs(row, 'input[name="leave_start[]"]')?.value || "";
+        const end = _qs(row, 'input[name="leave_end[]"]')?.value || "";
+        if (_isEmpty(start) || _isEmpty(end)) return;
+        // Only keep valid YMD values.
+        if (!_parseLocalYmd(start) || !_parseLocalYmd(end)) return;
+        out.push({ start, end });
+    });
+    return out;
+}
+
+function _applyLeaveOverlapRule(row, changedEl) {
+    const startEl = _qs(row, 'input[name="leave_start[]"]');
+    const endEl = _qs(row, 'input[name="leave_end[]"]');
+    if (!startEl || !endEl) return true;
+
+    const s = (startEl.value || "").trim();
+    const e = (endEl.value || "").trim();
+
+    // Clear previous overlap errors for this row.
+    if (changedEl) changedEl.setCustomValidity("");
+    _clearError(startEl);
+    _clearError(endEl);
+
+    const others = _collectLeaveRanges(row);
+
+    // If only start is selected, at least block picking a start day that is already used.
+    if (s && !e) {
+        const hit = others.find((r) => _rangesOverlapYmd(s, s, r.start, r.end));
+        if (hit) {
+            const msg = `This date overlaps an existing leave (${hit.start} to ${hit.end}).`;
+            _showError(startEl, msg);
+            startEl.setCustomValidity(msg);
+            // Force a different pick.
+            startEl.value = "";
+            return false;
+        }
+        return true;
+    }
+
+    // If both are selected, block any overlap with other ranges.
+    if (s && e) {
+        const hit = others.find((r) => _rangesOverlapYmd(s, e, r.start, r.end));
+        if (hit) {
+            const msg = `These dates overlap an existing leave (${hit.start} to ${hit.end}).`;
+            // Attach error to the field that changed (prefer end, otherwise start).
+            const target = changedEl || endEl;
+            _showError(target, msg);
+            target.setCustomValidity(msg);
+            // Clear the changed field to effectively "disable" those days for this row.
+            if (target === startEl) startEl.value = "";
+            if (target === endEl) endEl.value = "";
+            return false;
+        }
+    }
+    return true;
+}
+
 function _syncLeaveRowDateConstraints(row) {
     const start = _qs(row, 'input[name="leave_start[]"]');
     const end = _qs(row, 'input[name="leave_end[]"]');
@@ -419,6 +486,7 @@ function _syncLeaveRowDateConstraints(row) {
         end.min = "";
         end.max = today; // user requirement: "till today"
         if (end.value) end.value = "";
+        _applyLeaveOverlapRule(row, start);
         return;
     }
 
@@ -443,6 +511,7 @@ function _syncLeaveRowDateConstraints(row) {
         if (end.min && end.value < end.min) end.value = end.min;
         if (end.max && end.value > end.max) end.value = end.max;
     }
+    _applyLeaveOverlapRule(row, end);
 }
 
 function _normLeaveTypeForCalc(name) {
@@ -594,7 +663,10 @@ function _initRepeatables(form) {
 
         if (e.target && e.target.matches && e.target.matches('input[name="leave_start[]"], input[name="leave_end[]"], select[name="leave_type_id[]"]')) {
             const row = e.target.closest(".hrmis-repeat-row");
-            if (row) _syncLeaveRowDateConstraints(row);
+            if (row) {
+                _syncLeaveRowDateConstraints(row);
+                _applyLeaveOverlapRule(row, e.target);
+            }
             _recalcLeavesTaken(form);
         }
 
@@ -788,6 +860,29 @@ function _validateRepeatables(form) {
             }
         }
     });
+
+    // Leave rows overlap check (no reused days)
+    const leaveRanges = [];
+    _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
+        const start = _qs(row, 'input[name="leave_start[]"]')?.value || "";
+        const end = _qs(row, 'input[name="leave_end[]"]')?.value || "";
+        if (_isEmpty(start) || _isEmpty(end)) return;
+        leaveRanges.push({ row, start, end });
+    });
+    for (let i = 0; i < leaveRanges.length; i++) {
+        for (let j = i + 1; j < leaveRanges.length; j++) {
+            const a = leaveRanges[i];
+            const b = leaveRanges[j];
+            if (_rangesOverlapYmd(a.start, a.end, b.start, b.end)) {
+                const msg = `Leave dates overlap between rows (${a.start} to ${a.end}) and (${b.start} to ${b.end}).`;
+                const aEnd = _qs(a.row, 'input[name="leave_end[]"]');
+                const bEnd = _qs(b.row, 'input[name="leave_end[]"]');
+                if (aEnd) _showError(aEnd, msg);
+                if (bEnd) _showError(bEnd, msg);
+                hasError = true;
+            }
+        }
+    }
 
     return hasError;
 }
