@@ -1909,6 +1909,7 @@ class HrmisProfileRequestController(http.Controller):
         leave_calc_items = []  # (leave_type_id, start_date, end_date)
         # Hard-block these leave types even if posted manually
         blocked_leave_type_keys = {"paidtimeoff", "sicktimeoff", "unpaid"}
+        emp_gender = (getattr(employee, "gender", False) or getattr(employee, "hrmis_gender", False) or "").strip().lower()
         for i in range(max(len(l_type), len(l_start), len(l_end))):
             leave_type_id = self._to_int(l_type[i] if i < len(l_type) else "")
             s = (l_start[i] if i < len(l_start) else "").strip()
@@ -1925,6 +1926,16 @@ class HrmisProfileRequestController(http.Controller):
                 lt = env["hr.leave.type"].sudo().browse(int(leave_type_id)).exists()
                 if lt and _norm_leave_type_name(getattr(lt, "name", "")) in blocked_leave_type_keys:
                     return self._render_profile_form_error(employee, req, env, "Leave History: This leave type is not allowed.")
+                # Hide maternity for male employees (extra safety)
+                if lt and emp_gender == "male":
+                    key = _norm_leave_type_name(getattr(lt, "name", ""))
+                    if "maternity" in key:
+                        return self._render_profile_form_error(
+                            employee,
+                            req,
+                            env,
+                            "Leave History: Maternity leave is not allowed for male employees.",
+                        )
             except Exception:
                 # If we cannot resolve the leave type reliably, keep going; other validations still apply.
                 pass

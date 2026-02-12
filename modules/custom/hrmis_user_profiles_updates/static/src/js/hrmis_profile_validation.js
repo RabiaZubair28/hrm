@@ -829,6 +829,20 @@ function _syncLeaveRowDateConstraints(row) {
     const yesterday = _yesterdayLocalYmd();
     const today = _todayLocalYmd();
     const joinMin = _getJoiningMonthStartYmd();
+    if (!joinMin) {
+        // Joining date must be selected before leave dates can be picked.
+        start.disabled = true;
+        end.disabled = true;
+        start.value = "";
+        end.value = "";
+        const msg = "Please select the joining date first.";
+        _showError(start, msg);
+        _showError(end, msg);
+        return;
+    }
+
+    // Joining date now present: allow interaction
+    start.disabled = false;
     if (joinMin) start.min = joinMin;
     start.max = yesterday;
     if (start.value && start.value > yesterday) start.value = yesterday;
@@ -1059,6 +1073,11 @@ function _initRepeatables(form) {
                 _applyLeaveOverlapRule(row, e.target);
             }
             _recalcLeavesTaken(form);
+        }
+
+        // When joining date changes, (re)enable and re-validate all leave rows.
+        if (e.target && e.target.matches && e.target.matches('[name="hrmis_joining_date"]')) {
+            _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => _syncLeaveRowDateConstraints(row));
         }
 
         const qualChk = e.target.closest(".js-qual-completed");

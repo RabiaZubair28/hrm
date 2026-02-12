@@ -475,6 +475,8 @@
             <label>Leave Type<span class="req">*</span></label>
             <select class="hrmis-input" name="leave_type_id[]" required="required">
               <option value="" disabled="disabled" selected="selected" hidden="hidden">Select Leave Type</option>
+              <t t-set="emp_gender"
+                 t-value="((req.gender or current_employee.gender or '') or '').lower()"/>
               <t t-foreach="env['hr.leave.type'].sudo().search([], order='name')" t-as="lt">
                 <t t-set="lt_name" t-value="(lt.name or '').lower()"/>
                 <!-- Business requirement: hide these leave types from this dropdown -->
@@ -484,6 +486,7 @@
                     and ('paid time off' not in lt_name)
                     and ('sick time off' not in lt_name)
                     and (lt_name.strip() != 'unpaid')
+                    and (emp_gender != 'male' or ('maternity' not in lt_name))
                 ">
                   <option t-att-value="lt.id"><t t-esc="lt.name"/></option>
                 </t>
