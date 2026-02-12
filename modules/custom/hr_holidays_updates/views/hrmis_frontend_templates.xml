@@ -633,6 +633,8 @@
                                         <select class="hrmis-input js-hrmis-leave-type" name="leave_type_id" required="required">
                                             <option value="">Select leave type</option>
                                             <t t-foreach="leave_types" t-as="lt">
+                                                <t t-set="lt_name" t-value="(lt.name or '').lower()"/>
+                                                <t t-if="('paid time off' not in lt_name) and ('sick time off' not in lt_name)">
                                                 <option t-att-value="lt.id"
                                                         t-att-data-support-document="1 if lt.support_document else 0"
                                                         t-att-data-support-document-note="(lt.support_document_note or '') if 'support_document_note' in lt._fields else ''">
@@ -640,6 +642,7 @@
                                                          employee/date/company/request_type context so balances compute correctly. -->
                                                     <t t-esc="lt.name"/>
                                                 </option>
+                                                </t>
                                             </t>
                                         </select>
                                     </div>

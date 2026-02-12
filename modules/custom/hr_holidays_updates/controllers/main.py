@@ -1470,6 +1470,8 @@ class HrmisProfileRequestController(http.Controller):
         today = date.today()
         max_dob_str = (today - relativedelta(years=18)).strftime("%Y-%m-%d")
         max_today_str = today.strftime("%Y-%m-%d")   # for commission/joining max
+        # Leave History rows must not allow today/future dates
+        max_past_str = (today - relativedelta(days=1)).strftime("%Y-%m-%d")
 
         ProfileRequest = request.env["hrmis.employee.profile.request"].sudo()
         Post = request.env["hrmis.posting.history"].sudo()
@@ -1562,6 +1564,7 @@ class HrmisProfileRequestController(http.Controller):
                 info=info,
                 max_dob_str=max_dob_str,
                 max_today_str=max_today_str,
+                max_past_str=max_past_str,
             ),
         )
 
@@ -1895,6 +1898,8 @@ class HrmisProfileRequestController(http.Controller):
         l_end = form.getlist("leave_end[]")
 
         leave_lines = []
+        # Hard-block these leave types even if posted manually
+        blocked_leave_type_keys = {"paidtimeoff", "sicktimeoff"}
         for i in range(max(len(l_type), len(l_start), len(l_end))):
             leave_type_id = self._to_int(l_type[i] if i < len(l_type) else "")
             s = (l_start[i] if i < len(l_start) else "").strip()
@@ -1906,20 +1911,38 @@ class HrmisProfileRequestController(http.Controller):
             if not leave_type_id or not s or not e:
                 return self._render_profile_form_error(employee, req, env, "Leave History: Leave Type, Start Date and End Date are required.")
 
-            # server validation: end >= start
+            # Validate leave type (blocked)
+            try:
+                lt = env["hr.leave.type"].sudo().browse(int(leave_type_id)).exists()
+                if lt and _norm_leave_type_name(getattr(lt, "name", "")) in blocked_leave_type_keys:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: This leave type is not allowed.")
+            except Exception:
+                # If we cannot resolve the leave type reliably, keep going; other validations still apply.
+                pass
+
+            # Date validations
             try:
                 sd = fields.Date.to_date(s)
                 ed = fields.Date.to_date(e)
+                if not sd or not ed:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
                 if ed < sd:
                     return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be earlier than Start Date.")
+                # Disable dates from today onwards (today + future)
+                today_ctx = fields.Date.context_today(env.user)
+                if sd >= today_ctx or ed >= today_ctx:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: You cannot select today's date or future dates.")
+                # Disable 6 days after the start date (and beyond) => allow max start + 5 days
+                if (ed - sd).days >= 6:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be 6 days or more after Start Date.")
             except Exception:
                 return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
 
             leave_lines.append({
                 "employee_id": employee.id,
                 "leave_type_id": leave_type_id,
-                "start_date": s,
-                "end_date": e,
+                "start_date": sd,
+                "end_date": ed,
             })
 
         # -----------------------
