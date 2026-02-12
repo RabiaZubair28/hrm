@@ -69,6 +69,10 @@
               <div class="hrmis-field">
                 <label>Gender<span class="req">*</span></label>
                 <select class="hrmis-input" name="gender" required="required">
+                  <option value="" disabled="disabled" hidden="hidden"
+                          t-att-selected="not (req.gender or current_employee.gender)">
+                    Select Gender
+                  </option>
                   <option value="male" t-att-selected="(req.gender or current_employee.gender) == 'male'">Male</option>
                   <option value="female" t-att-selected="(req.gender or current_employee.gender) == 'female'">Female</option>
                   <option value="other" t-att-selected="(req.gender or current_employee.gender) == 'other'">Other</option>

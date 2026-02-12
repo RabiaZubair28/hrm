@@ -1909,7 +1909,11 @@ class HrmisProfileRequestController(http.Controller):
         leave_calc_items = []  # (leave_type_id, start_date, end_date)
         # Hard-block these leave types even if posted manually
         blocked_leave_type_keys = {"paidtimeoff", "sicktimeoff", "unpaid"}
-        emp_gender = (getattr(employee, "gender", False) or getattr(employee, "hrmis_gender", False) or "").strip().lower()
+        # Prefer submitted gender (profile request may be editing it), fallback to employee record.
+        emp_gender = (
+            (post.get("gender") or "")
+            or (getattr(employee, "gender", False) or getattr(employee, "hrmis_gender", False) or "")
+        ).strip().lower()
         for i in range(max(len(l_type), len(l_start), len(l_end))):
             leave_type_id = self._to_int(l_type[i] if i < len(l_type) else "")
             s = (l_start[i] if i < len(l_start) else "").strip()

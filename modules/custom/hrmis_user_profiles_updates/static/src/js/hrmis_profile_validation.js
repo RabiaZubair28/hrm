@@ -773,6 +773,36 @@ function _collectLeaveRanges(excludeRow) {
     return out;
 }
 
+function _syncLeaveTypeSelectsByGender(form) {
+    const genderEl = _qs(form, '[name="gender"]');
+    const gender = String(genderEl?.value || "").trim().toLowerCase();
+    const selects = _qsa(document, '#leave_rows select[name="leave_type_id[]"]');
+    if (!selects.length) return;
+
+    for (const sel of selects) {
+        if (!(sel instanceof HTMLSelectElement)) continue;
+
+        if (!gender) {
+            sel.disabled = true;
+            _showError(sel, "Please select the gender first.");
+            continue;
+        }
+
+        sel.disabled = false;
+        _clearError(sel);
+
+        const isMale = gender === "male";
+        for (const opt of Array.from(sel.options || [])) {
+            if (!opt || !opt.value) continue; // keep placeholder
+            const txt = String(opt.textContent || "").trim().toLowerCase();
+            const isMaternity = txt.includes("maternity");
+            opt.hidden = !!(isMale && isMaternity);
+        }
+        const cur = sel.selectedOptions?.[0];
+        if (cur && cur.hidden) sel.selectedIndex = 0;
+    }
+}
+
 function _applyLeaveOverlapRule(row, changedEl) {
     const startEl = _qs(row, 'input[name="leave_start[]"]');
     const endEl = _qs(row, 'input[name="leave_end[]"]');
@@ -843,6 +873,8 @@ function _syncLeaveRowDateConstraints(row) {
 
     // Joining date now present: allow interaction
     start.disabled = false;
+    _clearError(start);
+    _clearError(end);
     if (joinMin) start.min = joinMin;
     start.max = yesterday;
     if (start.value && start.value > yesterday) start.value = yesterday;
@@ -1044,6 +1076,7 @@ function _initRepeatables(form) {
         const row = _cloneFromTemplate("#tpl_leave_row", "#leave_rows");
         if (row) {
             _syncLeaveRowDateConstraints(row);
+            _syncLeaveTypeSelectsByGender(form);
             _recalcLeavesTaken(form);
         }
     });
@@ -1080,6 +1113,11 @@ function _initRepeatables(form) {
             _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => _syncLeaveRowDateConstraints(row));
         }
 
+        // When gender changes, enable/disable leave types + hide maternity for male.
+        if (e.target && e.target.matches && e.target.matches('[name="gender"]')) {
+            _syncLeaveTypeSelectsByGender(form);
+        }
+
         const qualChk = e.target.closest(".js-qual-completed");
         if (qualChk) {
             const row = qualChk.closest(".hrmis-repeat-row");
@@ -1113,6 +1151,7 @@ function _initRepeatables(form) {
 
     // Ensure any pre-rendered leave rows get constraints too.
     _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => _syncLeaveRowDateConstraints(row));
+    _syncLeaveTypeSelectsByGender(form);
     _recalcLeavesTaken(form);
 }
 
