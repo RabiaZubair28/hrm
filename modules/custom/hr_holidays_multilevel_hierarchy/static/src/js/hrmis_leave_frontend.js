@@ -16,31 +16,6 @@
             .replaceAll("'", "&#039;");
     }
 
-    function _normLeaveTypeName(name) {
-        return String(name || "")
-            .trim()
-            .toLowerCase()
-            .replace(/[\u2010-\u2015]/g, "-")
-            .replace(/[^a-z0-9]+/g, "");
-    }
-
-    const _BLOCKED_LEAVE_TYPE_NAMES = new Set(["paidtimeoff", "sicktimeoff"]);
-
-    function _isBlockedLeaveTypeName(name) {
-        return _BLOCKED_LEAVE_TYPE_NAMES.has(_normLeaveTypeName(name));
-    }
-
-    function _pruneBlockedLeaveTypes(selectEl) {
-        if (!selectEl) return;
-        Array.from(selectEl.options || []).forEach((opt) => {
-            if (!opt || !opt.value) return; // keep placeholder
-            if (_isBlockedLeaveTypeName(opt.textContent || "")) opt.remove();
-        });
-        if (selectEl.value && !Array.from(selectEl.options || []).some((o) => o.value === selectEl.value)) {
-            selectEl.value = "";
-        }
-    }
-
     function _setSelectOptions(selectEl, options, keepValue) {
         if (!selectEl) return;
         const current = keepValue ? selectEl.value : "";
@@ -52,7 +27,6 @@
         console.log("🟢 [HRMIS] Setting leave type options:", options);
 
         for (const opt of options || []) {
-            if (_isBlockedLeaveTypeName(opt?.name)) continue;
             const o = document.createElement("option");
             o.value = String(opt.id);
             o.textContent = opt.name;
@@ -60,7 +34,6 @@
             if (opt.support_document_note !== undefined) o.dataset.supportDocumentNote = opt.support_document_note || "";
             selectEl.appendChild(o);
         }
-        _pruneBlockedLeaveTypes(selectEl);
 
         if (keepValue && current && [...selectEl.options].some(o => o.value === current)) {
             selectEl.value = current;
@@ -227,7 +200,6 @@
 
         const leaveTypeEl = _qs(formEl, ".js-hrmis-leave-type");
         if (leaveTypeEl) {
-            _pruneBlockedLeaveTypes(leaveTypeEl);
             leaveTypeEl.addEventListener("change", () => _refreshApprovers(formEl));
         }
 
