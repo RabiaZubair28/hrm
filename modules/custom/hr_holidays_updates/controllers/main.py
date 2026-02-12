@@ -371,6 +371,121 @@ def _dedupe_leave_types_for_ui(leave_types):
     return kept
 
 
+def _dedupe_leave_types_for_profile_leave_history_ui(leave_types):
+    """
+    UI-only dedupe for the Profile Update Request -> Leave History section.
+
+    Requirement:
+    - Show all leave types EXCEPT: Casual Leave, Unpaid, Compensatory
+    - Keep behavior aligned with the New Leave Request dropdown where possible
+      (name normalization + dedupe + hiding known noisy defaults).
+    """
+    blocked = {
+        # Same as the leave-request dropdown
+        "compensatorydays",
+        "paidtimeoff",
+        "sicktimeoff",
+        "unpaid",
+        # Additionally hide Casual Leave for this dropdown
+        "casualleave",
+        "casual",
+        # Defensive: some DBs name it slightly differently
+        "compensatory",
+        "compensatoryleave",
+    }
+    seen = set()
+    kept = leave_types.browse([])
+    for lt in leave_types:
+        key = _norm_leave_type_name(lt.name)
+        if not key or key in blocked or key in seen:
+            continue
+        seen.add(key)
+        kept |= lt
+    return kept
+
+
+def _hrmis_effective_days_for_range(employee, day_from, day_to) -> float:
+    """
+    Use the same effective-day logic as the leave module when available,
+    otherwise fall back to inclusive calendar days.
+    """
+    if not employee or not day_from or not day_to:
+        return 0.0
+    if day_to < day_from:
+        return 0.0
+    try:
+        Leave = request.env["hr.leave"].sudo()
+        if hasattr(Leave, "_hrmis_effective_days"):
+            return float(Leave._hrmis_effective_days(employee, day_from, day_to) or 0.0)
+    except Exception:
+        pass
+    try:
+        return float((day_to - day_from).days + 1)
+    except Exception:
+        return 0.0
+
+
+def _hrmis_total_leaves_taken_from_history_lines(employee, history_lines) -> float:
+    """
+    Compute Total Leaves Taken (Days) from HRMIS profile leave history.
+
+    Business rules (match leave module intent):
+    - Half-pay leave types: count half of effective days.
+    - Earned/full-pay bucket: count full effective days.
+    - Medical, Maternity, Leave Without Pay (EOL): count 0.
+    """
+    env = request.env
+    # Resolve leave types by XML id (ignore if not present).
+    full_types = [
+        env.ref("hr_holidays_updates.leave_type_earned_full_pay", raise_if_not_found=False),
+        env.ref("hr_holidays_updates.leave_type_ex_pakistan_full_pay", raise_if_not_found=False),
+        env.ref("hr_holidays_updates.leave_type_study_full_pay", raise_if_not_found=False),
+        env.ref("hr_holidays_updates.leave_type_lpr", raise_if_not_found=False),
+    ]
+    half_types = [
+        env.ref("hr_holidays_updates.leave_type_half_pay", raise_if_not_found=False),
+        env.ref("hr_holidays_updates.leave_type_ex_pakistan_half_pay", raise_if_not_found=False),
+        env.ref("hr_holidays_updates.leave_type_study_half_pay", raise_if_not_found=False),
+    ]
+    zero_types = [
+        env.ref("hr_holidays_updates.leave_type_medical_long", raise_if_not_found=False),
+        env.ref("hr_holidays_updates.leave_type_maternity", raise_if_not_found=False),
+        env.ref("hr_holidays_updates.leave_type_eol", raise_if_not_found=False),
+        env.ref("hr_holidays_updates.leave_type_ex_pakistan_eol", raise_if_not_found=False),
+        env.ref("hr_holidays_updates.leave_type_study_eol", raise_if_not_found=False),
+    ]
+
+    full_ids = {lt.id for lt in full_types if lt}
+    half_ids = {lt.id for lt in half_types if lt}
+    zero_ids = {lt.id for lt in zero_types if lt}
+
+    total = 0.0
+    for ln in history_lines or []:
+        try:
+            lt = getattr(ln, "leave_type_id", False)
+            if not lt:
+                continue
+            if lt.id in zero_ids:
+                continue
+
+            d_from = fields.Date.to_date(getattr(ln, "start_date", None))
+            d_to = fields.Date.to_date(getattr(ln, "end_date", None))
+            eff = _hrmis_effective_days_for_range(employee, d_from, d_to)
+
+            if lt.id in half_ids:
+                total += (eff / 2.0)
+            elif lt.id in full_ids:
+                total += eff
+            else:
+                # All other leave types do not count towards "Total Leaves Taken".
+                continue
+        except Exception:
+            continue
+
+    # Keep a stable decimal (UI expects a number, not a long float tail)
+    return float(round(total, 2))
+
+
 class HrmisLeaveFrontendController(http.Controller):
     def _wants_json(self) -> bool:
         """
@@ -1326,6 +1441,27 @@ class HrmisProfileRequestController(http.Controller):
             return False, str(e)
 
     def _render_profile_form_error(self, employee, req, env, msg):
+        # Keep form rendering stable across all code paths:
+        # the template expects these collections for dropdowns / sections.
+        today = date.today()
+        max_dob_str = (today - relativedelta(years=18)).strftime("%Y-%m-%d")
+        max_today_str = today.strftime("%Y-%m-%d")
+
+        Post = env["hrmis.posting.history"].sudo()
+        Qual = env["hrmis.qualification.history"].sudo()
+        Promo = env["hrmis.promotion.history"].sudo()
+        LeaveHist = env["hrmis.leave.history"].sudo()
+
+        posting_lines = Post.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+        qualification_lines = Qual.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+        promotion_lines = Promo.search([("employee_id", "=", employee.id)], order="promotion_date asc, id asc")
+        leave_lines = LeaveHist.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+
+        leave_types_profile = _dedupe_leave_types_for_profile_leave_history_ui(
+            env["hr.leave.type"].sudo().search([], order="name asc")
+        )
+        computed_leaves_taken = _hrmis_total_leaves_taken_from_history_lines(employee, leave_lines)
+
         return request.render(
             "hr_holidays_updates.hrmis_profile_request_form",
             _base_ctx(
@@ -1336,8 +1472,59 @@ class HrmisProfileRequestController(http.Controller):
                 req=req,
                 districts=env["hrmis.district.master"].sudo().search([]),
                 facilities=env["hrmis.facility.type"].sudo().search([]),
+                posting_lines=posting_lines,
+                qualification_lines=qualification_lines,
+                promotion_lines=promotion_lines,
+                leave_lines=leave_lines,
+                leave_types_profile=leave_types_profile,
+                computed_leaves_taken=computed_leaves_taken,
                 designations_unique=self._get_unique_designations(env),
                 error=msg,
+                max_dob_str=max_dob_str,
+                max_today_str=max_today_str,
+            ),
+        )
+
+    def _render_profile_form_success(self, employee, req, env, msg):
+        today = date.today()
+        max_dob_str = (today - relativedelta(years=18)).strftime("%Y-%m-%d")
+        max_today_str = today.strftime("%Y-%m-%d")
+
+        Post = env["hrmis.posting.history"].sudo()
+        Qual = env["hrmis.qualification.history"].sudo()
+        Promo = env["hrmis.promotion.history"].sudo()
+        LeaveHist = env["hrmis.leave.history"].sudo()
+
+        posting_lines = Post.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+        qualification_lines = Qual.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+        promotion_lines = Promo.search([("employee_id", "=", employee.id)], order="promotion_date asc, id asc")
+        leave_lines = LeaveHist.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+
+        leave_types_profile = _dedupe_leave_types_for_profile_leave_history_ui(
+            env["hr.leave.type"].sudo().search([], order="name asc")
+        )
+        computed_leaves_taken = _hrmis_total_leaves_taken_from_history_lines(employee, leave_lines)
+
+        return request.render(
+            "hr_holidays_updates.hrmis_profile_request_form",
+            _base_ctx(
+                "Profile Update Request",
+                "user_profile",
+                employee=employee,
+                current_employee=employee,
+                req=req,
+                districts=env["hrmis.district.master"].sudo().search([]),
+                facilities=env["hrmis.facility.type"].sudo().search([]),
+                posting_lines=posting_lines,
+                qualification_lines=qualification_lines,
+                promotion_lines=promotion_lines,
+                leave_lines=leave_lines,
+                leave_types_profile=leave_types_profile,
+                computed_leaves_taken=computed_leaves_taken,
+                designations_unique=self._get_unique_designations(env),
+                success=msg,
+                max_dob_str=max_dob_str,
+                max_today_str=max_today_str,
             ),
         )
 
@@ -1481,6 +1668,10 @@ class HrmisProfileRequestController(http.Controller):
         qualification_lines = Qual.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
         promotion_lines = Promo.search([("employee_id", "=", employee.id)], order="promotion_date asc, id asc")
         leave_lines = Leave.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+        leave_types_profile = _dedupe_leave_types_for_profile_leave_history_ui(
+            request.env["hr.leave.type"].sudo().search([], order="name asc")
+        )
+        computed_leaves_taken = _hrmis_total_leaves_taken_from_history_lines(employee, leave_lines)
 
         req = ProfileRequest.search(
             [("employee_id", "=", employee.id), ("state", "in", ["draft", "submitted"])], limit=1
@@ -1557,6 +1748,8 @@ class HrmisProfileRequestController(http.Controller):
                 qualification_lines=qualification_lines,
                 promotion_lines=promotion_lines,
                 leave_lines=leave_lines,
+                leave_types_profile=leave_types_profile,
+                computed_leaves_taken=computed_leaves_taken,
 
                 designations_unique=self._get_unique_designations(request.env),
                 info=info,
@@ -1624,19 +1817,7 @@ class HrmisProfileRequestController(http.Controller):
 
         req = env["hrmis.employee.profile.request"].sudo().browse(int(post.get("request_id") or 0))
         if not req.exists():
-            return request.render(
-                "hr_holidays_updates.hrmis_profile_request_form",
-                _base_ctx(
-                    "Profile Update Request",
-                    "user_profile",
-                    employee=employee,
-                    current_employee=employee,
-                    req=req,
-                    districts=env["hrmis.district.master"].sudo().search([]),
-                    facilities=env["hrmis.facility.type"].sudo().search([]),
-                    error="Invalid request.",
-                ),
-            )
+            return self._render_profile_form_error(employee, req, env, "Invalid request.")
 
         # -----------------------
         # Files
@@ -1689,18 +1870,11 @@ class HrmisProfileRequestController(http.Controller):
 
 
         if missing:
-            return request.render(
-                "hr_holidays_updates.hrmis_profile_request_form",
-                _base_ctx(
-                    "Profile Update Request",
-                    "user_profile",
-                    employee=employee,
-                    current_employee=employee,
-                    req=req,
-                    districts=env["hrmis.district.master"].sudo().search([]),
-                    facilities=env["hrmis.facility.type"].sudo().search([]),
-                    error="Please complete the following fields before submitting:\n• " + "\n• ".join(missing),
-                ),
+            return self._render_profile_form_error(
+                employee,
+                req,
+                env,
+                "Please complete the following fields before submitting:\n• " + "\n• ".join(missing),
             )
 
         # -----------------------
@@ -1744,19 +1918,7 @@ class HrmisProfileRequestController(http.Controller):
         )
 
         if hard_error:
-            return request.render(
-                "hr_holidays_updates.hrmis_profile_request_form",
-                _base_ctx(
-                    "Profile Update Request",
-                    "user_profile",
-                    employee=employee,
-                    current_employee=employee,
-                    req=req,
-                    districts=env["hrmis.district.master"].sudo().search([]),
-                    facilities=env["hrmis.facility.type"].sudo().search([]),
-                    error=message_override,   # contains the reason
-                ),
-            )
+            return self._render_profile_form_error(employee, req, env, message_override)
         # If helper returns a hard error message, stop here
         # (recommended: in helper, return message_override only for user-facing hard errors)
         if message_override and (
@@ -1782,7 +1944,6 @@ class HrmisProfileRequestController(http.Controller):
             "district_id": district_id,
             "facility_id": facility_id,
             "hrmis_contact_info": post.get("hrmis_contact_info"),
-            "hrmis_leaves_taken": post.get("hrmis_leaves_taken"),
             "hrmis_merit_number": post.get("hrmis_merit_number"),
             "approver_id": approver_emp.id if approver_emp else False,
             "state": "submitted",
@@ -1894,7 +2055,7 @@ class HrmisProfileRequestController(http.Controller):
         l_start = form.getlist("leave_start[]")
         l_end = form.getlist("leave_end[]")
 
-        leave_lines = []
+        leave_lines_vals = []
         for i in range(max(len(l_type), len(l_start), len(l_end))):
             leave_type_id = self._to_int(l_type[i] if i < len(l_type) else "")
             s = (l_start[i] if i < len(l_start) else "").strip()
@@ -1915,7 +2076,7 @@ class HrmisProfileRequestController(http.Controller):
             except Exception:
                 return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
 
-            leave_lines.append({
+            leave_lines_vals.append({
                 "employee_id": employee.id,
                 "leave_type_id": leave_type_id,
                 "start_date": s,
@@ -1942,8 +2103,19 @@ class HrmisProfileRequestController(http.Controller):
             Post.create(post_lines)
         if promo_lines:
             Promo.create(promo_lines)
-        if leave_lines:
-            Leave.create(leave_lines)
+        if leave_lines_vals:
+            Leave.create(leave_lines_vals)
+
+        # -------------------------------------------------
+        # Auto-compute Total Leaves Taken (Days)
+        # from the leave history lines we just stored.
+        # -------------------------------------------------
+        try:
+            computed_lines = Leave.search([("employee_id", "=", employee.id)])
+            vals["hrmis_leaves_taken"] = _hrmis_total_leaves_taken_from_history_lines(employee, computed_lines)
+        except Exception:
+            # Never block submission due to calculation issues.
+            vals["hrmis_leaves_taken"] = float(getattr(employee, "hrmis_leaves_taken", 0.0) or 0.0)
 
         # ✅ store merit number into employee AFTER req is updated
         employee.sudo().write({
@@ -1958,19 +2130,8 @@ class HrmisProfileRequestController(http.Controller):
 
         ok, err = self._with_temporary_parent(employee, final_manager_employee, _work)
         if not ok:
-            return request.render(
-                "hr_holidays_updates.hrmis_profile_request_form",
-                _base_ctx(
-                    "Profile Update Request",
-                    "user_profile",
-                    employee=employee,
-                    current_employee=employee,
-                    req=req,
-                    districts=env["hrmis.district.master"].sudo().search([]),
-                    facilities=env["hrmis.facility.type"].sudo().search([]),
-                    
-                    error=f"Could not submit request. Changes reverted. Error: {err}",
-                ),
+            return self._render_profile_form_error(
+                employee, req, env, f"Could not submit request. Changes reverted. Error: {err}"
             )
 
         # -----------------------
@@ -1978,19 +2139,7 @@ class HrmisProfileRequestController(http.Controller):
         # -----------------------
         success_msg = message_override or "Profile update request submitted successfully."
 
-        return request.render(
-            "hr_holidays_updates.hrmis_profile_request_form",
-            _base_ctx(
-                "Profile Update Request",
-                "user_profile",
-                employee=employee,
-                current_employee=employee,
-                req=req,
-                districts=env["hrmis.district.master"].sudo().search([]),
-                facilities=env["hrmis.facility.type"].sudo().search([]),
-                success=success_msg,
-            ),
-        )
+        return self._render_profile_form_success(employee, req, env, success_msg)
 
 
 
