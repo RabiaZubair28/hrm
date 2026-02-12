@@ -15,6 +15,36 @@ function _escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
+function _normLeaveTypeName(name) {
+  // Keep in sync with server-side normalization (best-effort).
+  return String(name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\u2010-\u2015]/g, "-") // normalize unicode hyphens
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+const _BLOCKED_LEAVE_TYPE_NAMES = new Set(["paidtimeoff", "sicktimeoff"]);
+
+function _isBlockedLeaveTypeName(name) {
+  return _BLOCKED_LEAVE_TYPE_NAMES.has(_normLeaveTypeName(name));
+}
+
+function _pruneBlockedLeaveTypes(selectEl) {
+  if (!selectEl) return;
+  // Remove any currently-rendered blocked options (covers server-render + failed API refresh).
+  for (const opt of [...selectEl.options]) {
+    if (!opt || !opt.value) continue; // keep placeholder
+    if (_isBlockedLeaveTypeName(opt.textContent || "")) {
+      opt.remove();
+    }
+  }
+  // If the current selection is now invalid, clear it.
+  if (selectEl.value && ![...selectEl.options].some((o) => o.value === selectEl.value)) {
+    selectEl.value = "";
+  }
+}
+
 function _setSelectOptions(selectEl, options, keepValue) {
   if (!selectEl) return;
   const current = keepValue ? selectEl.value : "";
@@ -24,6 +54,7 @@ function _setSelectOptions(selectEl, options, keepValue) {
     '<option value="">Select leave type</option>';
   selectEl.innerHTML = placeholder;
   for (const opt of options || []) {
+    if (_isBlockedLeaveTypeName(opt?.name)) continue;
     const o = document.createElement("option");
     o.value = String(opt.id);
     o.textContent = opt.name;
@@ -36,6 +67,7 @@ function _setSelectOptions(selectEl, options, keepValue) {
     }
     selectEl.appendChild(o);
   }
+  _pruneBlockedLeaveTypes(selectEl);
   if (
     keepValue &&
     current &&
@@ -506,6 +538,7 @@ function _init() {
 
   const leaveTypeEl = _qs(formEl, ".js-hrmis-leave-type");
   if (leaveTypeEl) {
+    _pruneBlockedLeaveTypes(leaveTypeEl);
     leaveTypeEl.addEventListener("change", () => {
       _updateSupportDocUI(formEl);
       _syncDateInputsEnabledAndRange(formEl);
