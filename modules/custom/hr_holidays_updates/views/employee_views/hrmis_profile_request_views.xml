@@ -497,9 +497,6 @@
                 <t t-if="
                     ('casual' not in lt_name)
                     and ('compensatory' not in lt_name)
-                    and ('unpaid' not in lt_name)
-                    and ('without pay' not in lt_name)
-                    and ('eol' not in lt_name)
                     and ('paid time off' not in lt_name)
                     and ('sick time off' not in lt_name)
                 ">
@@ -516,7 +513,7 @@
 
           <div class="hrmis-field" style="grid-column: span 4;">
             <label>End Date<span class="req">*</span></label>
-            <input class="hrmis-input" type="date" name="leave_end[]" required="required" t-att-max="max_past_str"/>
+            <input class="hrmis-input" type="date" name="leave_end[]" required="required" t-att-max="max_today_str"/>
           </div>
 
         </div>

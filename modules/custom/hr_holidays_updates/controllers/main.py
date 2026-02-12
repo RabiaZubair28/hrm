@@ -1928,13 +1928,15 @@ class HrmisProfileRequestController(http.Controller):
                     return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
                 if ed < sd:
                     return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be earlier than Start Date.")
-                # Disable dates from today onwards (today + future)
                 today_ctx = fields.Date.context_today(env.user)
-                if sd >= today_ctx or ed >= today_ctx:
-                    return self._render_profile_form_error(employee, req, env, "Leave History: You cannot select today's date or future dates.")
-                # Disable 6 days after the start date (and beyond) => allow max start + 5 days
-                if (ed - sd).days >= 6:
-                    return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be 6 days or more after Start Date.")
+                # Start date must be before today; End date can be up to today.
+                if sd >= today_ctx:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: Start Date must be before today.")
+                if ed > today_ctx:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be after today.")
+                # End date must be at least 7 days after start date.
+                if (ed - sd).days < 7:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: End Date must be at least 7 days after Start Date.")
             except Exception:
                 return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
 
