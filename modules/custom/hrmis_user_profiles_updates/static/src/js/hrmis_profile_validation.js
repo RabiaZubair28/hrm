@@ -354,6 +354,83 @@ function _initContact(form) {
 /* ---------------------------------------------------------
  * Dates
  * --------------------------------------------------------- */
+function _pad2(n) {
+    return String(n).padStart(2, "0");
+}
+
+function _toLocalYmd(d) {
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
+    const y = String(d.getFullYear()).padStart(4, "0");
+    const m = _pad2(d.getMonth() + 1);
+    const day = _pad2(d.getDate());
+    return `${y}-${m}-${day}`;
+}
+
+function _parseLocalYmd(ymd) {
+    const s = String(ymd || "").trim();
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m) return null;
+    const y = Number(m[1]);
+    const mo = Number(m[2]);
+    const d = Number(m[3]);
+    if (!y || !mo || !d) return null;
+    return new Date(y, mo - 1, d);
+}
+
+function _addDaysLocalYmd(ymd, days) {
+    const base = _parseLocalYmd(ymd);
+    if (!base) return "";
+    base.setDate(base.getDate() + Number(days || 0));
+    return _toLocalYmd(base);
+}
+
+function _minYmd(a, b) {
+    if (!_isEmpty(a) && !_isEmpty(b)) return a < b ? a : b; // YYYY-MM-DD lexicographic works
+    return !_isEmpty(a) ? a : b;
+}
+
+function _yesterdayLocalYmd() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - 1);
+    return _toLocalYmd(d);
+}
+
+function _syncLeaveRowDateConstraints(row) {
+    const start = _qs(row, 'input[name="leave_start[]"]');
+    const end = _qs(row, 'input[name="leave_end[]"]');
+    if (!start || !end) return;
+
+    // Disable dates from today onwards (today + future).
+    const yesterday = _yesterdayLocalYmd();
+    start.max = yesterday;
+    end.max = yesterday;
+
+    if (start.value && start.value > yesterday) start.value = yesterday;
+    if (end.value && end.value > yesterday) end.value = yesterday;
+
+    if (!start.value) {
+        // No start date yet: only enforce "no today/future" for end date.
+        end.min = "";
+        end.max = yesterday;
+        return;
+    }
+
+    // End date must be >= start date.
+    end.min = start.value;
+
+    // When selecting a starting date, disable the date 6 days after it (and beyond).
+    // i.e. end date can be at most (start + 5 days).
+    const cap = _addDaysLocalYmd(start.value, 5);
+    const maxEnd = _minYmd(yesterday, cap);
+    if (maxEnd) end.max = maxEnd;
+
+    if (end.value) {
+        if (end.value < end.min) end.value = end.min;
+        if (end.max && end.value > end.max) end.value = end.max;
+    }
+}
+
 function _initDates(form) {
     const today = new Date().toISOString().split("T")[0];
     ["hrmis_joining_date", "hrmis_commission_date"].forEach((name) => {
@@ -414,7 +491,8 @@ function _initRepeatables(form) {
     });
 
     if (btnLeave) btnLeave.addEventListener("click", () => {
-        _cloneFromTemplate("#tpl_leave_row", "#leave_rows");
+        const row = _cloneFromTemplate("#tpl_leave_row", "#leave_rows");
+        if (row) _syncLeaveRowDateConstraints(row);
     });
 
     // Remove (delegation)
@@ -432,6 +510,11 @@ function _initRepeatables(form) {
         if (district) {
             const row = district.closest(".hrmis-repeat-row");
             if (row) _filterFacilitiesInRow(row);
+        }
+
+        if (e.target && e.target.matches && e.target.matches('input[name="leave_start[]"], input[name="leave_end[]"]')) {
+            const row = e.target.closest(".hrmis-repeat-row");
+            if (row) _syncLeaveRowDateConstraints(row);
         }
 
         const qualChk = e.target.closest(".js-qual-completed");
@@ -464,6 +547,9 @@ function _initRepeatables(form) {
             if (digits !== raw) t.value = digits;
         }
     });
+
+    // Ensure any pre-rendered leave rows get constraints too.
+    _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => _syncLeaveRowDateConstraints(row));
 }
 
 /* ---------------------------------------------------------
@@ -595,7 +681,22 @@ function _validateRepeatables(form) {
         if (_isEmpty(start?.value)) { _showError(start, "Start date is required"); hasError = true; }
         if (_isEmpty(end?.value)) { _showError(end, "End date is required"); hasError = true; }
 
+        const yesterday = _yesterdayLocalYmd();
+        if (!_isEmpty(start?.value) && !_isEmpty(yesterday) && start.value > yesterday) {
+            _showError(start, "Start date cannot be today or a future date");
+            hasError = true;
+        }
+        if (!_isEmpty(end?.value) && !_isEmpty(yesterday) && end.value > yesterday) {
+            _showError(end, "End date cannot be today or a future date");
+            hasError = true;
+        }
+
         if (!_isEmpty(start?.value) && !_isEmpty(end?.value)) {
+            const maxEnd = _minYmd(yesterday, _addDaysLocalYmd(start.value, 5));
+            if (!_isEmpty(maxEnd) && end.value > maxEnd) {
+                _showError(end, "End date cannot be more than 6 days after Start date");
+                hasError = true;
+            }
             const s = new Date(start.value + "T00:00:00");
             const e = new Date(end.value + "T00:00:00");
             if (e < s) {
