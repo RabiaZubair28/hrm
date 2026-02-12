@@ -528,10 +528,35 @@ function _renderHrmisLeaveDatePicker() {
         !min || _toLocalYmd(new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0)) >= min;
     const nextOk = !max || _toLocalYmd(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 1)) <= max;
 
+    // Determine allowed year bounds for quick navigation
+    let minYear = 1900;
+    let maxYear = new Date().getFullYear();
+    const minD = _parseLocalYmd(min);
+    const maxD = _parseLocalYmd(max);
+    if (minD) minYear = minD.getFullYear();
+    if (maxD) maxYear = maxD.getFullYear();
+    if (minYear > maxYear) {
+        // fallback
+        minYear = 1900;
+        maxYear = new Date().getFullYear();
+    }
+
     popup.innerHTML = `
       <div class="hrmis-datepop__head">
         <button type="button" class="hrmis-datepop__btn js-prev"${prevOk ? "" : " disabled"}>&lt;</button>
-        <div class="hrmis-datepop__title">${title}</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <select class="hrmis-datepop__btn js-month" aria-label="Month">
+            ${monthNames
+                .map(
+                    (nm, idx) =>
+                        `<option value="${idx}"${idx === m0 ? " selected" : ""}>${nm}</option>`,
+                )
+                .join("")}
+          </select>
+          <input class="hrmis-datepop__btn js-year" aria-label="Year" inputmode="numeric"
+                 style="width:88px; text-align:center;" value="${y}"
+                 min="${minYear}" max="${maxYear}"/>
+        </div>
         <button type="button" class="hrmis-datepop__btn js-next"${nextOk ? "" : " disabled"}>&gt;</button>
       </div>
       <div class="hrmis-datepop__grid js-grid"></div>
@@ -582,6 +607,51 @@ function _renderHrmisLeaveDatePicker() {
         _hrmisLeaveDatePickerState.monthDate = nextMonth;
         _renderHrmisLeaveDatePicker();
     });
+
+    // Month/year quick navigation
+    const monthSel = popup.querySelector(".js-month");
+    const yearInp = popup.querySelector(".js-year");
+    if (monthSel) {
+        monthSel.addEventListener("change", () => {
+            const newM0 = parseInt(monthSel.value, 10);
+            if (Number.isNaN(newM0)) return;
+            _hrmisLeaveDatePickerState.monthDate = new Date(y, newM0, 1);
+            _renderHrmisLeaveDatePicker();
+        });
+    }
+    if (yearInp) {
+        const clampYear = (yr) => {
+            const n = parseInt(String(yr), 10);
+            if (Number.isNaN(n)) return y;
+            return Math.min(maxYear, Math.max(minYear, n));
+        };
+        yearInp.addEventListener("change", () => {
+            const newY = clampYear(yearInp.value);
+            _hrmisLeaveDatePickerState.monthDate = new Date(newY, m0, 1);
+            _renderHrmisLeaveDatePicker();
+        });
+        // Scroll wheel to change years quickly
+        yearInp.addEventListener(
+            "wheel",
+            (ev) => {
+                ev.preventDefault();
+                const delta = ev.deltaY > 0 ? -1 : 1;
+                const newY = clampYear((parseInt(yearInp.value, 10) || y) + delta);
+                _hrmisLeaveDatePickerState.monthDate = new Date(newY, m0, 1);
+                _renderHrmisLeaveDatePicker();
+            },
+            { passive: false },
+        );
+        // Up/Down keys also adjust year
+        yearInp.addEventListener("keydown", (ev) => {
+            if (ev.key !== "ArrowUp" && ev.key !== "ArrowDown") return;
+            ev.preventDefault();
+            const delta = ev.key === "ArrowUp" ? 1 : -1;
+            const newY = clampYear((parseInt(yearInp.value, 10) || y) + delta);
+            _hrmisLeaveDatePickerState.monthDate = new Date(newY, m0, 1);
+            _renderHrmisLeaveDatePicker();
+        });
+    }
 }
 
 function _openHrmisLeaveDatePicker(input, { min = "", max = "", disabledRanges = [] } = {}) {
