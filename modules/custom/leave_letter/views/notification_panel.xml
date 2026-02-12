@@ -1,0 +1,66 @@
+<odoo>
+
+    <template id="hrmis_notifications_page" name="HRMIS Notifications">
+    <t t-call="hr_holidays_updates.hrmis_ui_layout">
+
+        <div class="hrmis-panel">
+
+            <div class="hrmis-panel__header">
+                <div class="hrmis-panel__title">Public Notifications</div>
+            </div>
+
+            <div class="hrmis-panel__body">
+
+                <t t-if="not notifications">
+                    <div class="hrmis-empty">
+                        No notifications available.
+                    </div>
+                </t>
+
+                <t t-foreach="notifications" t-as="notif">
+                    <div class="hrmis-notif-row">
+
+                        <div class="hrmis-notif-main">
+                            <div class="hrmis-notif-title">
+                                <t t-esc="notif.transfer_id.notification_no"/>
+                            </div>
+
+                            <div class="hrmis-notif-meta">
+                                <span>
+                                    Officer:
+                                    <t t-esc="notif.employee_id.name"/>
+                                </span>
+
+                                <span>
+                                    From:
+                                    <t t-esc="notif.district_from_id.name"/>
+                                </span>
+
+                                <span>
+                                    To:
+                                    <t t-esc="notif.district_to_id.name"/>
+                                </span>
+
+                                <span>
+                                    Date:
+                                    <t t-esc="notif.issue_date"/>
+                                </span>
+                            </div>
+                        </div>
+
+                        <a t-att-href="'/transfer_letter/pdf/%s' % notif.id"
+   class="btn btn-sm btn-outline-primary">
+    Download
+</a>
+
+
+                    </div>
+                </t>
+
+            </div>
+
+        </div>
+
+    </t>
+</template>
+</odoo>

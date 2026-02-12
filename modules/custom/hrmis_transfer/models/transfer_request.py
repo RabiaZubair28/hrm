@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from odoo import api, fields, models, SUPERUSER_ID
+from odoo import api, fields, models, SUPERUSER_ID, _
 from odoo.exceptions import UserError
 import logging
 _logger = logging.getLogger(__name__)
@@ -166,6 +166,19 @@ class HrmisTransferRequest(models.Model):
         for rec in self:
             if rec.state != "draft":
                 continue
+
+            # ✅ Block if another TR is already pending for same employee
+            existing = self.search([
+                ("employee_id", "=", rec.employee_id.id),
+                ("state", "=", "submitted"),
+                ("id", "!=", rec.id),
+            ], limit=1)
+
+            if existing:
+                raise UserError(_(
+                    "You already have a pending Transfer Request (%s). "
+                    "Please wait until it is approved or rejected before submitting a new one."
+                ) % (existing.name or existing.display_name))
 
             # Resolve & freeze SO first (raises UserError if missing)
             rec._freeze_so_user()

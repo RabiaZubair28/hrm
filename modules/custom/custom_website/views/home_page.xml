@@ -37,7 +37,7 @@
                 <!-- ================= FOOTER ================= -->
                 <footer class="text-center py-3"
                         style="background: #ffffff; border-top: 1px solid #e5e7eb;">
-                    <small style="color: #6b7280;">
+                    <small style="color: #6b7280; padding-block: 10px">
                         © 2025 Sindh Health Department — HRMIS. All rights reserved.
                     </small>
                 </footer>

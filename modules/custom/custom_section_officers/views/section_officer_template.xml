@@ -17,7 +17,7 @@
               inherit_id="hr_holidays_updates.hrmis_staff_profile">
         <xpath expr="//div[@id='personal_data']" position="inside">
             <t t-if="not request.env.user.has_group('custom_login.group_section_officer')">
-                <div class="hrmis-panel__tools mb-3">
+                <div class="hrmis-btn hrmis-btn--primary hrmis-btn--lg mt-4 mb-1">
                     <a class="hrmis-btn hrmis-btn--primary"
                        t-att-href="'/hrmis/profile/request'">
                         Request Profile Update

@@ -21,8 +21,9 @@
         "views/leave_letter_custom_ui_employee.xml",
         "views/leave_letter_custom_ui_so.xml",
         "views/transfer_letter_custom_ui_employee.xml",
-        "views/alert_notification.xml",
+        # "views/alert_notification.xml",
         "views/transfer_letter_custom_ui_so.xml",
+        "views/notification_panel.xml",
     ],
     "application": True,
 }

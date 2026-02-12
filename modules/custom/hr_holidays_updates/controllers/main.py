@@ -11,6 +11,7 @@ import base64
 from urllib.parse import quote_plus, unquote
 from odoo.http import Response
 
+from dateutil.relativedelta import relativedelta
 
 from odoo import http, fields
 from odoo.exceptions import AccessError, UserError, ValidationError
@@ -1247,56 +1248,56 @@ class HrmisProfileRequestController(http.Controller):
 
         return False
 
-    def _resolve_manager_and_approver(self, employee, designation, bps, manager_user_id=None):
-        """
-        Mapping-driven approver resolution.
-        No facility logic, no hardcoded specialist logic.
+    # def _resolve_manager_and_approver(self, employee, designation, bps, manager_user_id=None):
+    #     """
+    #     Mapping-driven approver resolution.
+    #     No facility logic, no hardcoded specialist logic.
 
-        Returns:
-            final_manager_employee (hr.employee or False)
-            approver_employee (hr.employee or False)
-            message_override (str or None)
-            hard_error (bool)
-        """
-        env = request.env
-        message_override = None
+    #     Returns:
+    #         final_manager_employee (hr.employee or False)
+    #         approver_employee (hr.employee or False)
+    #         message_override (str or None)
+    #         hard_error (bool)
+    #     """
+    #     env = request.env
+    #     message_override = None
 
-        # 1) Try mapped SO from designation group + bps
-        mapped_so_user = self._resolve_so_user_for_designation(designation, bps)
+    #     # 1) Try mapped SO from designation group + bps
+    #     mapped_so_user = self._resolve_so_user_for_designation(designation, bps)
 
-        final_manager_user = mapped_so_user or False
+    #     final_manager_user = mapped_so_user or False
 
-        # 2) If no mapped SO found:
-        #    - If employee already has parent => keep it and allow submission
-        #    - Otherwise block
-        if not final_manager_user:
-            if employee.parent_id:
-                message_override = "The assignment of this user to its SO remains."
-                approver_employee = employee.parent_id
-                return False, approver_employee, message_override, False
-            return False, False, "Current designation has no SO available.", True
+    #     # 2) If no mapped SO found:
+    #     #    - If employee already has parent => keep it and allow submission
+    #     #    - Otherwise block
+    #     if not final_manager_user:
+    #         if employee.parent_id:
+    #             message_override = "The assignment of this user to its SO remains."
+    #             approver_employee = employee.parent_id
+    #             return False, approver_employee, message_override, False
+    #         return False, False, "Current designation has no SO available.", True
 
-        # 3) Convert mapped user -> hr.employee
-        final_manager_employee = env["hr.employee"].sudo().search(
-            [("user_id", "=", final_manager_user.id)],
-            limit=1
-        )
-        if not final_manager_employee:
-            return (
-                False,
-                False,
-                f"Current designation has no SO available (no employee record for user: {final_manager_user.login}).",
-                True,
-            )
+    #     # 3) Convert mapped user -> hr.employee
+    #     final_manager_employee = env["hr.employee"].sudo().search(
+    #         [("user_id", "=", final_manager_user.id)],
+    #         limit=1
+    #     )
+    #     if not final_manager_employee:
+    #         return (
+    #             False,
+    #             False,
+    #             f"Current designation has no SO available (no employee record for user: {final_manager_user.login}).",
+    #             True,
+    #         )
 
-        # 4) Approver is the mapped SO employee
-        approver_employee = final_manager_employee
+    #     # 4) Approver is the mapped SO employee
+    #     approver_employee = final_manager_employee
 
-        # 5) HARD BLOCK (extra safety)
-        if not approver_employee:
-            return False, False, "Current designation has no SO available.", True
+    #     # 5) HARD BLOCK (extra safety)
+    #     if not approver_employee:
+    #         return False, False, "Current designation has no SO available.", True
 
-        return final_manager_employee, approver_employee, message_override, False
+    #     return final_manager_employee, approver_employee, message_override, False
 
     
 
@@ -1324,6 +1325,140 @@ class HrmisProfileRequestController(http.Controller):
                 employee.sudo().write({"parent_id": old_parent_id})
             return False, str(e)
 
+    def _render_profile_form_error(self, employee, req, env, msg):
+        return request.render(
+            "hr_holidays_updates.hrmis_profile_request_form",
+            _base_ctx(
+                "Profile Update Request",
+                "user_profile",
+                employee=employee,
+                current_employee=employee,
+                req=req,
+                districts=env["hrmis.district.master"].sudo().search([]),
+                facilities=env["hrmis.facility.type"].sudo().search([]),
+                designations_unique=self._get_unique_designations(env),
+                error=msg,
+            ),
+        )
+
+    def _to_int(self, v):
+        try:
+            return int(v)
+        except Exception:
+            return False
+
+    def _month_to_date(self, ym):
+        """
+        Converts 'YYYY-MM' -> 'YYYY-MM-01' (string), suitable for fields.Date
+        """
+        ym = (ym or "").strip()
+        if not ym:
+            return False
+        # basic validation
+        if not re.fullmatch(r"\d{4}-\d{2}", ym):
+            return False
+        return f"{ym}-01"
+
+    def _validate_profile_request_post(self, post, req, env):
+        """
+        Validations (server-side):
+        - employee id not mandatory (no check)
+        - CNIC must be dashed only: 12345-1234567-1
+        - DOB >= 18 years
+        - Commission date not future
+        - Joining date not future
+        - Contact number (if provided) must start with 03 and be 11 digits
+        - Merit number mandatory
+        - Dropdowns: already enforced by required-fields (non-empty)
+        - CNIC front/back: only required if not already uploaded on req
+        """
+        # -----------------------
+        # CNIC dashed-only
+        # -----------------------
+        cnic = (post.get("hrmis_cnic") or "").strip()
+        if not re.fullmatch(r"\d{5}-\d{7}-\d{1}", cnic):
+            return "CNIC must be in format 12345-1234567-1"
+
+        # -----------------------
+        # Merit number required
+        # -----------------------
+        merit = (post.get("hrmis_merit_number") or "").strip()
+        if not merit:
+            return "Merit Number is required."
+
+        # -----------------------
+        # DOB must be >= 18
+        # -----------------------
+        dob_str = (post.get("birthday") or "").strip()
+        try:
+            dob = fields.Date.to_date(dob_str)
+        except Exception:
+            dob = None
+        if not dob:
+            return "Invalid Date of Birth."
+
+        today = date.today()
+        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        if age < 18:
+            return "Employee must be at least 18 years old."
+
+        # -----------------------
+        # Commission date not future
+        # -----------------------
+        comm_str = (post.get("hrmis_commission_date") or "").strip()
+        try:
+            comm = fields.Date.to_date(comm_str) if comm_str else None
+        except Exception:
+            comm = None
+        if not comm:
+            return "Invalid Commission Date."
+        if comm > fields.Date.today():
+            return "Commission Date cannot be in the future."
+
+        # -----------------------
+        # Joining date not future
+        # -----------------------
+        join_str = (post.get("hrmis_joining_date") or "").strip()
+        try:
+            join = fields.Date.to_date(join_str) if join_str else None
+        except Exception:
+            join = None
+        if not join:
+            return "Invalid Joining Date."
+        if join > fields.Date.today():
+            return "Joining Date cannot be in the future."
+
+        # -----------------------
+        # Contact number: must start with 03 (if provided)
+        # -----------------------
+        contact = (post.get("hrmis_contact_info") or "").strip()
+        if contact and not re.fullmatch(r"03\d{9}", contact):
+            return "Contact number must start with 03 and be 11 digits (03XXXXXXXXX)."
+
+        # -----------------------
+        # CNIC files required only if not already uploaded
+        # -----------------------
+        cnic_front_file = request.httprequest.files.get("hrmis_cnic_front")
+        cnic_back_file = request.httprequest.files.get("hrmis_cnic_back")
+
+        if not getattr(req, "hrmis_cnic_front", False) and not cnic_front_file:
+            return "CNIC Front Scan is required."
+        if not getattr(req, "hrmis_cnic_back", False) and not cnic_back_file:
+            return "CNIC Back Scan is required."
+
+        return None
+    def _get_unique_designations(self, env):
+        Designation = env["hrmis.designation"].sudo()
+        designations = Designation.search([("active", "=", True)], order="name")
+
+        seen = set()
+        unique = []
+        for d in designations:
+            key = (d.name or "").strip().lower()
+            if key and key not in seen:
+                seen.add(key)
+                unique.append(d)
+        return unique
 
 
     @http.route("/hrmis/profile/request", type="http", auth="user", website=True, methods=["GET"], csrf=False)
@@ -1332,8 +1467,20 @@ class HrmisProfileRequestController(http.Controller):
         employee = request.env["hr.employee"].sudo().search([("user_id", "=", user.id)], limit=1)
         if not employee:
             return request.render("hr_holidays_updates.hrmis_error", {"error": "No employee linked to your user."})
+        today = date.today()
+        max_dob_str = (today - relativedelta(years=18)).strftime("%Y-%m-%d")
+        max_today_str = today.strftime("%Y-%m-%d")   # for commission/joining max
 
         ProfileRequest = request.env["hrmis.employee.profile.request"].sudo()
+        Post = request.env["hrmis.posting.history"].sudo()
+        Qual = request.env["hrmis.qualification.history"].sudo()
+        Promo = request.env["hrmis.promotion.history"].sudo()
+        Leave = request.env["hrmis.leave.history"].sudo()
+
+        posting_lines = Post.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+        qualification_lines = Qual.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+        promotion_lines = Promo.search([("employee_id", "=", employee.id)], order="promotion_date asc, id asc")
+        leave_lines = Leave.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
 
         req = ProfileRequest.search(
             [("employee_id", "=", employee.id), ("state", "in", ["draft", "submitted"])], limit=1
@@ -1351,6 +1498,12 @@ class HrmisProfileRequestController(http.Controller):
                 "district_id": employee.district_id.id if employee.district_id else False,
                 "facility_id": employee.facility_id.id if employee.facility_id else False,
                 "hrmis_merit_number": employee.hrmis_merit_number,
+                "hrmis_domicile": employee.hrmis_domicile,
+                "qualification": employee.qualification,
+                "qualification_date": employee.qualification_date,
+                "year_qualification": employee.year_qualification,
+                "date_promotion": employee.date_promotion,
+
                 
             })
 
@@ -1373,6 +1526,13 @@ class HrmisProfileRequestController(http.Controller):
             "hrmis_merit_number": employee.hrmis_merit_number or "",
             "hrmis_cnic_front": req.hrmis_cnic_front_filename if req.hrmis_cnic_front else "",
             "hrmis_cnic_back": req.hrmis_cnic_back_filename if req.hrmis_cnic_back else "",
+            # NEW
+            "hrmis_domicile": employee.hrmis_domicile or "",
+            "qualification": employee.qualification or "",
+            "qualification_date": employee.qualification_date or "",
+            "year_qualification": employee.year_qualification or "",
+            "date_promotion": employee.date_promotion or "",
+
         }
 
         info = None
@@ -1393,9 +1553,55 @@ class HrmisProfileRequestController(http.Controller):
                 pre_fill=pre_fill,
                 districts=request.env["hrmis.district.master"].sudo().search([]),
                 facilities=request.env["hrmis.facility.type"].sudo().search([]),
+                posting_lines=posting_lines,
+                qualification_lines=qualification_lines,
+                promotion_lines=promotion_lines,
+                leave_lines=leave_lines,
+
+                designations_unique=self._get_unique_designations(request.env),
                 info=info,
+                max_dob_str=max_dob_str,
+                max_today_str=max_today_str,
             ),
         )
+
+    def _get_default_section_officer_user(self):
+        """Always route to this SO user."""
+        Users = request.env["res.users"].sudo()
+
+        so_user = Users.search([("login", "=", "devs")], limit=1)
+
+        return so_user or False
+    
+    def _resolve_manager_and_approver(self, employee, designation, bps, manager_user_id=None):
+        """
+        Always routes to the single default SO user (devs / section_officer).
+        """
+        env = request.env
+
+        so_user = self._get_default_section_officer_user()
+        if not so_user:
+            return False, False, "No Section Officer user found to route this request.", True
+
+        so_emp = env["hr.employee"].sudo().search([("user_id", "=", so_user.id)], limit=1)
+        if not so_emp:
+            return (
+                False,
+                False,
+                f"SO user '{so_user.login}' has no linked employee record (hr.employee.user_id).",
+                True,
+            )
+
+        # final_manager_employee used for temporary parent assignment
+        final_manager_employee = so_emp
+
+        # approver is same SO employee
+        approver_employee = so_emp
+
+        return final_manager_employee, approver_employee, None, False
+
+
+
 
     # It submits the employees profile update request
     @http.route(
@@ -1452,31 +1658,35 @@ class HrmisProfileRequestController(http.Controller):
         # Required fields validation
         # -----------------------
         required_fields = {
-            "hrmis_employee_id": "Employee ID / Service Number",
             "hrmis_cnic": "CNIC",
             "hrmis_father_name": "Father's Name",
             "gender": "Gender",
             "hrmis_joining_date": "Joining Date",
-            "hrmis_bps": "BPS",
+           
             "hrmis_cadre": "Cadre",
-            "hrmis_designation": "Designation",
-            "district_id": "District",
-            "facility_id": "Facility",
+            
             "birthday": "Date Of Birth",
             "hrmis_cnic_front": "CNIC Front Scan",
             "hrmis_cnic_back": "CNIC Back Scan",
-            
+            "hrmis_merit_number": "Merit Number",
+            "hrmis_contact_info": "Contact Number",
+
+            # NEW
+            "hrmis_domicile": "Domicile",
         }
+
 
         missing = []
         for field, label in required_fields.items():
             if field in ("hrmis_cnic_front", "hrmis_cnic_back"):
+                already = bool(getattr(req, field, False))  # ✅ already uploaded on req
                 file_obj = request.httprequest.files.get(field)
-                if not file_obj:
+                if not already and not file_obj:
                     missing.append(label)
             else:
                 if not (post.get(field) or "").strip():
                     missing.append(label)
+
 
         if missing:
             return request.render(
@@ -1576,7 +1786,165 @@ class HrmisProfileRequestController(http.Controller):
             "hrmis_merit_number": post.get("hrmis_merit_number"),
             "approver_id": approver_emp.id if approver_emp else False,
             "state": "submitted",
+
+            # NEW
+            "hrmis_domicile": post.get("hrmis_domicile"),
+            "qualification": post.get("qualification"),
+            "qualification_date": post.get("qualification_date"),
+            "year_qualification": post.get("year_qualification"),
+            "date_promotion": post.get("date_promotion"),
         })
+        # -----------------------
+        # Parse Repeatable Sections (getlist arrays)
+        # -----------------------
+        form = request.httprequest.form
+
+        # 1) Qualification History
+        q_degree = form.getlist("qualification_degree[]")
+        q_spec = form.getlist("qualification_specialization[]")
+        q_start = form.getlist("qualification_start[]")
+        q_end = form.getlist("qualification_end[]")
+
+        qual_lines = []
+        for i in range(max(len(q_degree), len(q_start), len(q_spec), len(q_end))):
+            deg = (q_degree[i] if i < len(q_degree) else "").strip()
+            spec = (q_spec[i] if i < len(q_spec) else "").strip()
+            s = self._month_to_date(q_start[i] if i < len(q_start) else "")
+            e = self._month_to_date(q_end[i] if i < len(q_end) else "")
+
+            # skip completely empty rows
+            if not (deg or spec or s or e):
+                continue
+
+            # required fields
+            if not deg or not s:
+                return self._render_profile_form_error(employee, req, env, "Qualification History: Degree and Start Month are required.")
+
+            qual_lines.append({
+                "employee_id": employee.id,
+                "degree": deg,
+                "specialization": spec,
+                "start_date": s,
+                "end_date": e or False,
+            })
+
+        # 2) Posting History
+        p_district = form.getlist("posting_district_id[]")
+        p_facility = form.getlist("posting_facility_id[]")
+        p_designation = form.getlist("posting_designation_id[]")
+        p_bps = form.getlist("posting_bps[]")
+        p_start = form.getlist("posting_start[]")
+        p_end = form.getlist("posting_end[]")
+
+        post_lines = []
+        for i in range(max(len(p_district), len(p_designation), len(p_bps), len(p_start), len(p_end), len(p_facility))):
+            district_id = self._to_int(p_district[i] if i < len(p_district) else "")
+            facility_id = self._to_int(p_facility[i] if i < len(p_facility) else "")
+            designation_id = self._to_int(p_designation[i] if i < len(p_designation) else "")
+            bps_val = self._to_int(p_bps[i] if i < len(p_bps) else "")
+            s = self._month_to_date(p_start[i] if i < len(p_start) else "")
+            e = self._month_to_date(p_end[i] if i < len(p_end) else "")
+
+            # skip completely empty row
+            if not (district_id or facility_id or designation_id or bps_val or s or e):
+                continue
+
+            if not district_id or not designation_id or not bps_val or not s:
+                return self._render_profile_form_error(employee, req, env, "Posting History: District, Designation, BPS and Start Month are required.")
+
+            post_lines.append({
+                "employee_id": employee.id,
+                "district_id": district_id,
+                "facility_id": facility_id or False,
+                "designation_id": designation_id,
+                "bps": bps_val,
+                "start_date": s,
+                "end_date": e or False,
+            })
+
+        # 3) Promotion History
+        pr_from = form.getlist("promotion_bps_from[]")
+        pr_to = form.getlist("promotion_bps_to[]")
+        pr_date = form.getlist("promotion_date[]")
+
+        promo_lines = []
+        for i in range(max(len(pr_from), len(pr_to), len(pr_date))):
+            b_from = self._to_int(pr_from[i] if i < len(pr_from) else "")
+            b_to = self._to_int(pr_to[i] if i < len(pr_to) else "")
+            pdate = self._month_to_date(pr_date[i] if i < len(pr_date) else "")
+
+            if not (b_from or b_to or pdate):
+                continue
+
+            if not b_from or not b_to or not pdate:
+                return self._render_profile_form_error(employee, req, env, "Promotion History: BPS From, BPS To and Promotion Month are required.")
+
+            if b_to <= b_from:
+                return self._render_profile_form_error(employee, req, env, "Promotion History: BPS To must be greater than BPS From.")
+
+            promo_lines.append({
+                "employee_id": employee.id,
+                "bps_from": b_from,
+                "bps_to": b_to,
+                "promotion_date": pdate,
+            })
+
+        # 4) Leave History
+        l_type = form.getlist("leave_type_id[]")
+        l_start = form.getlist("leave_start[]")
+        l_end = form.getlist("leave_end[]")
+
+        leave_lines = []
+        for i in range(max(len(l_type), len(l_start), len(l_end))):
+            leave_type_id = self._to_int(l_type[i] if i < len(l_type) else "")
+            s = (l_start[i] if i < len(l_start) else "").strip()
+            e = (l_end[i] if i < len(l_end) else "").strip()
+
+            if not (leave_type_id or s or e):
+                continue
+
+            if not leave_type_id or not s or not e:
+                return self._render_profile_form_error(employee, req, env, "Leave History: Leave Type, Start Date and End Date are required.")
+
+            # server validation: end >= start
+            try:
+                sd = fields.Date.to_date(s)
+                ed = fields.Date.to_date(e)
+                if ed < sd:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be earlier than Start Date.")
+            except Exception:
+                return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
+
+            leave_lines.append({
+                "employee_id": employee.id,
+                "leave_type_id": leave_type_id,
+                "start_date": s,
+                "end_date": e,
+            })
+
+        # -----------------------
+        # Write histories (replace existing histories)
+        # If you want append-only, remove the unlink() blocks.
+        # -----------------------
+        Qual = env["hrmis.qualification.history"].sudo()
+        Post = env["hrmis.posting.history"].sudo()
+        Promo = env["hrmis.promotion.history"].sudo()
+        Leave = env["hrmis.leave.history"].sudo()
+
+        Qual.search([("employee_id", "=", employee.id)]).unlink()
+        Post.search([("employee_id", "=", employee.id)]).unlink()
+        Promo.search([("employee_id", "=", employee.id)]).unlink()
+        Leave.search([("employee_id", "=", employee.id)]).unlink()
+
+        if qual_lines:
+            Qual.create(qual_lines)
+        if post_lines:
+            Post.create(post_lines)
+        if promo_lines:
+            Promo.create(promo_lines)
+        if leave_lines:
+            Leave.create(leave_lines)
+
         # ✅ store merit number into employee AFTER req is updated
         employee.sudo().write({
             "hrmis_merit_number": (post.get("hrmis_merit_number") or "").strip() or employee.hrmis_merit_number,
@@ -1600,6 +1968,7 @@ class HrmisProfileRequestController(http.Controller):
                     req=req,
                     districts=env["hrmis.district.master"].sudo().search([]),
                     facilities=env["hrmis.facility.type"].sudo().search([]),
+                    
                     error=f"Could not submit request. Changes reverted. Error: {err}",
                 ),
             )

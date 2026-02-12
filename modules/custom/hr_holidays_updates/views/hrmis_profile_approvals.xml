@@ -19,25 +19,29 @@
                         </div>
                     </t>
 
-                    <t t-foreach="requests" t-as="req">
-                        <div class="hrmis-leave-row">
-
-                            <div class="hrmis-leave-row__cell">
-                                <strong>
-                                    <t t-esc="req.employee_id.name"/>
-                                </strong>
+                    <t t-if="requests">
+                        <div class="hrmis-table hrmis-table--profile-approvals">
+                            <div class="hrmis-table__head">
+                                <div>Employee</div>
+                                <div>Designation</div>
+                                <div>Action</div>
                             </div>
-
-                            <div class="hrmis-leave-row__cell">
-                                <t t-esc="req.hrmis_designation"/>
-                            </div>
-
-                            <div class="hrmis-leave-row__cell">
-                                <a class="hrmis-btn hrmis-btn--outline"
-                                    t-attf-href="/web#id={{ req.id }}&amp;model=hrmis.employee.profile.request&amp;view_type=form">
-                                        Review
-                                </a>
-                            </div>
+                            <t t-foreach="requests" t-as="req">
+                                <div class="hrmis-table__row">
+                                    <div class="strong" data-label="Employee">
+                                        <t t-esc="req.employee_id.name"/>
+                                    </div>
+                                    <div data-label="Designation">
+                                        <t t-esc="req.hrmis_designation"/>
+                                    </div>
+                                    <div data-label="Action" class="hrmis-leave-row__actions">
+                                        <a class="hrmis-btn hrmis-btn--outline"
+                                           t-attf-href="/web#id={{ req.id }}&amp;model=hrmis.employee.profile.request&amp;view_type=form">
+                                            Review
+                                        </a>
+                                    </div>
+                                </div>
+                            </t>
                         </div>
                     </t>
                 </div>

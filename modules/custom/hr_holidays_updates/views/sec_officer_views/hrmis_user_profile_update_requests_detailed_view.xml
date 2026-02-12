@@ -1,168 +1,184 @@
 <odoo>
-<template id="hrmis_profile_update_request_view" name="Approve Profile Request Form">
-    <t t-call="hr_holidays_updates.hrmis_ui_layout">
+    <template id="hrmis_profile_update_request_view" name="Approve Profile Request Form">
+        <t t-call="hr_holidays_updates.hrmis_ui_layout">
 
-        <div class="hrmis-panel">
-            <!-- Breadcrumb -->
-            <div class="hrmis-breadcrumb">
-                <a t-att-href="'/hrmis/profile-update-requests'">&lt; Back to Requests</a>
-            </div>
-            <!-- Header -->
-            <div class="hrmis-panel__header">
-                <div class="hrmis-panel__title">Approve Profile Update Request</div>
-            </div>
+            <div class="hrmis-panel">
+                <!-- Breadcrumb -->
+               
 
-            <!-- Body -->
-            <div class="hrmis-panel__body">
-                <t t-if="error_msg">
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <strong>Error:</strong>
-                        <t t-esc="error_msg"/>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                </t>
+                <!-- Header -->
+                <div class="hrmis-panel__header">
+                <div style="display: block; ; margin-bottom: 10px"> 
+                    <div class="hrmis-panel__title">Approve Profile Update Request</div>
+                     <div class="hrmis-breadcrumb">
+                    <a t-att-href="'/hrmis/profile-update-requests'" style="border-bottom: 1px solid #2a2f31; text: black; text-decoration: none;">Back to Requests</a></div>
+                </div>
+                </div>
 
-                <t t-if="success_msg">
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <strong>Success:</strong>
-                        <t t-esc="success_msg"/>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                </t>
+                <!-- Body -->
+                <div class="hrmis-panel__body">
 
-                <t t-if="info_msg">
-                    <div class="alert alert-info alert-dismissible fade show" role="alert">
-                        <strong>Info:</strong>
-                        <t t-esc="info_msg"/>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                </t>
-                <form class="hrmis-form"
-                      t-att-action="'/hrmis/profile/request/approve/%s' % req.id"
-                      method="post">
-
-                    <input type="hidden" name="csrf_token"
-                           t-att-value="request.csrf_token()"/>
-
-                    <div class="hrmis-form__grid">
-
-                        <!-- Employee / Service Info -->
-                        <div class="hrmis-field">
-                            <label>Employee ID / Service No</label>
-                            <input class="hrmis-input"
-                                   type="text"
-                                   name="hrmis_employee_id"
-                                   t-att-value="req.hrmis_employee_id"/>
+                    <t t-if="error_msg">
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <strong>Error:</strong>
+                            <t t-esc="error_msg"/>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
+                    </t>
 
-                        <div class="hrmis-field">
-                            <label>CNIC</label>
-                            <input class="hrmis-input"
-                                   type="text"
-                                   name="hrmis_cnic"
-                                   t-att-value="req.hrmis_cnic"/>
+                    <t t-if="success_msg">
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <strong>Success:</strong>
+                            <t t-esc="success_msg"/>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
+                    </t>
 
-                        <!-- Personal -->
-                        <div class="hrmis-field">
-                            <label>Father's Name</label>
-                            <input class="hrmis-input"
-                                   type="text"
-                                   name="hrmis_father_name"
-                                   t-att-value="req.hrmis_father_name"/>
+                    <t t-if="info_msg">
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <strong>Info:</strong>
+                            <t t-esc="info_msg"/>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
+                    </t>
 
-                        <div class="hrmis-field">
-                            <label>Gender</label>
-                            <select class="hrmis-input" name="gender">
-                                <option value="male" t-att-selected="req.gender=='male'">Male</option>
-                                <option value="female" t-att-selected="req.gender=='female'">Female</option>
-                            </select>
-                        </div>
+                    <form class="hrmis-form"
+                          t-att-action="'/hrmis/profile/request/approve/%s' % req.id"
+                          method="post">
 
+                        <input type="hidden" name="csrf_token"
+                               t-att-value="request.csrf_token()"/>
 
-                        <div class="hrmis-field">
-                            <label>Date of Birth</label>
-                            <input class="hrmis-input"
-                                   type="date"
-                                   name="birthday"
-                                   t-att-value="req.birthday"/>
-                        </div>
+                        <div class="hrmis-form__grid">
 
+                            <!-- Employee / Service Info -->
+                            <div class="hrmis-field">
+                                <label>Employee ID / Service No</label>
+                                <input class="hrmis-input"
+                                       type="text"
+                                       name="hrmis_employee_id"
+                                       t-att-value="req.hrmis_employee_id"/>
+                            </div>
 
-                        <div class="hrmis-field">
-                            <label>Commision Date</label>
-                            <input class="hrmis-input"
-                                   type="date"
-                                   name="hrmis_commission_date"
-                                   t-att-value="req.hrmis_commission_date"/>
-                        </div>
+                            <div class="hrmis-field">
+                                <label>CNIC</label>
+                                <input class="hrmis-input"
+                                       type="text"
+                                       name="hrmis_cnic"
+                                       placeholder="12345-1234567-1"
+                                       pattern="^\d{5}-\d{7}-\d{1}$"
+                                       title="CNIC must be like 12345-1234567-1"
+                                       t-att-value="req.hrmis_cnic"
+                                       required="required"/>
+                            </div>
 
-                        <!-- Service -->
-                        <div class="hrmis-field">
-                            <label>Joining Date</label>
-                            <input class="hrmis-input"
-                                   type="date"
-                                   name="hrmis_joining_date"
-                                   t-att-value="req.hrmis_joining_date"/>
-                        </div>
-                        <!-- Posting -->
-                        <div class="hrmis-field">
-                            <label>District</label>
-                            <select class="hrmis-input js-hrmis-district" name="district_id" required="required">
-                                <option value="">Select</option>
-                                <t t-foreach="districts" t-as="dist">
-                                    <option t-att-value="dist.id"
-                                            t-att-selected="req.district_id and req.district_id.id == dist.id">
-                                        <t t-esc="dist.name"/>
-                                    </option>
-                                </t>
-                            </select>
-                        </div>
+                            <!-- Personal -->
+                            <div class="hrmis-field">
+                                <label>Father's Name</label>
+                                <input class="hrmis-input"
+                                       type="text"
+                                       name="hrmis_father_name"
+                                       t-att-value="req.hrmis_father_name"/>
+                            </div>
 
-                        <div class="hrmis-field">
-                            <label>Facility</label>
-                            <select class="hrmis-input js-hrmis-facility" name="facility_id" required="required">
-                                <option value="">Select</option>
-                                <t t-foreach="facilities" t-as="fac">
-                                    <option t-att-value="fac.id"
-                                            t-att-data-district-id="fac.district_id.id if fac.district_id else ''"
-                                            t-att-selected="req.facility_id and req.facility_id.id == fac.id">
-                                        <t t-esc="fac.name"/>
-                                    </option>
-                                </t>
-                            </select>
-                        </div>
+                            <div class="hrmis-field">
+                                <label>Gender</label>
+                                <select class="hrmis-input" name="gender">
+                                    <option value="male" t-att-selected="req.gender=='male'">Male</option>
+                                    <option value="female" t-att-selected="req.gender=='female'">Female</option>
+                                </select>
+                            </div>
 
-                        <div class="hrmis-field">
-                            <label>Cadre</label>
-                            <select class="hrmis-input" name="hrmis_cadre">
-                                <option value="">Select</option>
-                                <t t-foreach="cadres" t-as="cadre">
-                                    <option t-att-value="cadre.id"
-                                            t-att-selected="req.hrmis_cadre and req.hrmis_cadre.id == cadre.id">
-                                        <t t-esc="cadre.name"/>
-                                    </option>
-                                </t>
-                            </select>
-                        </div>
+                            <div class="hrmis-field">
+                                <label>Date of Birth</label>
+                                <!-- <t t-set="today_str" t-value="fields.Date.today().strftime('%Y-%m-%d')"/>
+                                <t t-set="max_dob_str" t-value="(fields.Date.today() - relativedelta(years=18)).strftime('%Y-%m-%d')"/> -->
+                                <input type="date"
+                                       name="birthday"
+                                       class="hrmis-input"
+                                       t-att-max="max_dob_str"
+                                       t-att-value="req.birthday"
+                                       required="required"/>
+                            </div>
 
-                        <div class="hrmis-field">
-                            <label>BPS Grade</label>
-                            <input class="hrmis-input js-hrmis-bps"
-                                type="number"
-                                name="hrmis_bps"
-                                t-att-value="req.hrmis_bps"/>
-                        </div>
+                            <div class="hrmis-field">
+                                <label>Commision Date</label>
+                                <input type="date"
+                                       name="hrmis_commission_date"
+                                       class="hrmis-input"
+                                       t-att-max="today_str"
+                                       t-att-value="req.hrmis_commission_date"
+                                       required="required"/>
+                            </div>
 
-                        <!-- Designation -->
-                        <div class="hrmis-field">
-                            <label>Designation<span class="req">*</span></label>
-                            <select class="hrmis-input js-designation-select" name="hrmis_designation" required="required">
-                                <option value="">Select</option>
-                                <t t-foreach="designations" t-as="designation">
-                                    <t t-set="rem"
-                                        t-value="remaining_map.get((designation.facility_id.id, designation.id), designation.total_sanctioned_posts or 0)"/>
+                            <!-- Service -->
+                            <div class="hrmis-field">
+                                <label>Joining Date</label>
+                                <input type="date"
+                                       name="hrmis_joining_date"
+                                       class="hrmis-input"
+                                       t-att-max="today_str"
+                                       t-att-value="req.hrmis_joining_date"
+                                       required="required"/>
+                            </div>
+
+                            <!-- Posting -->
+                            <div class="hrmis-field">
+                                <label>District</label>
+                                <select class="hrmis-input js-hrmis-district" name="district_id" required="required">
+                                    <option value="">Select</option>
+                                    <t t-foreach="districts" t-as="dist">
+                                        <option t-att-value="dist.id"
+                                                t-att-selected="req.district_id and req.district_id.id == dist.id">
+                                            <t t-esc="dist.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <div class="hrmis-field">
+                                <label>Facility</label>
+                                <select class="hrmis-input js-hrmis-facility" name="facility_id" required="required">
+                                    <option value="">Select</option>
+                                    <t t-foreach="facilities" t-as="fac">
+                                        <option t-att-value="fac.id"
+                                                t-att-data-district-id="fac.district_id.id if fac.district_id else ''"
+                                                t-att-selected="req.facility_id and req.facility_id.id == fac.id">
+                                            <t t-esc="fac.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <div class="hrmis-field">
+                                <label>Cadre</label>
+                                <select class="hrmis-input" name="hrmis_cadre">
+                                    <option value="">Select</option>
+                                    <t t-foreach="cadres" t-as="cadre">
+                                        <option t-att-value="cadre.id"
+                                                t-att-selected="req.hrmis_cadre and req.hrmis_cadre.id == cadre.id">
+                                            <t t-esc="cadre.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <div class="hrmis-field">
+                                <label>BPS Grade</label>
+                                <input class="hrmis-input js-hrmis-bps"
+                                       type="number"
+                                       name="hrmis_bps"
+                                       t-att-value="req.hrmis_bps"/>
+                            </div>
+
+                            <!-- Designation -->
+                            <div class="hrmis-field">
+                                <label>Designation<span class="req">*</span></label>
+                                <select class="hrmis-input js-designation-select" name="hrmis_designation" required="required">
+                                    <option value="">Select</option>
+                                    <t t-foreach="designations" t-as="designation">
+                                        <t t-set="rem"
+                                           t-value="remaining_map.get((designation.facility_id.id, designation.id), designation.total_sanctioned_posts or 0)"/>
 
                                         <option t-att-value="designation.id"
                                                 t-att-data-facility-id="designation.facility_id.id if designation.facility_id else ''"
@@ -174,123 +190,186 @@
                                             <t t-esc="designation.name"/>
                                             <t t-esc="'  (%s/%s)' % (rem or 0, designation.total_sanctioned_posts or 0)"/>
                                         </option>
+                                    </t>
+                                </select>
+                            </div>
+ <!-- Qualification & Promotion  -->
 
-                                </t>
-                            </select>
+<div class="hrmis-field">
+  <label>Domicile</label>
 
+  <select name="hrmis_domicile"
+          class="hrmis-input"
+          required="required">
 
-                        </div>
+    <option value="" disabled="disabled" hidden="hidden"
+            t-att-selected="not req.hrmis_domicile">
+      Select Domicile
+    </option>
 
-                        <div class="hrmis-field">
-                            <label>Total Leaves Taken Since Joining (Days)</label>
-                            <input class="hrmis-input"
-                                   type="numbner"
-                                   steps="0.1"
-                                   name="hrmis_leaves_taken"
-                                   t-att-value="req.hrmis_leaves_taken"/>
-                        </div>
+    <t t-foreach="districts" t-as="d">
+      <option t-att-value="d.name"
+              t-att-selected="req.hrmis_domicile == d.name">
+        <t t-esc="d.name"/>
+      </option>
+    </t>
 
-                        <!-- Contact -->
-                        <div class="hrmis-field hrmis-field--wide">
-                            <label>Contact Info</label>
-                            <input class="hrmis-input hrmis-input--wide"
-                                   type="text"
-                                   name="hrmis_contact_info"
-                                   t-att-value="req.hrmis_contact_info"/>
-                        </div>
-     <div class="hrmis-field hrmis-field--wide">
-    <label>Merit Number</label>
-    <input class="hrmis-input hrmis-input--wide"
-           type="text"
-           name="hrmis_merit_number"
-           t-att-value="req.hrmis_merit_number"/>
-</div>
-
-                        <!-- CNIC Verification -->
-<div class="hrmis-panel__section">
-    <h5 class="mb-2">CNIC Verification</h5>
-
-    <div class="row">
-
-        <!-- Front -->
-        <div class="col-md-6">
-            <label class="fw-bold">CNIC Front</label>
-
-            <t t-if="req.hrmis_cnic_front">
-                <div class="mt-2">
-                    <img t-att-src="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_front?download=true' % req.id"
-                         style="max-width:100%; max-height:300px; border:1px solid #ddd; padding:6px;"/>
-
-                    <div class="mt-1">
-                        <a class="btn btn-sm btn-outline-primary"
-                           t-att-href="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_front?download=true' % req.id"
-                           target="_blank">
-                            View / Download
-                        </a>
-                    </div>
-                </div>
-            </t>
-
-            <t t-if="not req.hrmis_cnic_front">
-                <span class="text-muted">No CNIC front uploaded.</span>
-            </t>
-        </div>
-
-        <!-- Back -->
-        <div class="col-md-6">
-            <label class="fw-bold">CNIC Back</label>
-
-            <t t-if="req.hrmis_cnic_back">
-                <div class="mt-2">
-                    <img t-att-src="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_back?download=true' % req.id"
-                         style="max-width:100%; max-height:300px; border:1px solid #ddd; padding:6px;"/>
-
-                    <div class="mt-1">
-                        <a class="btn btn-sm btn-outline-primary"
-                           t-att-href="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_back?download=true' % req.id"
-                           target="_blank">
-                            View / Download
-                        </a>
-                    </div>
-                </div>
-            </t>
-
-            <t t-if="not req.hrmis_cnic_back">
-                <span class="text-muted">No CNIC back uploaded.</span>
-            </t>
-        </div>
-
-    </div>
+  </select>
 </div>
 
 
-                    </div>
+<div class="hrmis-field">
+  <label>Last Qualification</label>
+  <input type="text"
+         name="qualification"
+         class="hrmis-input"
+         placeholder="MBBS, FCPS, MCPS, Diploma"
+         t-att-value="req.qualification"
+         required="required"/>
+</div>
 
-                    <!-- Actions -->
-                    <div class="hrmis-form__actions" t-if="can_approve">
-                        <button type="submit"
-                                name="approve"
-                                class="hrmis-btn hrmis-btn--primary hrmis-btn--lg">
-                            Approve
-                        </button>
+<div class="hrmis-field">
+  <label>Qualification Date</label>
+  <input type="date"
+         name="qualification_date"
+         class="hrmis-input"
+         t-att-max="today_str"
+         t-att-value="req.qualification_date"
+         required="required"/>
+</div>
 
-                        <a class="hrmis-btn hrmis-btn--danger hrmis-btn--lg"
-                            t-att-href="'/hrmis/profile/request/reject/%s' % req.id"
-                        >
+<div class="hrmis-field">
+  <label>Year of Qualification</label>
+  <input type="date"
+         name="year_qualification"
+         class="hrmis-input"
+         t-att-max="today_str"
+         t-att-value="req.year_qualification"
+         required="required"/>
+</div>
+
+<div class="hrmis-field">
+  <label>Last Promotion Date</label>
+  <input type="date"
+         name="date_promotion"
+         class="hrmis-input"
+         t-att-max="today_str"
+         t-att-value="req.date_promotion"/>
+</div>
+
+                            <div class="hrmis-field">
+                                <label>Total Leaves Taken Since Joining (Days)</label>
+                                <input class="hrmis-input"
+                                       type="number"
+                                       step="0.1"
+                                       name="hrmis_leaves_taken"
+                                       t-att-value="req.hrmis_leaves_taken"/>
+                            </div>
+
+                            <!-- Contact -->
+                            <div class="hrmis-field hrmis-field--wide">
+                                <label>Contact Info</label>
+                                <input class="hrmis-input hrmis-input--wide"
+                                       type="text"
+                                       name="hrmis_contact_info"
+                                       placeholder="03XXXXXXXXX"
+                                       pattern="^03\d{9}$"
+                                       title="Contact number must start with 03 and be 11 digits"
+                                       t-att-value="req.hrmis_contact_info"/>
+                            </div>
+
+                            <div class="hrmis-field hrmis-field--wide">
+                                <label>Merit Number</label>
+                                <input class="hrmis-input hrmis-input--wide"
+                                       type="text"
+                                       name="hrmis_merit_number"
+                                       required="required"
+                                       t-att-value="req.hrmis_merit_number"/>
+                            </div>
+
+                            <!-- CNIC Verification -->
+                            <div class="hrmis-panel__section hrmis-field--wide">
+                               
+
+                                <div class="row">
+
+                                    <!-- Front -->
+                                    <div class="col-md-6">
+                                        <label class=" py-2" style="font-weight: 800;">CNIC Front</label>
+
+                                        <t t-if="req.hrmis_cnic_front">
+                                            <div class="mt-2">
+                                                <img t-att-src="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_front?download=true' % req.id"
+                                                     style="max-width:100%; max-height:300px; border:1px solid #ddd; padding:6px;"/>
+
+                                                <div class="my-2">
+                                                    <a class="btn btn-sm btn-outline-primary bg-[#064526]"
+                                                       t-att-href="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_front?download=true' % req.id"
+                                                       target="_blank">
+                                                        View / Download
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </t>
+
+                                        <t t-if="not req.hrmis_cnic_front">
+                                            <span class="text-muted">No CNIC front uploaded.</span>
+                                        </t>
+                                    </div>
+
+                                    <!-- Back -->
+                                    <div class="col-md-6">
+                                        <label class=" py-2" style="font-weight: 800;">CNIC Back</label>
+
+                                        <t t-if="req.hrmis_cnic_back">
+                                            <div class="mt-2">
+                                                <img t-att-src="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_back?download=true' % req.id"
+                                                     style="max-width:100%; max-height:300px; border:1px solid #ddd; padding:6px;"/>
+
+                                                <div class="my-2">
+                                                    <a class="btn btn-sm btn-outline-primary bg-[#064526]"
+                                                       t-att-href="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_back?download=true' % req.id"
+                                                       target="_blank">
+                                                        View / Download
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </t>
+
+                                        <t t-if="not req.hrmis_cnic_back">
+                                            <span class="text-muted">No CNIC back uploaded.</span>
+                                        </t>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                        </div> <!-- /.hrmis-form__grid -->
+
+                        <!-- Actions -->
+                        <div class="hrmis-form__actions" t-if="can_approve">
+                            <button type="submit"
+                                    name="approve"
+                                    class="hrmis-btn hrmis-btn--primary hrmis-btn--lg">
+                                Approve
+                            </button>
+
+                            <a class="hrmis-btn hrmis-btn--danger hrmis-btn--lg"
+                               t-att-href="'/hrmis/profile/request/reject/%s' % req.id">
                                 Reject
                             </a>
 
-                        <a class="hrmis-btn hrmis-btn--outline"
-                           t-att-href="back_url">
-                            Back
-                        </a>
-                    </div>
+                            <a class="hrmis-btn hrmis-btn--outline"
+                               t-att-href="back_url">
+                                Back
+                            </a>
+                        </div>
 
-                </form>
+                    </form>
 
-            </div>
-        </div>
+                </div> <!-- /.hrmis-panel__body -->
+            </div> <!-- /.hrmis-panel -->
 
-    </t>
-</template>
+        </t>
+    </template>
 </odoo>

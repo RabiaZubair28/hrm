@@ -10,3 +10,8 @@ from . import hrmis_designations
 from . import hrmis_health_care_unit
 from . import hrmis_facility_designation
 from . import designation_group
+
+from . import qualification_history
+from . import posting_history
+from . import promotion_history
+from . import leave_history

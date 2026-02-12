@@ -167,6 +167,14 @@
   justify-content: space-between;
   padding: 12px 14px;
 }
+.hrmis-panel__header2 {
+  background: linear-gradient(180deg, #dfeaec 0%, #cfe1e5 100%);
+  border-bottom: 2px solid #2a2f31;
+  display: block;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
 .hrmis-panel__title {
   font-size: 28px;
   font-weight: 800;
@@ -178,6 +186,8 @@
 .hrmis-panel__tools {
   display: flex;
   align-items: center;
+  justify-content: center;
+  margin-top: 20px ;
   gap: 10px;
 }
 

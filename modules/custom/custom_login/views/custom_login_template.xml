@@ -3,7 +3,7 @@
   <template id="custom_login_template">
     <t t-call="custom_login.custom_login_layout">
 
-            <div class="d-flex justify-content-center align-items-center  bg-light">
+            <div class="d-flex justify-content-center align-items-center  bg-light px-3 pb-4">
 
                     <!-- <h4 class="fw-bold mb-1" style="color:#064526; letter-spacing:1px;">
                     SINDH HUMAN RESOURCE MANAGEMENT INFORMATION SYSTEM</h4> -->

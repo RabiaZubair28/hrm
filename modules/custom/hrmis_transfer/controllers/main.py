@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import json
 from urllib.parse import quote_plus
-
+from odoo.exceptions import UserError, ValidationError, AccessError
 from odoo import http
 from odoo.http import request
 from odoo.addons.hrmis_multilevel_approvals.models.mixins import NoApproverConfigured
+import logging
+_logger = logging.getLogger(__name__)
+
 
 class HrmisTransferController(http.Controller):
     def _json(self, payload: dict, status: int = 200):
@@ -254,15 +257,27 @@ class HrmisTransferController(http.Controller):
             })
 
             tr.with_user(request.env.user).action_submit()
-
+        
+        except (UserError, ValidationError, AccessError) as e:
+            # ✅ show the real business message to the user
+            return request.redirect(
+                f"/hrmis/transfer?tab=new&error={quote_plus(str(e) or 'Operation not allowed')}"
+            )
+        
         except NoApproverConfigured as e:
             return request.redirect(
                 f"/hrmis/transfer?tab=new&error={quote_plus(str(e))}"
             )
 
-        except Exception:
+        except Exception as e:
+            # ✅ log full traceback in server logs
+            _logger.exception("[TR][SUBMIT] Unexpected error while submitting transfer request. emp=%s user=%s",
+                            employee.id, request.env.user.id)
+
+            # ✅ show a slightly more meaningful message (without leaking internals)
+            msg = f"Unexpected error occurred ({e.__class__.__name__}). Please contact the administrator."
             return request.redirect(
-                "/hrmis/transfer?tab=new&error=Unexpected+error+occurred"
+                f"/hrmis/transfer?tab=new&error={quote_plus(msg)}"
             )
 
         return request.redirect(

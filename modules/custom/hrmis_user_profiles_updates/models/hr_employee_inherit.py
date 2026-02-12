@@ -90,6 +90,55 @@ class HREmployee(models.Model):
     hrmis_cnic_back_filename = fields.Char(
         string="CNIC Back Filename"
     )
+    hrmis_domicile = fields.Char(string="Domicile")
+    # ---------------- QUALIFICATION / PROMOTION ---------------- #
+
+    qualification = fields.Char(
+        string="Last Qualification Received",
+        help="Example: MBBS, FCPS, MCPS, Diploma",
+        required=True
+    )
+
+    qualification_date = fields.Date(
+        string="Qualification Date",
+        help="Date of last qualification received",
+        required=True
+    )
+
+    date_promotion = fields.Date(
+        string="Last Promotion Date",
+        help="Date of previous promotion",
+        required=True
+    )
+
+    year_qualification = fields.Date(
+        string="Year of Qualification",
+        help="Date of last qualification received",
+        required=True
+    )
+    qualification_history_ids = fields.One2many(
+        "hrmis.qualification.history",
+        "employee_id",
+        string="Qualification History",
+    )
+
+    posting_history_ids = fields.One2many(
+        "hrmis.posting.history",
+        "employee_id",
+        string="Posting History",
+    )
+
+    promotion_history_ids = fields.One2many(
+        "hrmis.promotion.history",
+        "employee_id",
+        string="Promotion History",
+    )
+
+    leave_history_ids = fields.One2many(
+        "hrmis.leave.history",
+        "employee_id",
+        string="Leave History",
+    )
 
     def action_request_profile_update(self):
         self.ensure_one()

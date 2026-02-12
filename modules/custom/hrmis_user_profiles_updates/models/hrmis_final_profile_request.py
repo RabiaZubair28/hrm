@@ -114,6 +114,29 @@ class EmployeeProfileRequest(models.Model):
     
     hrmis_contact_info = fields.Char(string="Contact Info")
 
+    # ---------------- QUALIFICATION / PROMOTION ---------------- #
+
+    hrmis_domicile = fields.Char(string="Domicile")
+
+    qualification = fields.Char(
+        string="Last Qualification Received",
+        help="Example: MBBS, FCPS, MCPS, Diploma"
+    )
+
+    qualification_date = fields.Date(
+        string="Qualification Date",
+        help="Date of last qualification received"
+    )
+
+    date_promotion = fields.Date(
+        string="Last Promotion Date",
+        help="Date of previous promotion"
+    )
+
+    year_qualification = fields.Date(
+        string="Year of Qualification",
+        help="Date of last qualification received"
+    )
 
     @api.model
     def default_get(self, fields_list):
@@ -137,7 +160,15 @@ class EmployeeProfileRequest(models.Model):
             'facility_id': employee.facility_id.id,
             'hrmis_contact_info': employee.hrmis_contact_info,
             "hrmis_leaves_taken": employee.hrmis_leaves_taken,
+
+            # NEW
+            "hrmis_domicile": employee.hrmis_domicile,
+            "qualification": employee.qualification,
+            "qualification_date": employee.qualification_date,
+            "date_promotion": employee.date_promotion,
+            "year_qualification": employee.year_qualification,
         })
+
         return res
 
     @api.onchange('district_id')
@@ -175,7 +206,14 @@ class EmployeeProfileRequest(models.Model):
             'hrmis_designation',
             'hrmis_bps',
             'hrmis_leaves_taken',
+
+            # NEW
+            'hrmis_domicile',
+            'qualification',
+            'qualification_date',
+            'year_qualification',
         ]
+
 
         missing = [
             self._fields[f].string
@@ -244,6 +282,13 @@ class EmployeeProfileRequest(models.Model):
             'facility_id': self.facility_id.id if self.facility_id else False,
             'hrmis_contact_info': self.hrmis_contact_info,
             'hrmis_leaves_taken': self.hrmis_leaves_taken,
+
+            # NEW
+            'hrmis_domicile': self.hrmis_domicile,
+            'qualification': self.qualification,
+            'qualification_date': self.qualification_date,
+            'date_promotion': self.date_promotion,
+            'year_qualification': self.year_qualification,
         })
 
         self.approved_by = self.env.user.id
