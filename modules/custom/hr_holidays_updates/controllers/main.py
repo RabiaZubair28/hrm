@@ -1784,7 +1784,6 @@ class HrmisProfileRequestController(http.Controller):
             "district_id": district_id,
             "facility_id": facility_id,
             "hrmis_contact_info": post.get("hrmis_contact_info"),
-            "hrmis_leaves_taken": post.get("hrmis_leaves_taken"),
             "hrmis_merit_number": post.get("hrmis_merit_number"),
             "approver_id": approver_emp.id if approver_emp else False,
             "state": "submitted",
@@ -1897,6 +1896,7 @@ class HrmisProfileRequestController(http.Controller):
         l_end = form.getlist("leave_end[]")
 
         leave_lines = []
+        leave_calc_items = []  # (leave_type_id, start_date, end_date)
         # Hard-block these leave types even if posted manually
         blocked_leave_type_keys = {"paidtimeoff", "sicktimeoff"}
         for i in range(max(len(l_type), len(l_start), len(l_end))):
@@ -1945,6 +1945,41 @@ class HrmisProfileRequestController(http.Controller):
                 "start_date": sd,
                 "end_date": ed,
             })
+            leave_calc_items.append((leave_type_id, sd, ed))
+
+        # Auto-calculate Total Leaves Taken (UI field is read-only).
+        # Rules:
+        # - Half-pay leaves count as 0.5 per inclusive day
+        # - Earned/full-pay/LPR leaves count as 1.0 per inclusive day
+        # - Without pay / EOL / unpaid / medical / maternity count as 0
+        try:
+            total_taken = 0.0
+            LeaveType = env["hr.leave.type"].sudo()
+            for lt_id, sd, ed in leave_calc_items:
+                lt = LeaveType.browse(int(lt_id)).exists()
+                name = (lt.name or "").strip().lower() if lt else ""
+
+                # 0-count types
+                if any(k in name for k in ("medical", "maternity", "without pay", "eol", "unpaid")):
+                    continue
+
+                factor = 0.0
+                if "half pay" in name:
+                    factor = 0.5
+                elif any(k in name for k in ("full pay", "earned", "lpr")):
+                    factor = 1.0
+                else:
+                    continue
+
+                days = float((ed - sd).days + 1)
+                total_taken += (days * factor)
+
+            # Snap to 0.5 increments
+            total_taken = round(total_taken * 2.0) / 2.0
+            vals["hrmis_leaves_taken"] = total_taken
+        except Exception:
+            # Never block the request due to a calculation failure; keep existing value if any.
+            pass
 
         # -----------------------
         # Write histories (replace existing histories)

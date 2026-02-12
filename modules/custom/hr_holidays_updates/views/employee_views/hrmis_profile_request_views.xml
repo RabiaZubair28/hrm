@@ -154,9 +154,9 @@
    
               <div class="hrmis-field">
                 <label>Total Leaves Taken Since Joining (Days)<span class="req">*</span></label>
-                <input class="hrmis-input" type="number" step="1" min="0" max="365"
-                       name="hrmis_leaves_taken" required="required"
-                       t-att-value="req.hrmis_leaves_taken or current_employee.hrmis_leaves_taken or ''"/>
+                <input class="hrmis-input js-hrmis-leaves-taken" type="number" step="0.5" min="0" max="365"
+                       name="hrmis_leaves_taken" required="required" readonly="readonly"
+                       t-att-value="req.hrmis_leaves_taken or current_employee.hrmis_leaves_taken or 0"/>
               </div>
 
               <!-- Contact + Merit (adjacent) -->
@@ -491,7 +491,7 @@
             <label>Leave Type<span class="req">*</span></label>
             <select class="hrmis-input" name="leave_type_id[]" required="required">
               <option value="" disabled="disabled" selected="selected" hidden="hidden">Select Leave Type</option>
-              <t t-foreach="env['hr.leave.type'].search([], order='name')" t-as="lt">
+              <t t-foreach="env['hr.leave.type'].sudo().search([], order='name')" t-as="lt">
                 <t t-set="lt_name" t-value="(lt.name or '').lower()"/>
                 <!-- Business requirement: hide these leave types from this dropdown -->
                 <t t-if="

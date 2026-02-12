@@ -445,6 +445,66 @@ function _syncLeaveRowDateConstraints(row) {
     }
 }
 
+function _normLeaveTypeForCalc(name) {
+    return String(name || "").trim().toLowerCase();
+}
+
+function _leaveFactorFromTypeName(name) {
+    const s = _normLeaveTypeForCalc(name);
+    // Explicit 0-count types
+    if (s.includes("without pay") || s.includes("unpaid") || s.includes(" eol") || s.includes("eol")) return 0;
+    if (s.includes("medical") || s.includes("maternity")) return 0;
+
+    // 0.5-count
+    if (s.includes("half pay")) return 0.5;
+
+    // 1.0-count
+    if (s.includes("full pay") || s.includes("earned") || s.includes("lpr")) return 1.0;
+
+    // Default: don't count
+    return 0;
+}
+
+function _daysInclusiveLocal(startYmd, endYmd) {
+    const s = _parseLocalYmd(startYmd);
+    const e = _parseLocalYmd(endYmd);
+    if (!s || !e) return 0;
+    // Normalize to midnight local
+    s.setHours(0, 0, 0, 0);
+    e.setHours(0, 0, 0, 0);
+    const ms = e.getTime() - s.getTime();
+    if (Number.isNaN(ms) || ms < 0) return 0;
+    return Math.floor(ms / (24 * 60 * 60 * 1000)) + 1;
+}
+
+function _recalcLeavesTaken(form) {
+    const out = _qs(form, 'input[name="hrmis_leaves_taken"]');
+    if (!out) return;
+
+    let total = 0;
+    _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
+        const typeSel = _qs(row, 'select[name="leave_type_id[]"]');
+        const start = _qs(row, 'input[name="leave_start[]"]');
+        const end = _qs(row, 'input[name="leave_end[]"]');
+        if (!typeSel || !start || !end) return;
+        if (_isEmpty(typeSel.value) || _isEmpty(start.value) || _isEmpty(end.value)) return;
+
+        const optText = typeSel.selectedOptions?.[0]?.textContent || "";
+        const factor = _leaveFactorFromTypeName(optText);
+        if (!factor) return;
+
+        const days = _daysInclusiveLocal(start.value, end.value);
+        if (!days) return;
+        total += days * factor;
+    });
+
+    // Snap to 0.5 increments
+    total = Math.round(total * 2) / 2;
+
+    // Keep as number string. Always set something to satisfy "required".
+    out.value = String(total);
+}
+
 function _initDates(form) {
     const today = new Date().toISOString().split("T")[0];
     ["hrmis_joining_date", "hrmis_commission_date"].forEach((name) => {
@@ -506,7 +566,10 @@ function _initRepeatables(form) {
 
     if (btnLeave) btnLeave.addEventListener("click", () => {
         const row = _cloneFromTemplate("#tpl_leave_row", "#leave_rows");
-        if (row) _syncLeaveRowDateConstraints(row);
+        if (row) {
+            _syncLeaveRowDateConstraints(row);
+            _recalcLeavesTaken(form);
+        }
     });
 
     // Remove (delegation)
@@ -515,6 +578,7 @@ function _initRepeatables(form) {
         if (btn) {
             e.preventDefault();
             _removeRepeatRow(btn);
+            _recalcLeavesTaken(form);
         }
     });
 
@@ -526,9 +590,10 @@ function _initRepeatables(form) {
             if (row) _filterFacilitiesInRow(row);
         }
 
-        if (e.target && e.target.matches && e.target.matches('input[name="leave_start[]"], input[name="leave_end[]"]')) {
+        if (e.target && e.target.matches && e.target.matches('input[name="leave_start[]"], input[name="leave_end[]"], select[name="leave_type_id[]"]')) {
             const row = e.target.closest(".hrmis-repeat-row");
             if (row) _syncLeaveRowDateConstraints(row);
+            _recalcLeavesTaken(form);
         }
 
         const qualChk = e.target.closest(".js-qual-completed");
@@ -564,6 +629,7 @@ function _initRepeatables(form) {
 
     // Ensure any pre-rendered leave rows get constraints too.
     _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => _syncLeaveRowDateConstraints(row));
+    _recalcLeavesTaken(form);
 }
 
 /* ---------------------------------------------------------
@@ -737,8 +803,14 @@ function _initHRMISValidations() {
 
     // existing numeric fields
     _digitsOnly(_qs(form, '[name="hrmis_bps"]'), { maxLen: 2 });
-    _digitsOnly(_qs(form, '[name="hrmis_leaves_taken"]'), { maxLen: 3 });
     _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
+
+    // Total leaves taken is auto-calculated and read-only.
+    const leavesTakenEl = _qs(form, '[name="hrmis_leaves_taken"]');
+    if (leavesTakenEl) {
+        leavesTakenEl.readOnly = true;
+        leavesTakenEl.setAttribute("readonly", "readonly");
+    }
 
     // init repeatables (UPDATED)
     _initRepeatables(form);
