@@ -356,7 +356,6 @@ def _dedupe_leave_types_for_ui(leave_types):
         "compensatorydays",
         "paidtimeoff",
         "sicktimeoff",
-        "unpaid",
     }
     seen = set()
     # Preserve env/context from the incoming recordset; name_get() uses context
