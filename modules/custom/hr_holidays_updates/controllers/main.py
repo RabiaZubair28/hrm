@@ -1895,6 +1895,16 @@ class HrmisProfileRequestController(http.Controller):
         l_start = form.getlist("leave_start[]")
         l_end = form.getlist("leave_end[]")
 
+        # Joining date boundary: disallow leaves before joining month.
+        join_raw = (post.get("hrmis_joining_date") or "").strip() or getattr(employee, "hrmis_joining_date", "") or ""
+        join_dt = fields.Date.to_date(join_raw) if join_raw else None
+        join_month_start = None
+        try:
+            if join_dt:
+                join_month_start = join_dt.replace(day=1)
+        except Exception:
+            join_month_start = None
+
         leave_lines = []
         leave_calc_items = []  # (leave_type_id, start_date, end_date)
         # Hard-block these leave types even if posted manually
@@ -1927,6 +1937,13 @@ class HrmisProfileRequestController(http.Controller):
                     return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
                 if ed < sd:
                     return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be earlier than Start Date.")
+                if join_month_start and (sd < join_month_start or ed < join_month_start):
+                    return self._render_profile_form_error(
+                        employee,
+                        req,
+                        env,
+                        "Leave History: Leave dates cannot be before your joining month.",
+                    )
                 today_ctx = fields.Date.context_today(env.user)
                 # Start date must be before today; End date can be up to today.
                 if sd >= today_ctx:

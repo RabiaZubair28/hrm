@@ -493,6 +493,16 @@ function _getAttrSafe(input, name) {
     }
 }
 
+function _getJoiningMonthStartYmd() {
+    const form = _qs(document, ".hrmis-form");
+    const joining = _qs(form, '[name="hrmis_joining_date"]')?.value || "";
+    const d = _parseLocalYmd(joining);
+    if (!d) return "";
+    const yyyy = String(d.getFullYear()).padStart(4, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    return `${yyyy}-${mm}-01`;
+}
+
 function _renderHrmisLeaveDatePicker() {
     const popup = _ensureHrmisLeaveDatePickerPopup();
     const st = _hrmisLeaveDatePickerState;
@@ -553,9 +563,9 @@ function _renderHrmisLeaveDatePicker() {
                 )
                 .join("")}
           </select>
-          <input class="hrmis-datepop__btn js-year" aria-label="Year" inputmode="numeric"
+          <input class="hrmis-datepop__btn js-year" aria-label="Year" type="number" inputmode="numeric"
                  style="width:88px; text-align:center;" value="${y}"
-                 min="${minYear}" max="${maxYear}"/>
+                 min="${minYear}" max="${maxYear}" step="1"/>
         </div>
         <button type="button" class="hrmis-datepop__btn js-next"${nextOk ? "" : " disabled"}>&gt;</button>
       </div>
@@ -625,11 +635,33 @@ function _renderHrmisLeaveDatePicker() {
             if (Number.isNaN(n)) return y;
             return Math.min(maxYear, Math.max(minYear, n));
         };
-        yearInp.addEventListener("change", () => {
-            const newY = clampYear(yearInp.value);
+        const applyYear = (raw) => {
+            const newY = clampYear(raw);
+            yearInp.value = String(newY);
             _hrmisLeaveDatePickerState.monthDate = new Date(newY, m0, 1);
             _renderHrmisLeaveDatePicker();
+        };
+        yearInp.addEventListener("input", () => {
+            // live clamp to numeric-only; don't re-render on every keystroke unless it's valid-ish
+            const v = String(yearInp.value || "").trim();
+            if (!/^\d{1,4}$/.test(v)) return;
+            // Don't re-render for short year inputs like "2" yet.
+            if (v.length < 4) return;
+            applyYear(v);
         });
+        yearInp.addEventListener("change", () => {
+            applyYear(yearInp.value);
+        });
+        yearInp.addEventListener("blur", () => {
+            applyYear(yearInp.value);
+        });
+        yearInp.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter") {
+                ev.preventDefault();
+                applyYear(yearInp.value);
+            }
+        });
+
         // Scroll wheel to change years quickly
         yearInp.addEventListener(
             "wheel",
@@ -637,30 +669,33 @@ function _renderHrmisLeaveDatePicker() {
                 ev.preventDefault();
                 const delta = ev.deltaY > 0 ? -1 : 1;
                 const newY = clampYear((parseInt(yearInp.value, 10) || y) + delta);
+                yearInp.value = String(newY);
                 _hrmisLeaveDatePickerState.monthDate = new Date(newY, m0, 1);
                 _renderHrmisLeaveDatePicker();
             },
             { passive: false },
         );
+
         // Up/Down keys also adjust year
         yearInp.addEventListener("keydown", (ev) => {
             if (ev.key !== "ArrowUp" && ev.key !== "ArrowDown") return;
             ev.preventDefault();
             const delta = ev.key === "ArrowUp" ? 1 : -1;
             const newY = clampYear((parseInt(yearInp.value, 10) || y) + delta);
+            yearInp.value = String(newY);
             _hrmisLeaveDatePickerState.monthDate = new Date(newY, m0, 1);
             _renderHrmisLeaveDatePicker();
         });
     }
 }
 
-function _openHrmisLeaveDatePicker(input, { min = "", max = "", disabledRanges = [] } = {}) {
+function _openHrmisLeaveDatePicker(input, { min = "", max = "", disabledRanges = [], openTo = "" } = {}) {
     const popup = _ensureHrmisLeaveDatePickerPopup();
     if (!popup) return;
     const rect = input.getBoundingClientRect();
     _hrmisLeaveDatePickerState = {
         input,
-        monthDate: _parseLocalYmd(input.value) || new Date(),
+        monthDate: _parseLocalYmd(input.value) || _parseLocalYmd(openTo) || new Date(),
         min,
         max,
         disabledRanges,
@@ -770,26 +805,31 @@ function _syncLeaveRowDateConstraints(row) {
     // Start date: only allow dates strictly BEFORE today.
     const yesterday = _yesterdayLocalYmd();
     const today = _todayLocalYmd();
+    const joinMin = _getJoiningMonthStartYmd();
+    if (joinMin) start.min = joinMin;
     start.max = yesterday;
     if (start.value && start.value > yesterday) start.value = yesterday;
+    if (joinMin && start.value && start.value < joinMin) start.value = joinMin;
 
     // Attach calendar UI that disables already-used leave days.
     _attachHrmisLeaveDatePicker(start, () => ({
-        min: _getAttrSafe(start, "min") || "",
+        min: _getAttrSafe(start, "min") || joinMin || "",
         max: _getAttrSafe(start, "max") || yesterday,
         disabledRanges: _collectLeaveRanges(row),
+        openTo: joinMin || "",
     }));
 
     // End date: only enable after a start date is chosen.
     if (!start.value) {
         end.disabled = true;
-        end.min = "";
+        end.min = joinMin || "";
         end.max = today; // user requirement: "till today"
         if (end.value) end.value = "";
         _attachHrmisLeaveDatePicker(end, () => ({
-            min: _getAttrSafe(end, "min") || "",
+            min: _getAttrSafe(end, "min") || joinMin || "",
             max: _getAttrSafe(end, "max") || today,
             disabledRanges: _collectLeaveRanges(row),
+            openTo: joinMin || "",
         }));
         _applyLeaveOverlapRule(row, start);
         return;
@@ -809,6 +849,7 @@ function _syncLeaveRowDateConstraints(row) {
         min: _getAttrSafe(end, "min") || (minEnd || ""),
         max: _getAttrSafe(end, "max") || today,
         disabledRanges: _collectLeaveRanges(row),
+        openTo: (minEnd || start.value || joinMin || ""),
     }));
 
     // If range is impossible, disable end input.
