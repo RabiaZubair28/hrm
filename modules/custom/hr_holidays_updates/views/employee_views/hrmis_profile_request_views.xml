@@ -552,7 +552,7 @@
               <p class="mb-3">Please review the information below before submitting.</p>
               <div class="table-responsive">
                 <table class="table table-sm align-middle">
-                  <tbody id="confirm_table_body"/>
+                  <tbody id="confirm_table_body"></tbody>
                 </table>
               </div>
             </div>
