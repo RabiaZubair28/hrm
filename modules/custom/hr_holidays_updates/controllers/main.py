@@ -2093,45 +2093,41 @@ class HrmisProfileRequestController(http.Controller):
         # - Half-pay leaves count as ceil(effective_days / 2.0)
         # - Earned/full-pay/LPR leaves count as effective_days
         # - Without pay / EOL / unpaid / medical / maternity count as 0
-        #
-        # IMPORTANT:
-        # If no leave rows were parsed, do NOT overwrite the posted value with 0.
         try:
             import math
 
-            if leave_calc_items:
-                total_taken = 0.0
-                LeaveModel = env["hr.leave"].sudo()
-                LeaveType = env["hr.leave.type"].sudo()
-                for lt_id, sd, ed in leave_calc_items:
-                    lt = LeaveType.browse(int(lt_id)).exists()
-                    name = (lt.name or "").strip().lower() if lt else ""
+            total_taken = 0.0
+            LeaveModel = env["hr.leave"].sudo()
+            LeaveType = env["hr.leave.type"].sudo()
+            for lt_id, sd, ed in leave_calc_items:
+                lt = LeaveType.browse(int(lt_id)).exists()
+                name = (lt.name or "").strip().lower() if lt else ""
 
-                    # 0-count types
-                    if any(k in name for k in ("medical", "maternity", "without pay", "eol", "unpaid")):
-                        continue
+                # 0-count types
+                if any(k in name for k in ("medical", "maternity", "without pay", "eol", "unpaid")):
+                    continue
 
-                    factor = 0.0
-                    if "half pay" in name:
-                        factor = 0.5
-                    elif any(k in name for k in ("full pay", "earned", "lpr")):
-                        factor = 1.0
-                    else:
-                        continue
+                factor = 0.0
+                if "half pay" in name:
+                    factor = 0.5
+                elif any(k in name for k in ("full pay", "earned", "lpr")):
+                    factor = 1.0
+                else:
+                    continue
 
-                    eff = (
-                        float(LeaveModel._hrmis_effective_days(employee, sd, ed) or 0.0)
-                        if hasattr(LeaveModel, "_hrmis_effective_days")
-                        else float((ed - sd).days + 1)
-                    )
-                    if factor == 0.5:
-                        total_taken += float(math.ceil(eff / 2.0))
-                    else:
-                        total_taken += eff
+                eff = (
+                    float(LeaveModel._hrmis_effective_days(employee, sd, ed) or 0.0)
+                    if hasattr(LeaveModel, "_hrmis_effective_days")
+                    else float((ed - sd).days + 1)
+                )
+                if factor == 0.5:
+                    total_taken += float(math.ceil(eff / 2.0))
+                else:
+                    total_taken += eff
 
-                # Keep a compact numeric value (UI uses step 0.5).
-                total_taken = round(total_taken * 2.0) / 2.0
-                vals["hrmis_leaves_taken"] = total_taken
+            # Keep a compact numeric value (UI uses step 0.5).
+            total_taken = round(total_taken * 2.0) / 2.0
+            vals["hrmis_leaves_taken"] = total_taken
         except Exception:
             # Never block the request due to a calculation failure; keep existing value if any.
             pass

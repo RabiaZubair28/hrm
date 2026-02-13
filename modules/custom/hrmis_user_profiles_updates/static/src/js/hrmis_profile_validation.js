@@ -1002,12 +1002,6 @@ function _recalcLeavesTaken(form) {
   const out = _qs(form, 'input[name="hrmis_leaves_taken"]');
   if (!out) return;
 
-  // After submission we display server-calculated value; don't overwrite it to 0
-  // just because repeatable rows are not editable/loaded the same way.
-  if (form && form.classList && form.classList.contains("is-submitted")) {
-    return;
-  }
-
   let total = 0;
   _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
     const typeSel = _qs(row, 'select[name="leave_type_id[]"]');
