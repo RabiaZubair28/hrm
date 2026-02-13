@@ -789,9 +789,6 @@ function _syncLeaveTypeSelectsByGender(form) {
   const selects = _qsa(document, '#leave_rows select[name="leave_type_id[]"]');
   if (!selects.length) return;
 
-  const maternityId = String(form?.dataset?.maternityLeaveTypeId || "").trim();
-  const maternityBlocked = String(form?.dataset?.maternityBlocked || "0") === "1";
-
   for (const sel of selects) {
     if (!(sel instanceof HTMLSelectElement)) continue;
 
@@ -812,9 +809,6 @@ function _syncLeaveTypeSelectsByGender(form) {
         .toLowerCase();
       const isMaternity = txt.includes("maternity");
       opt.hidden = !!(isMale && isMaternity);
-      if (maternityId && String(opt.value) === maternityId && maternityBlocked) {
-        opt.hidden = true;
-      }
     }
     const cur = sel.selectedOptions?.[0];
     if (cur && cur.hidden) sel.selectedIndex = 0;

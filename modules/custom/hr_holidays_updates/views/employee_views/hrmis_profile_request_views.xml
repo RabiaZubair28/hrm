@@ -40,8 +40,6 @@
                 method="post"
                 enctype="multipart/form-data"
                 action="/hrmis/profile/request/submit"
-                t-att-data-maternity-leave-type-id="maternity_leave_type_id or ''"
-                t-att-data-maternity-blocked="'1' if maternity_blocked else '0'"
                 t-att-onsubmit="'return false;' if not is_draft else None">
 
             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>

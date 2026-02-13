@@ -1617,22 +1617,6 @@ class HrmisProfileRequestController(http.Controller):
                 "You cannot submit another until it is processed."
             )
 
-        # Leave history dropdown rule (Profile Update page):
-        # Hide maternity leave type once 3 maternity entries already exist in hrmis.leave.history
-        maternity_id = False
-        maternity_blocked = False
-        try:
-            maternity = request.env.ref("hr_holidays_updates.leave_type_maternity", raise_if_not_found=False)
-            maternity_id = getattr(maternity, "id", False) if maternity else False
-            if maternity_id:
-                taken = request.env["hrmis.leave.history"].sudo().search_count(
-                    [("employee_id", "=", employee.id), ("leave_type_id", "=", maternity_id)]
-                )
-                maternity_blocked = bool(taken >= 3)
-        except Exception:
-            maternity_id = False
-            maternity_blocked = False
-
         return request.render(
             "hr_holidays_updates.hrmis_profile_request_form",
             _base_ctx(
@@ -1654,8 +1638,6 @@ class HrmisProfileRequestController(http.Controller):
                 max_dob_str=max_dob_str,
                 max_today_str=max_today_str,
                 max_past_str=max_past_str,
-                maternity_leave_type_id=maternity_id,
-                maternity_blocked=maternity_blocked,
             ),
         )
 
