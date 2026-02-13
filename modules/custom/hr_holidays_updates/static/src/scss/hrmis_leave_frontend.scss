@@ -682,6 +682,19 @@
   min-width: 240px;
   outline: none;
 }
+
+/* Profile Update: shade + lock appearance after submission */
+.hrmis-form.is-submitted .hrmis-input,
+.hrmis-form.is-submitted select.hrmis-input {
+  background: #f3f4f6 !important;
+  color: #6c757d !important;
+  opacity: 0.75;
+  filter: blur(0.15px);
+}
+
+.hrmis-form.is-submitted .hrmis-input[type="file"] {
+  display: none;
+}
 .hrmis-input--wide {
   min-width: 520px;
   width: 100%;
