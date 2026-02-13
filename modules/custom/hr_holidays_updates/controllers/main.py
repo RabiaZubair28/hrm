@@ -2115,17 +2115,10 @@ class HrmisProfileRequestController(http.Controller):
                 else:
                     continue
 
-                # Use effective-days helper if available, but never allow it
-                # to silently turn a valid range into 0 days.
-                eff_fallback = float((ed - sd).days + 1)
-                if hasattr(LeaveModel, "_hrmis_effective_days"):
-                    try:
-                        eff_calc = float(LeaveModel._hrmis_effective_days(employee, sd, ed) or 0.0)
-                    except Exception:
-                        eff_calc = 0.0
-                    eff = eff_calc if eff_calc > 0 else eff_fallback
-                else:
-                    eff = eff_fallback
+                # IMPORTANT: Keep server calculation aligned with the frontend.
+                # For history, we count inclusive calendar days (not "effective" working days),
+                # otherwise half-pay odd day ranges can mismatch (e.g., 11 days -> UI 6 but DB 5).
+                eff = float((ed - sd).days + 1)
                 if factor == 0.5:
                     total_taken += float(math.ceil(eff / 2.0))
                 else:
