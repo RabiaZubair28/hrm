@@ -18,6 +18,7 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.http import request
 
 import os
+import mimetypes
 
 _MAX_UPLOAD_BYTES = 4 * 1024 * 1024  # 4 MB
 _ALLOWED_UPLOAD_EXTS = {"pdf", "jpg", "jpeg", "png", "svg"}
@@ -89,6 +90,20 @@ def _validate_upload_file(
         return False, f"{label}: File too large. Max allowed size is 4 MB.", b""
 
     return True, "", data
+
+
+def _guess_mimetype_from_filename(filename: str) -> str:
+    fn = (filename or "").strip().lower()
+    ext = _norm_ext(fn)
+    if ext == "pdf":
+        return "application/pdf"
+    if ext in ("jpg", "jpeg"):
+        return "image/jpeg"
+    if ext == "png":
+        return "image/png"
+    if ext == "svg":
+        return "image/svg+xml"
+    return mimetypes.guess_type(fn)[0] or "application/octet-stream"
 
 
 _logger = logging.getLogger(__name__)
@@ -1279,6 +1294,62 @@ class HrmisProfileRequestController(http.Controller):
             "so_c_i":{"group_name": ["MO"],        "min_bps": 17, "max_bps": 17},
             "so_nc": {"group_name": ["Nurse"],     "min_bps": 16, "max_bps": None},
         }
+
+    @http.route(
+        "/hrmis/profile/request/cnic/<int:req_id>/<string:side>",
+        type="http",
+        auth="user",
+        website=True,
+        methods=["GET"],
+        csrf=False,
+    )
+    def hrmis_profile_request_cnic(self, req_id, side, **kw):
+        """
+        Serve CNIC front/back with sudo (website-safe) while enforcing ownership.
+        This avoids /web/content ACL issues for portal/website users.
+        """
+        user = request.env.user
+        req = request.env["hrmis.employee.profile.request"].sudo().browse(int(req_id))
+        if not req.exists():
+            return request.not_found()
+
+        # Ownership check: only the employee (or the user who created the request) can view
+        if not (
+            (req.user_id and req.user_id.id == user.id)
+            or (req.employee_id and req.employee_id.user_id and req.employee_id.user_id.id == user.id)
+            or user.has_group("base.group_system")
+        ):
+            return request.not_found()
+
+        side = (side or "").strip().lower()
+        if side not in ("front", "back"):
+            return request.not_found()
+
+        if side == "front":
+            data_b64 = req.hrmis_cnic_front
+            filename = req.hrmis_cnic_front_filename or "cnic_front"
+        else:
+            data_b64 = req.hrmis_cnic_back
+            filename = req.hrmis_cnic_back_filename or "cnic_back"
+
+        if not data_b64:
+            return request.not_found()
+
+        try:
+            raw = base64.b64decode(data_b64)
+        except Exception:
+            raw = b""
+        if not raw:
+            return request.not_found()
+
+        mime = _guess_mimetype_from_filename(filename)
+        as_download = str(kw.get("download") or "").strip() in ("1", "true", "True", "yes")
+        dispo = "attachment" if as_download else "inline"
+        headers = [
+            ("Content-Type", mime),
+            ("Content-Disposition", f'{dispo}; filename="{filename}"'),
+        ]
+        return request.make_response(raw, headers=headers)
     
     def _resolve_so_user_for_designation(self, designation, bps):
         """

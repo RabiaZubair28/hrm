@@ -198,7 +198,7 @@
                               <t t-set="front_is_pdf" t-value="front_fn.lower().endswith('.pdf')"/>
                               <div class="mt-2">
                                 <t t-if="not front_is_pdf">
-                                  <img t-att-src="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_front?download=true' % req.id"
+                                  <img t-att-src="'/hrmis/profile/request/cnic/%s/front' % req.id"
                                        style="max-width:100%; max-height:220px; border:1px solid #ddd; padding:6px; border-radius:10px;"/>
                                 </t>
                                 <t t-if="front_is_pdf">
@@ -206,7 +206,7 @@
                                 </t>
                                 <div class="my-2">
                                   <a class="hrmis-btn hrmis-btn--secondary"
-                                     t-att-href="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_front?download=true' % req.id"
+                                     t-att-href="'/hrmis/profile/request/cnic/%s/front?download=1' % req.id"
                                      target="_blank">
                                     View / Download
                                   </a>
@@ -237,7 +237,7 @@
                               <t t-set="back_is_pdf" t-value="back_fn.lower().endswith('.pdf')"/>
                               <div class="mt-2">
                                 <t t-if="not back_is_pdf">
-                                  <img t-att-src="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_back?download=true' % req.id"
+                                  <img t-att-src="'/hrmis/profile/request/cnic/%s/back' % req.id"
                                        style="max-width:100%; max-height:220px; border:1px solid #ddd; padding:6px; border-radius:10px;"/>
                                 </t>
                                 <t t-if="back_is_pdf">
@@ -245,7 +245,7 @@
                                 </t>
                                 <div class="my-2">
                                   <a class="hrmis-btn hrmis-btn--secondary"
-                                     t-att-href="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_back?download=true' % req.id"
+                                     t-att-href="'/hrmis/profile/request/cnic/%s/back?download=1' % req.id"
                                      target="_blank">
                                     View / Download
                                   </a>
