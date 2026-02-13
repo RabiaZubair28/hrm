@@ -1003,6 +1003,7 @@ function _recalcLeavesTaken(form) {
   if (!out) return;
 
   let total = 0;
+  let hasAny = false;
   _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
     const typeSel = _qs(row, 'select[name="leave_type_id[]"]');
     const start = _qs(row, 'input[name="leave_start[]"]');
@@ -1011,11 +1012,16 @@ function _recalcLeavesTaken(form) {
     if (_isEmpty(typeSel.value) || _isEmpty(start.value) || _isEmpty(end.value))
       return;
 
+    hasAny = true;
     const optText = typeSel.selectedOptions?.[0]?.textContent || "";
     const days = _daysInclusiveLocal(start.value, end.value);
     if (!days) return;
     total += _leaveContributionFromTypeName(optText, days);
   });
+
+  // If there are no complete rows, do not overwrite the existing value
+  // (submitted requests render rows read-only / not present).
+  if (!hasAny) return;
 
   out.value = String(total);
 }
