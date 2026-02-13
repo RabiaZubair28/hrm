@@ -1035,6 +1035,62 @@ function _initDates(form) {
 }
 
 /* ---------------------------------------------------------
+ * Profile date pickers: reuse HRMIS calendar widget
+ * - DOB uses its existing max constraint
+ * - Commission date min = DOB
+ * - Joining date min = Commission date
+ * --------------------------------------------------------- */
+function _initProfileDatePickers(form) {
+  const dob = _qs(form, '[name="birthday"]');
+  const comm = _qs(form, '[name="hrmis_commission_date"]');
+  const join = _qs(form, '[name="hrmis_joining_date"]');
+
+  // Attach calendar widget (same as leave datepicker)
+  if (dob) {
+    _attachHrmisLeaveDatePicker(dob, () => ({
+      min: _getAttrSafe(dob, "min") || "",
+      max: _getAttrSafe(dob, "max") || "",
+      disabledRanges: [],
+      openTo: dob.value || "",
+    }));
+  }
+
+  if (comm) {
+    const syncCommMin = () => {
+      const v = (dob?.value || "").trim();
+      comm.min = v || "";
+      if (comm.value && v && comm.value < v) comm.value = "";
+    };
+    syncCommMin();
+    dob?.addEventListener("change", syncCommMin);
+
+    _attachHrmisLeaveDatePicker(comm, () => ({
+      min: (comm.min || "").trim(),
+      max: _getAttrSafe(comm, "max") || "",
+      disabledRanges: [],
+      openTo: (dob?.value || "").trim() || comm.value || "",
+    }));
+  }
+
+  if (join) {
+    const syncJoinMin = () => {
+      const v = (comm?.value || "").trim();
+      join.min = v || "";
+      if (join.value && v && join.value < v) join.value = "";
+    };
+    syncJoinMin();
+    comm?.addEventListener("change", syncJoinMin);
+
+    _attachHrmisLeaveDatePicker(join, () => ({
+      min: (join.min || "").trim(),
+      max: _getAttrSafe(join, "max") || "",
+      disabledRanges: [],
+      openTo: (comm?.value || "").trim() || join.value || "",
+    }));
+  }
+}
+
+/* ---------------------------------------------------------
  * Repeatable sections: Add/Remove + Posting district->facility filter
  * --------------------------------------------------------- */
 function _filterFacilitiesInRow(row) {
@@ -1456,6 +1512,7 @@ function _initHRMISValidations() {
   if (!form) return;
 
   _initDates(form);
+  _initProfileDatePickers(form);
   _initCNIC(form);
   _initContact(form);
   _initCnicScanFiles(form);

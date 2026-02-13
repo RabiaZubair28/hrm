@@ -2133,6 +2133,15 @@ class HrmisProfileRequestController(http.Controller):
 
             # Keep a compact numeric value (UI uses step 0.5).
             total_taken = round(total_taken * 2.0) / 2.0
+
+            # If server calculation yields 0 but UI already calculated a value,
+            # keep the posted value (avoids mismatch due to leave type naming/effective-day helpers).
+            try:
+                if float(total_taken or 0.0) == 0.0 and float(posted_taken or 0.0) > 0.0:
+                    total_taken = float(posted_taken)
+            except Exception:
+                pass
+
             vals["hrmis_leaves_taken"] = total_taken
         except Exception:
             # Never block the request due to a calculation failure; keep existing value if any.
