@@ -726,7 +726,7 @@
                              t-att-required="'required' if is_draft else None"
                              readonly="readonly"
                              style="background:#f3f4f6; color:#6c757d; opacity:0.75; filter: blur(0.15px); width:50%;"
-                             t-att-value="req.hrmis_leaves_taken or current_employee.hrmis_leaves_taken or 0"/>
+                             t-att-value="req.hrmis_leaves_taken if (req and (req.hrmis_leaves_taken is not False)) else (current_employee.hrmis_leaves_taken or 0)"/>
                       <div class="hrmis-help" style="color:#6c757d; margin-top:5px;">Auto-calculated from Leave History.</div>
                     </div>
 

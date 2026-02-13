@@ -523,14 +523,14 @@ function _getAttrSafe(input, name) {
   }
 }
 
-function _getJoiningMonthStartYmd() {
+function _getJoiningMinLeaveStartYmd() {
   const form = _qs(document, ".hrmis-form");
   const joining = _qs(form, '[name="hrmis_joining_date"]')?.value || "";
   const d = _parseLocalYmd(joining);
   if (!d) return "";
-  const yyyy = String(d.getFullYear()).padStart(4, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${yyyy}-${mm}-01`;
+  // User cannot select joining date or earlier for leave history.
+  // So min selectable day is (joining date + 1 day).
+  return _addDaysLocalYmd(joining, 1);
 }
 
 function _renderHrmisLeaveDatePicker() {
@@ -863,7 +863,7 @@ function _syncLeaveRowDateConstraints(row) {
 
   const yesterday = _yesterdayLocalYmd();
   const today = _todayLocalYmd();
-  const joinMin = _getJoiningMonthStartYmd();
+  const joinMin = _getJoiningMinLeaveStartYmd();
 
   if (!joinMin) {
     start.disabled = true;
@@ -871,6 +871,18 @@ function _syncLeaveRowDateConstraints(row) {
     start.value = "";
     end.value = "";
     const msg = "Please select the joining date first.";
+    _showError(start, msg);
+    _showError(end, msg);
+    return;
+  }
+
+  // If joining date is too recent, the allowed range can be empty (min > max).
+  if (joinMin && yesterday && joinMin > yesterday) {
+    start.disabled = true;
+    end.disabled = true;
+    start.value = "";
+    end.value = "";
+    const msg = "Leave history cannot be added before your joining date.";
     _showError(start, msg);
     _showError(end, msg);
     return;

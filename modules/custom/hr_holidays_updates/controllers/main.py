@@ -1850,6 +1850,12 @@ class HrmisProfileRequestController(http.Controller):
         # -----------------------
         # Build request values
         # -----------------------
+        # Keep the UI-calculated Total Leaves Taken as a fallback (server will re-calc later).
+        try:
+            posted_taken = float((post.get("hrmis_leaves_taken") or "").strip() or 0.0)
+        except Exception:
+            posted_taken = 0.0
+
         vals.update({
             "hrmis_employee_id": post.get("hrmis_employee_id"),
             "hrmis_cnic": post.get("hrmis_cnic"),
@@ -1865,6 +1871,7 @@ class HrmisProfileRequestController(http.Controller):
             "facility_id": facility_id,
             "hrmis_contact_info": post.get("hrmis_contact_info"),
             "hrmis_merit_number": post.get("hrmis_merit_number"),
+            "hrmis_leaves_taken": posted_taken,
             "approver_id": approver_emp.id if approver_emp else False,
             "state": "submitted",
 

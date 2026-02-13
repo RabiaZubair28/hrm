@@ -695,6 +695,27 @@
 .hrmis-form.is-submitted .hrmis-input[type="file"] {
   display: none;
 }
+
+/* Responsive: stack all history row fields on tablet/mobile */
+@media (max-width: 992px) {
+  .hrmis-form .hrmis-form__grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .hrmis-form .hrmis-form__grid .hrmis-field {
+    grid-column: 1 / -1 !important;
+    width: 100%;
+  }
+
+  .hrmis-form .hrmis-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .hrmis-form .hrmis-leave-row-wrap {
+    flex-direction: column;
+  }
+}
 .hrmis-input--wide {
   min-width: 520px;
   width: 100%;
