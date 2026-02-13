@@ -682,8 +682,6 @@
                                 <option value="" disabled="disabled" selected="selected" hidden="hidden">Select Leave Type</option>
                                 <t t-set="emp_gender"
                                    t-value="((req.gender or current_employee.gender or '') or '').lower()"/>
-                                <t t-set="maternity_lt" t-value="env.ref('hr_holidays_updates.leave_type_maternity', raise_if_not_found=False)"/>
-                                <t t-set="maternity_taken" t-value="env['hrmis.leave.history'].sudo().search_count([('employee_id','=', current_employee.id), ('leave_type_id','=', maternity_lt.id)]) if maternity_lt else 0"/>
                                 <t t-foreach="env['hr.leave.type'].sudo().search([], order='name')" t-as="lt">
                                   <t t-set="lt_name" t-value="(lt.name or '').lower()"/>
                                   <t t-if="
@@ -694,7 +692,6 @@
                                       and ('lpr' not in lt_name)
                                       and (lt_name.strip() != 'unpaid')
                                       and (emp_gender != 'male' or ('maternity' not in lt_name))
-                                      and (not maternity_lt or (lt.id != maternity_lt.id) or (maternity_taken &lt; 3))
                                   ">
                                     <option t-att-value="lt.id"><t t-esc="lt.name"/></option>
                                   </t>
