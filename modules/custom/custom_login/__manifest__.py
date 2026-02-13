@@ -17,6 +17,9 @@
         
         ],
     'assets': {
+        'web.assets_frontend': [
+            'custom_login/static/src/js/force_password_visibility.js',
+        ],
         'web.assets_backend': [
             'custom_login/static/src/js/force_password_redirect.js',
         ],

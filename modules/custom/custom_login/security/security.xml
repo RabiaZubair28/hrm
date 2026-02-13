@@ -8,16 +8,26 @@
 
     <!-- HRMIS Employee Group -->
     <record id="group_hrmis_employee_self" model="res.groups">
+
         <field name="name">HRMIS Employee (Self)</field>
         <field name="category_id" ref="module_category_hrmis_roles"/>
-        <field name="implied_ids" eval="[(4, ref('base.group_user')), (4, ref('hr.group_hr_user'))]"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+
     </record>
+    <record id="hrmis_employee_self_rule" model="ir.rule">
+    <field name="model_id" ref="hr.model_hr_employee"/>
+    <field name="groups" eval="[(4, ref('custom_login.group_hrmis_employee_self'))]"/>
+    <field name="domain_force">[('user_id', '=', user.id)]</field>
+</record>
+
+
 
     <!-- Section Officer Group -->
     <record id="group_section_officer" model="res.groups">
         <field name="name">Section Officer</field>
         <field name="category_id" ref="module_category_hrmis_roles"/>
         <field name="implied_ids" eval="[(4, ref('base.group_user')), (4, ref('hr.group_hr_user'))]"/>
+
     </record>
 
     <!-- MS DHO -->
@@ -25,6 +35,7 @@
         <field name="name">MS DHO</field>
         <field name="category_id" ref="module_category_hrmis_roles"/>
         <field name="implied_ids" eval="[(4, ref('custom_login.group_hrmis_employee_self')), (4, ref('hr.group_hr_user'))]"/>
+
     </record>
 
 </odoo>

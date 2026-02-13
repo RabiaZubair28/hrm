@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from odoo import http
 from odoo.http import request
-
+import logging
+_logger = logging.getLogger(__name__)
 from .utils import base_ctx, current_employee
 
 
@@ -11,13 +12,14 @@ class HrmisServicesController(http.Controller):
     def odoo_time_off_overview(self, **kw):
         return request.render("hr_holidays_updates.hrmis_services", base_ctx("Services", "services"))
 
-    @http.route(["/odoo/custom-time-off"], type="http", auth="user", website=True)
-    def odoo_my_time_off(self, **kw):
-        emp = current_employee()
-        if not emp:
-            return request.render("hr_holidays_updates.hrmis_services", base_ctx("My Time Off", "services"))
-        # Landing page for everyone: user profile.
-        return request.redirect(f"/hrmis/staff/{emp.id}")
+    # @http.route(["/odoo/custom-time-off"], type="http", auth="user", website=True)
+    # def odoo_my_time_off(self, **kw):
+    #     _logger.warning("🔥🔥🔥🔥🔥 ENTERING RouteServices")
+    #     emp = current_employee()
+    #     if not emp:
+    #         return request.render("hr_holidays_updates.hrmis_services", base_ctx("My Time Off", "services"))
+    #     # Landing page for everyone: user profile.
+    #     return request.redirect(f"/hrmis/staff/{emp.id}")
 
     @http.route(["/odoo/my-time-off/new"], type="http", auth="user", website=True)
     def odoo_my_time_off_new(self, **kw):

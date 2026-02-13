@@ -52,53 +52,42 @@ class ForcePasswordController(http.Controller):
         return request.render('custom_login.reset_password')
 
     @http.route(
-        '/force_password_reset/submit',
-        type='http',
-        auth='user',
-        methods=['POST'],
+        "/force_password_reset/submit",
+        type="http",
+        auth="user",
+        methods=["POST"],
         website=True,
-        csrf=True
+        csrf=True,
     )
     def force_password_reset_submit(self, **post):
         user = request.env.user
 
-        current_password = post.get('current_password')
-        new_password = post.get('new_password')
-        confirm_password = post.get('confirm_password')
+        current_password = (post.get("current_password") or "").strip()
+        new_password = (post.get("new_password") or "").strip()
+        confirm_password = (post.get("confirm_password") or "").strip()
 
-        # Guardrails
-        if not all([current_password, new_password, confirm_password]):
-            return request.render(
-                'custom_login.reset_password',
-                {'error': 'All fields are required.'}
-            )
+        def _render_error(msg):
+            return request.render("custom_login.reset_password", {"error": msg})
+
+        if not current_password or not new_password or not confirm_password:
+            return _render_error("All fields are required.")
 
         if new_password != confirm_password:
-            return request.render(
-                'custom_login.reset_password',
-                {'error': 'New passwords do not match.'}
-            )
+            return _render_error("New passwords do not match.")
 
-        
         try:
             user.sudo()._check_credentials(
-                {'type': 'password', 'password': current_password},
-                request.env
+                {"type": "password", "password": current_password},
+                request.env,
             )
         except Exception:
-            return request.render(
-                'custom_login.reset_password',
-                {'error': 'Current password is incorrect.'}
-            )
+            return _render_error("Current password is incorrect.")
 
-        # Update password + clear temp flag
         user.sudo().write({
-            'password': new_password,
-            'is_temp_password': False,
+            "password": new_password,
+            "is_temp_password": False,
         })
-        
-        # request.session.uid = user.id
 
-        return request.redirect('/odoo/custom-time-off')
+        return request.redirect("/odoo/custom-time-off")
 
 

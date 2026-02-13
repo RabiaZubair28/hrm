@@ -24,6 +24,7 @@
         'views/hrmis_leave_view_history.xml',
         'views/sec_officer_views/hrmis_user_profile_update_requests_view.xml',
         'views/sec_officer_views/hrmis_user_profile_update_requests_detailed_view.xml',
+        "views/not_found_page.xml",
     ],
     'assets': {
         'web.assets_frontend': [

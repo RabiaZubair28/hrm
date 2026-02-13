@@ -8,43 +8,34 @@
         <!-- Header -->
         <div class="hrmis-panel__header">
           <div class="d-flex flex-column gap-1">
-            <div>
+            <!-- <div>
               <a t-att-href="'/hrmis/staff/%s' % employee.id"
                  style="border-bottom:1px solid #2a2f31; color:#2a2f31; text-decoration:none;">
                 &#8592; Back to Profile
               </a>
-            </div>
+            </div> -->
             <div class="hrmis-panel__title">Profile Update Request</div>
           </div>
         </div>
 
         <!-- Body -->
         <div class="hrmis-panel__body">
+          <t t-if="info">
+            <div class="hrmis-alert hrmis-alert--success mt-2"><t t-esc="info"/></div>
+          </t>
+          <t t-if="error">
+            <div class="hrmis-alert hrmis-alert--danger mt-2"><t t-esc="error"/></div>
+          </t>
+          <t t-if="success">
+            <div class="hrmis-alert hrmis-alert--success mt-2"><t t-esc="success"/></div>
+          </t>
 
-                <!-- Header -->
-                <div class="hrmis-panel__header">
-                    <div style="display: block; ; margin-bottom: 10px"> 
-                    <div class="hrmis-panel__title">Profile Update Request</div> 
-                    <div><a t-att-href="'/hrmis/staff/%s' % employee.id" style="border-bottom: 1px solid #2a2f31; text: black; text-decoration: none;"><span style="color: #2a2f31">Back to  Profile</span></a></div>
-                    </div>
-                </div>
-             
+          <form class="hrmis-form mt-1"
+                id="profile_update_form"
+                method="post"
+                enctype="multipart/form-data"
+                action="/hrmis/profile/request/submit">
 
-                <!-- Body -->
-                <div class="hrmis-panel__body">
-                    <t t-if="info">
-                        <div class="hrmis-alert hrmis-alert--success mt-2">
-                            <t t-esc="info"/>
-                        </div>
-                    </t>
-                    <!-- Display success / error messages -->
-                    <t t-if="error">
-                        <div class="hrmis-alert hrmis-alert--danger">
-                            <t t-esc="error"/>
-                        </div>
-                    </t>
-
-            <!-- IMPORTANT: missing in your latest paste -->
             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
             <input type="hidden" name="request_id" t-att-value="req.id"/>
 
@@ -75,9 +66,13 @@
                        t-att-value="req.hrmis_father_name or current_employee.hrmis_father_name or ''"/>
               </div>
 
-              <div class="hrmis-field">
+             <div class="hrmis-field">
                 <label>Gender<span class="req">*</span></label>
                 <select class="hrmis-input" name="gender" required="required">
+                  <option value="" disabled="disabled" hidden="hidden"
+                          t-att-selected="not (req.gender or current_employee.gender)">
+                    Select Gender
+                  </option>
                   <option value="male" t-att-selected="(req.gender or current_employee.gender) == 'male'">Male</option>
                   <option value="female" t-att-selected="(req.gender or current_employee.gender) == 'female'">Female</option>
                   <option value="other" t-att-selected="(req.gender or current_employee.gender) == 'other'">Other</option>
@@ -91,7 +86,7 @@
                        required="required"
                        t-att-value="req.birthday or current_employee.birthday or ''"/>
               </div>
-                            <!-- Qualification & Promotion -->
+
               <div class="hrmis-field">
   <label>Domicile<span class="req">*</span></label>
 
@@ -137,8 +132,7 @@
                 <label>Cadre<span class="req">*</span></label>
                 <t t-set="current_cadre" t-value="req.hrmis_cadre or current_employee.hrmis_cadre"/>
                 <select class="hrmis-input js-cadre-select" name="hrmis_cadre" required="required">
-                  <option value="" disabled="disabled" hidden="hidden"
-                          t-att-selected="not current_cadre">
+                  <option value="" disabled="disabled" hidden="hidden" t-att-selected="not current_cadre">
                     Select Cadre
                   </option>
 
@@ -152,13 +146,6 @@
                 </div>
 
    
-              <div class="hrmis-field">
-                <label>Total Leaves Taken Since Joining (Days)<span class="req">*</span></label>
-                <input class="hrmis-input" type="number" step="1" min="0" max="365"
-                       name="hrmis_leaves_taken" required="required"
-                       t-att-value="req.hrmis_leaves_taken or current_employee.hrmis_leaves_taken or ''"/>
-              </div>
-
               <!-- Contact + Merit (adjacent) -->
               <div class="hrmis-field">
                 <label>Contact Number<span class="req">*</span></label>
@@ -199,61 +186,48 @@
               </div>
 
               <!-- ===================== Qualification History ===================== -->
-<!-- ===================== Qualification History ===================== -->
-<div class="hrmis-section" style="grid-column: 1 / -1;">
-  <div class="hrmis-card p-3" style="border:1px solid #e6e6e6; border-radius:12px; background:#fff;">
+              <div class="hrmis-section" style="grid-column: 1 / -1;">
+                <div class="hrmis-card p-3" style="border:1px solid #e6e6e6; border-radius:12px; background:#fff;">
 
-   <div class="d-flex align-items-center mb-2">
-  
-
-  <div style="flex:1; text-align:center; font-weight:700; font-size:16px;">
-    Qualification History
-  </div>
-
- 
-</div>
- 
-  <button type="button"
-            class="hrmis-btn hrmis-btn--secondary"
-            id="btn_add_qual_row"
-            style="padding:6px 12px; font-size:12px; border-radius:10px; margin-left:auto;">
-      + Add
-    </button>
+                  <div class="d-flex align-items-center mb-2">
+                    <div style="flex:1;"></div>
+                    <div style="flex:1; text-align:center; font-weight:700; font-size:16px;">Qualification History</div>
+                    <div style="flex:1; display:flex; justify-content:flex-end;">
+                      <button type="button" class="hrmis-btn hrmis-btn--secondary" id="btn_add_qual_row"
+                              style="padding:6px 12px; font-size:12px; border-radius:10px;">
+                        + Add
+                      </button>
+                    </div>
+                  </div>
 
     <div id="qual_rows" class="d-flex flex-column gap-2"></div>
 
-    <!-- Hidden row template -->
-    <template id="tpl_qual_row">
-      <div class="hrmis-repeat-row hrmis-card p-3"
-           data-row="qual"
+                  <template id="tpl_qual_row">
+                    <div class="hrmis-repeat-row hrmis-card p-3"
+                         data-row="qual"
            style="position:relative; border:1px solid #f0f0f0; border-radius:12px; background:#fafafa;">
 
-        <!-- remove -->
+                      <button type="button" class="btn_remove_row" title="Remove"
+                              style="position:absolute; top:10px; right:10px;
+                                     width:30px; height:30px; border-radius:10px;
+                                     border:1px solid #e9ecef; background:#f8f9fa;
+                                     display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                        <span style="font-size:18px; line-height:1; color:#6c757d;">&#215;</span>
+                      </button>
 
-        <button type="button"
-                class="btn_remove_row"
-                title="Remove"
-                style="position:absolute; top:10px; right:10px;
-                       width:30px; height:30px; border-radius:10px;
-                       border:1px solid #e9ecef; background:#f8f9fa;
-                       display:flex; align-items:center; justify-content:center;
-                       cursor:pointer;">
-          <span style="font-size:18px; line-height:1; color:#6c757d;">&#215;</span>
-        </button>
-        <div class="hrmis-form__grid" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px;">
-
-          <div class="hrmis-field" style="grid-column: span 3;">
-            <label>Degree<span class="req">*</span></label>
-            <select class="hrmis-input" name="qualification_degree[]" required="required">
-              <option value="" disabled="disabled" selected="selected" hidden="hidden">Select Degree</option>
-              <option value="ms">MS</option>
-              <option value="md">MD</option>
-              <option value="fcps_1">FCPS-I</option>
-              <option value="fcps_2">FCPS-II</option>
-              <option value="mcps">MCPS</option>
-              <option value="diploma">Diploma</option>
-            </select>
-          </div>
+                      <div class="hrmis-form__grid" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px;">
+                        <div class="hrmis-field" style="grid-column: span 3;">
+                          <label>Degree<span class="req">*</span></label>
+                          <select class="hrmis-input" name="qualification_degree[]" required="required">
+                            <option value="" disabled="disabled" selected="selected" hidden="hidden">Select Degree</option>
+                            <option value="ms">MS</option>
+                            <option value="md">MD</option>
+                            <option value="fcps_1">FCPS-I</option>
+                            <option value="fcps_2">FCPS-II</option>
+                            <option value="mcps">MCPS</option>
+                            <option value="diploma">Diploma</option>
+                          </select>
+                        </div>
 
           <div class="hrmis-field" style="grid-column: span 4;">
             <label>Specialization</label>
@@ -286,41 +260,121 @@
 <div class="hrmis-section" style="grid-column: 1 / -1;">
   <div class="hrmis-card p-3" style="border:1px solid #e6e6e6; border-radius:12px; background:#fff;">
 
+    <!-- SECTION HEADER -->
     <div class="d-flex align-items-center mb-2">
-  <!-- left spacer -->
-  <!-- centered heading -->
-  <div style="flex:1; text-align:center; font-weight:700; font-size:16px;">
-    Posting History
+      <div style="flex:1;"></div>
+      <div style="flex:1; text-align:center; font-weight:700; font-size:16px;">Posting History</div>
+      <div style="flex:1;"></div>
+    </div>
+
+    <!-- Current Posting -->
+    <div class="hrmis-card p-3 mb-3"
+         style="border:1px solid #f0f0f0; border-radius:12px; background:#fafafa;">
+      <div style="font-weight:600; font-size:14px; margin-bottom:8px;">Current Posting</div>
+
+      <div class="hrmis-form__grid" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px;">
+
+        <div class="hrmis-field" style="grid-column: span 3;">
+          <label>District<span class="req">*</span></label>
+          <select class="hrmis-input js-current-district" name="district_id" required="required">
+            <option value="" disabled="disabled" hidden="hidden"
+                    t-att-selected="not (req.district_id or current_employee.district_id)">
+              Select District
+            </option>
+            <t t-foreach="districts" t-as="d">
+              <option t-att-value="d.id"
+                      t-att-selected="(req.district_id and req.district_id.id == d.id) or (current_employee.district_id and current_employee.district_id.id == d.id)">
+                <t t-esc="d.name"/>
+              </option>
+            </t>
+          </select>
+        </div>
+
+        <div class="hrmis-field" style="grid-column: span 3;">
+          <label>Facility</label>
+          <select class="hrmis-input js-current-facility" name="facility_id">
+            <option value="" selected="selected">Select Facility</option>
+            <t t-foreach="facilities" t-as="f">
+              <option t-att-value="f.id"
+                      t-att-data-district-id="f.district_id.id if f.district_id else ''"
+                      t-att-selected="(req.facility_id and req.facility_id.id == f.id) or (current_employee.facility_id and current_employee.facility_id.id == f.id)">
+                <t t-esc="f.name"/>
+              </option>
+            </t>
+          </select>
+        </div>
+
+        <div class="hrmis-field" style="grid-column: span 3;">
+          <label>Designation<span class="req">*</span></label>
+          <select class="hrmis-input" name="hrmis_designation" required="required">
+            <option value="" disabled="disabled" hidden="hidden"
+                    t-att-selected="not (req.hrmis_designation or current_employee.hrmis_designation)">
+              Select Designation
+            </option>
+            <t t-foreach="designations_unique" t-as="des">
+              <option t-att-value="des.id"
+                      t-att-selected="(req.hrmis_designation and req.hrmis_designation.id == des.id) or (current_employee.hrmis_designation and current_employee.hrmis_designation.id == des.id)">
+                <t t-esc="des.name"/>
+              </option>
+            </t>
+          </select>
+        </div>
+
+        <div class="hrmis-field" style="grid-column: span 1;">
+          <label>BPS<span class="req">*</span></label>
+          <input class="hrmis-input" type="number" min="1" max="22" name="hrmis_bps" required="required"
+                 t-att-value="req.hrmis_bps or current_employee.hrmis_bps or ''"/>
+        </div>
+
+        <!-- Current Posting Start Month -->
+        <div class="hrmis-field" style="grid-column: span 2;">
+          <label>Start (MM-YYYY)<span class="req">*</span></label>
+
+          <!-- QWeb SAFE: only read it if field exists -->
+          <t t-set="cps_val" t-value="''"/>
+          <t t-if="req and ('current_posting_start' in req._fields)">
+            <t t-set="cps_val" t-value="req.current_posting_start or ''"/>
+          </t>
+
+          <input class="hrmis-input js-current-post-start"
+                 type="month"
+                 name="current_posting_start"
+                 required="required"
+                 t-att-value="cps_val"/>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Previous Posting History (hidden/shown by JS) -->
+    <!-- Previous Posting History (hidden/shown by JS) -->
+<div class="js-prev-posting-wrap" style="display:none;">
+
+  <div class="d-flex align-items-center mb-2">
+    <div style="flex:1;"></div>
+    <div style="flex:1; text-align:center; font-weight:600; font-size:14px;">Previous Posting History</div>
+    <div style="flex:1; display:flex; justify-content:flex-end;">
+      <button type="button" class="hrmis-btn hrmis-btn--secondary" id="btn_add_prev_post_row"
+              style="padding:6px 12px; font-size:12px; border-radius:10px;">
+        + Add
+      </button>
+    </div>
   </div>
 
-  
-</div>
-    <button type="button"
-            class="hrmis-btn hrmis-btn--secondary"
-            id="btn_add_post_row"
-            style="padding:6px 12px; font-size:12px; border-radius:10px; margin-left:auto;">
-      + Add
-    </button>
+  <div id="prev_post_rows" class="d-flex flex-column gap-2"></div>
 
+  <template id="tpl_prev_post_row">
+    <div class="hrmis-repeat-row hrmis-card p-3"
+         data-row="prev_post"
+         style="position:relative; border:1px solid #f0f0f0; border-radius:12px; background:#fafafa;">
 
-    <div id="post_rows" class="d-flex flex-column gap-2"></div>
-
-    <!-- Hidden row template -->
-    <template id="tpl_post_row">
-      <div class="hrmis-repeat-row hrmis-card p-3"
-           data-row="post"
-           style="position:relative; border:1px solid #f0f0f0; border-radius:12px; background:#fafafa;">
-
-        <button type="button"
-                class="btn_remove_row"
-                title="Remove"
-                style="position:absolute; top:10px; right:10px;
-                       width:30px; height:30px; border-radius:10px;
-                       border:1px solid #e9ecef; background:#f8f9fa;
-                       display:flex; align-items:center; justify-content:center;
-                       cursor:pointer;">
-          <span style="font-size:18px; line-height:1; color:#6c757d;">&#215;</span>
-        </button>
+      <button type="button" class="btn_remove_row" title="Remove"
+              style="position:absolute; top:10px; right:10px;
+                     width:30px; height:30px; border-radius:10px;
+                     border:1px solid #e9ecef; background:#f8f9fa;
+                     display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <span style="font-size:18px; line-height:1; color:#6c757d;">&#215;</span>
+      </button>
 
         <div class="hrmis-form__grid" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px;">
 
@@ -334,18 +388,17 @@
             </select>
           </div>
 
-          <div class="hrmis-field" style="grid-column: span 3;">
-            <label>Facility</label>
-            <select class="hrmis-input js-post-facility" name="posting_facility_id[]">
-              <option value="" selected="selected">Select Facility</option>
-              <t t-foreach="facilities" t-as="f">
-                <option t-att-value="f.id"
-                        t-att-data-district-id="f.district_id.id if f.district_id else ''">
-                  <t t-esc="f.name"/>
-                </option>
-              </t>
-            </select>
-          </div>
+        <div class="hrmis-field" style="grid-column: span 3;">
+          <label>Facility</label>
+          <select class="hrmis-input js-post-facility" name="posting_facility_id[]">
+            <option value="" selected="selected">Select Facility</option>
+            <t t-foreach="facilities" t-as="f">
+              <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''">
+                <t t-esc="f.name"/>
+              </option>
+            </t>
+          </select>
+        </div>
 
           <div class="hrmis-field" style="grid-column: span 3;">
             <label>Designation<span class="req">*</span></label>
@@ -362,24 +415,21 @@
             <input class="hrmis-input" type="number" min="1" max="22" name="posting_bps[]" required="required"/>
           </div>
 
-          <div class="hrmis-field" style="grid-column: span 2;">
-            <label>Start (MM-YYYY)<span class="req">*</span></label>
-            <input class="hrmis-input js-post-start" type="month" name="posting_start[]" required="required"/>
-          </div>
-
-          <div class="hrmis-field" style="grid-column: span 1; display:flex; align-items:center; gap:8px; padding-top:28px;">
-            <input type="checkbox" class="form-check-input js-post-current" name="posting_is_current[]"/>
-            <label style="margin:0;">Current</label>
-          </div>
-
-          <div class="hrmis-field js-post-end-wrap" style="grid-column: span 2;">
-            <label>End (MM-YYYY)</label>
-            <input class="hrmis-input js-post-end" type="month" name="posting_end[]"/>
-          </div>
-
+        <div class="hrmis-field" style="grid-column: span 1;">
+          <label>Start<span class="req">*</span></label>
+          <input class="hrmis-input js-post-start" type="month" name="posting_start[]" required="required"/>
         </div>
+
+        <div class="hrmis-field" style="grid-column: span 1;">
+          <label>End<span class="req">*</span></label>
+          <input class="hrmis-input js-post-end" type="month" name="posting_end[]" required="required"/>
+        </div>
+
       </div>
-    </template>
+    </div>
+  </template>
+
+</div><!-- /.js-prev-posting-wrap -->
 
   </div>
 </div>
@@ -388,39 +438,31 @@
 <div class="hrmis-section" style="grid-column: 1 / -1;">
   <div class="hrmis-card p-3" style="border:1px solid #e6e6e6; border-radius:12px; background:#fff;">
 
- <div class="d-flex align-items-center mb-2">
- 
+                  <div class="d-flex align-items-center mb-2">
+                    <div style="flex:1;"></div>
+                    <div style="flex:1; text-align:center; font-weight:700; font-size:16px;">Promotion History</div>
+                    <div style="flex:1; display:flex; justify-content:flex-end;">
+                      <button type="button" class="hrmis-btn hrmis-btn--secondary" id="btn_add_promo_row"
+                              style="padding:6px 12px; font-size:12px; border-radius:10px;">
+                        + Add
+                      </button>
+                    </div>
+                  </div>
 
-  <div style="flex:1; text-align:center; font-weight:700; font-size:16px;">
-    Promotion History
-  </div>
+                  <div id="promo_rows" class="d-flex flex-column gap-2"></div>
 
-</div>
-    <button type="button"
-            class="hrmis-btn hrmis-btn--secondary"
-            id="btn_add_promo_row"
-            style="padding:6px 12px; font-size:12px; border-radius:10px; margin-left:auto;">
-      + Add
-    </button>
+                  <template id="tpl_promo_row">
+                    <div class="hrmis-repeat-row hrmis-card p-3"
+                         data-row="promo"
+                         style="position:relative; border:1px solid #f0f0f0; border-radius:12px; background:#fafafa;">
 
-    <div id="promo_rows" class="d-flex flex-column gap-2"></div>
-
-    <!-- Hidden row template -->
-    <template id="tpl_promo_row">
-      <div class="hrmis-repeat-row hrmis-card p-3"
-           data-row="promo"
-           style="position:relative; border:1px solid #f0f0f0; border-radius:12px; background:#fafafa;">
-
-        <button type="button"
-                class="btn_remove_row"
-                title="Remove"
-                style="position:absolute; top:10px; right:10px;
-                       width:30px; height:30px; border-radius:10px;
-                       border:1px solid #e9ecef; background:#f8f9fa;
-                       display:flex; align-items:center; justify-content:center;
-                       cursor:pointer;">
-          <span style="font-size:18px; line-height:1; color:#6c757d;">&#215;</span>
-        </button>
+                      <button type="button" class="btn_remove_row" title="Remove"
+                              style="position:absolute; top:10px; right:10px;
+                                     width:30px; height:30px; border-radius:10px;
+                                     border:1px solid #e9ecef; background:#f8f9fa;
+                                     display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                        <span style="font-size:18px; line-height:1; color:#6c757d;">&#215;</span>
+                      </button>
 
         <div class="hrmis-form__grid" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px;">
 
@@ -446,76 +488,113 @@
   </div>
 </div>
 
-<!-- ===================== Leave History ===================== -->
-<div class="hrmis-section" style="grid-column: 1 / -1;">
-  <div class="hrmis-card p-3" style="border:1px solid #e6e6e6; border-radius:12px; background:#fff;">
+ <!-- ===================== Leave History (FIXED TAGS) ===================== -->
+              <div class="hrmis-section" style="grid-column: 1 / -1;">
 
-   <div class="d-flex align-items-center mb-2">
+                <!-- FIXED: use a single wrapper, no extra/mismatched closing divs -->
+                <div class="hrmis-panel" >
 
+                  <div class=" hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">
+                    Leave History
+                  </div>
 
-  <div style="flex:1; text-align:center; font-weight:700; font-size:16px;">
-    Leave History
-  </div>
+                  <div class="px-3 pt-1 pb-3">
 
-</div>
-    <button type="button"
-            class="hrmis-btn hrmis-btn--secondary"
-            id="btn_add_leave_row"
-            style="padding:6px 12px; font-size:12px; border-radius:10px; margin-left:auto;">
-      + Add
-    </button>
+                    <div class="d-flex align-items-center justify-content-between" style="gap:12px; margin-bottom:15px;">
+                      <div style="color:#dc3545; font-weight:400; margin:0; padding:0; font-size: 16px">
+                        Note: Kindly add your Leave History carefully!
+                      </div>
 
+                      <button type="button"
+                              class="hrmis-btn hrmis-btn--primary"
+                              id="btn_add_leave_row">
+                        Add
+                      </button>
+                    </div>
 
-    <div id="leave_rows" class="d-flex flex-column gap-2"></div>
+                    <div id="leave_rows" class="d-flex flex-column gap-2" ></div>
 
-    <!-- Hidden row template -->
-    <template id="tpl_leave_row">
-      <div class="hrmis-repeat-row hrmis-card p-3"
-           data-row="leave"
-           style="position:relative; border:1px solid #f0f0f0; border-radius:12px; background:#fafafa;">
+                    <template id="tpl_leave_row">
+                      <div class="hrmis-leave-row-wrap d-flex align-items-stretch" style="gap:10px; border: 2px solid black">
 
-        <button type="button"
-                class="btn_remove_row"
-                title="Remove"
-                style="position:absolute; top:10px; right:10px;
-                       width:30px; height:30px; border-radius:10px;
-                       border:1px solid #e9ecef; background:#f8f9fa;
-                       display:flex; align-items:center; justify-content:center;
-                       cursor:pointer;">
-          <span style="font-size:18px; line-height:1; color:#6c757d;">&#215;</span>
-        </button>
+                        <div class="hrmis-repeat-row hrmis-card p-3"
+                             data-row="leave"
+                             style="flex:1; position:relative; border:1px solid #f0f0f0; border-radius:12px; background:#fafafa;">
 
-        <div class="hrmis-form__grid" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px;">
+                          <!-- Keep your existing X inside the row -->
+                          <button type="button"
+                                  class="btn_remove_row"
+                                  title="Remove"
+                                  style="position:absolute; top:10px; right:10px;
+                                         width:30px; height:30px; border-radius:10px;
+                                         border:1px solid #dc3545; background:#dc3545;
+                                         display:flex; align-items:center; justify-content:center;
+                                         cursor:pointer; text: white">
+                            <i class="fa fa-trash" style="color:#ffffff; font-size:18px;"></i>
+                          </button>
 
-          <div class="hrmis-field" style="grid-column: span 4;">
-            <label>Leave Type<span class="req">*</span></label>
-            <select class="hrmis-input" name="leave_type_id[]" required="required">
-              <option value="" disabled="disabled" selected="selected" hidden="hidden">Select Leave Type</option>
-              <t t-foreach="env['hr.leave.type'].search([], order='name')" t-as="lt">
-                <option t-att-value="lt.id"><t t-esc="lt.name"/></option>
-              </t>
-            </select>
-          </div>
+                          <div class="hrmis-form__grid pt-3 pb-2" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px;">
 
-          <div class="hrmis-field" style="grid-column: span 4;">
-            <label>Start Date<span class="req">*</span></label>
-            <input class="hrmis-input" type="date" name="leave_start[]" required="required"/>
-          </div>
+                            <div class="hrmis-field" style="grid-column: span 4;">
+                              <label>Leave Type<span class="req">*</span></label>
+                              <select class="hrmis-input" name="leave_type_id[]" required="required">
+                                <option value="" disabled="disabled" selected="selected" hidden="hidden">Select Leave Type</option>
+                                <t t-set="emp_gender"
+                                   t-value="((req.gender or current_employee.gender or '') or '').lower()"/>
+                                <t t-foreach="env['hr.leave.type'].sudo().search([], order='name')" t-as="lt">
+                                  <t t-set="lt_name" t-value="(lt.name or '').lower()"/>
+                                  <t t-if="
+                                      ('casual' not in lt_name)
+                                      and ('compensatory' not in lt_name)
+                                      and ('paid time off' not in lt_name)
+                                      and ('sick time off' not in lt_name)
+                                      and (lt_name.strip() != 'unpaid')
+                                      and (emp_gender != 'male' or ('maternity' not in lt_name))
+                                  ">
+                                    <option t-att-value="lt.id"><t t-esc="lt.name"/></option>
+                                  </t>
+                                </t>
+                              </select>
+                            </div>
 
-          <div class="hrmis-field" style="grid-column: span 4;">
-            <label>End Date<span class="req">*</span></label>
-            <input class="hrmis-input" type="date" name="leave_end[]" required="required"/>
-          </div>
+                            <div class="hrmis-field" style="grid-column: span 4;">
+                              <label>Start Date<span class="req">*</span></label>
+                              <input class="hrmis-input" type="date" name="leave_start[]" required="required" t-att-max="max_past_str"/>
+                            </div>
 
-        </div>
-      </div>
-    </template>
+                            <div class="hrmis-field" style="grid-column: span 4;">
+                              <label>End Date<span class="req">*</span></label>
+                              <input class="hrmis-input" type="date" name="leave_end[]" required="required" t-att-max="max_today_str"/>
+                            </div>
 
-  </div>
-</div>
+                          </div>
+                        </div>
 
+                      </div>
+                    </template>
+
+                    <div class="hrmis-field" style="margin-top:15px;">
+                      <label>Total Leaves Taken Since Joining (Days)<span class="req">*</span></label>
+                      <input class="hrmis-input js-hrmis-leaves-taken"
+                             type="number"
+                             step="0.5"
+                             min="0"
+                             max="365"
+                             name="hrmis_leaves_taken"
+                             required="required"
+                             readonly="readonly"
+                             style="background:#f3f4f6; color:#6c757d; opacity:0.75; filter: blur(0.15px); width:50%;"
+                             t-att-value="req.hrmis_leaves_taken or current_employee.hrmis_leaves_taken or 0"/>
+                      <div class="hrmis-help" style="color:#6c757d; margin-top:5px;">Auto-calculated from Leave History.</div>
+                    </div>
+
+                  </div><!-- /.px-2 -->
+
+                </div><!-- /.hrmis-panel__body -->
+              </div><!-- /.hrmis-section -->
 
             </div><!-- /.hrmis-form__grid -->
+
 
             <div class="hrmis-form__actions">
               <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg"
@@ -531,28 +610,19 @@
         </div><!-- /.hrmis-panel__body -->
       </div><!-- /.hrmis-panel -->
 
-      <!-- Confirmation Modal (still inside t-call, but outside panel is OK) -->
+      <!-- Confirmation Modal (ONLY ONCE) -->
       <div class="modal fade" id="confirmSubmitModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable" style="display:flex; align-items:center">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title">Confirm Profile Update Request</h5>
+              <h5 class="modal-title" style="font-weight:800;">Confirm Profile Update Request</h5>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <!-- Bootstrap 5 Confirmation Modal -->
-            <div class="modal fade" id="confirmSubmitModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable" style="display:flex; align-items:center">
-                <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" style="font-weight: 800;">Confirm Profile Update Request</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
             <div class="modal-body">
               <p class="mb-3">Please review the information below before submitting.</p>
               <div class="table-responsive">
                 <table class="table table-sm align-middle">
-                  <tbody id="confirm_table_body"/>
+                  <tbody id="confirm_table_body"></tbody>
                 </table>
               </div>
             </div>

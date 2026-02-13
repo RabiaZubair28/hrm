@@ -17,6 +17,54 @@ from odoo import http, fields
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.http import request
 
+import os
+
+_MAX_UPLOAD_BYTES = 4 * 1024 * 1024  # 4 MB
+_ALLOWED_UPLOAD_EXTS = {"pdf", "jpg", "jpeg", "png", "svg"}
+
+def _norm_ext(filename: str) -> str:
+    fn = (filename or "").strip().lower()
+    _, ext = os.path.splitext(fn)
+    return (ext or "").lstrip(".").lower()
+
+def _validate_upload_file(file_obj, label: str, *, max_bytes=_MAX_UPLOAD_BYTES, allowed_exts=_ALLOWED_UPLOAD_EXTS):
+    """
+    Validates a Werkzeug FileStorage-like object from request.httprequest.files.get(...)
+
+    Rules:
+    - Extension must be in allowed_exts
+    - File size must be <= max_bytes
+
+    Returns: (ok: bool, error_msg: str, data: bytes)
+    """
+    if not file_obj:
+        return True, "", b""
+
+    filename = getattr(file_obj, "filename", "") or ""
+    ext = _norm_ext(filename)
+
+    if ext not in allowed_exts:
+        return False, f"{label}: Invalid file type. Allowed: PDF, JPG, JPEG, PNG, SVG.", b""
+
+    # Read once (we need bytes anyway for base64 storage).
+    try:
+        data = file_obj.read() or b""
+    except Exception:
+        return False, f"{label}: Could not read uploaded file.", b""
+
+    # Reset stream position just in case something else expects it later (safe).
+    try:
+        file_obj.stream.seek(0)
+    except Exception:
+        pass
+
+    if len(data) > max_bytes:
+        # show exact limit requested
+        return False, f"{label}: File too large. Max allowed size is 4 MB.", b""
+
+    return True, "", data
+
+
 _logger = logging.getLogger(__name__)
 
 def _safe_int(v, default=None):
@@ -356,7 +404,6 @@ def _dedupe_leave_types_for_ui(leave_types):
         "compensatorydays",
         "paidtimeoff",
         "sicktimeoff",
-        "unpaid",
     }
     seen = set()
     # Preserve env/context from the incoming recordset; name_get() uses context
@@ -1470,6 +1517,8 @@ class HrmisProfileRequestController(http.Controller):
         today = date.today()
         max_dob_str = (today - relativedelta(years=18)).strftime("%Y-%m-%d")
         max_today_str = today.strftime("%Y-%m-%d")   # for commission/joining max
+        # Leave History rows must not allow today/future dates
+        max_past_str = (today - relativedelta(days=1)).strftime("%Y-%m-%d")
 
         ProfileRequest = request.env["hrmis.employee.profile.request"].sudo()
         Post = request.env["hrmis.posting.history"].sudo()
@@ -1562,6 +1611,7 @@ class HrmisProfileRequestController(http.Controller):
                 info=info,
                 max_dob_str=max_dob_str,
                 max_today_str=max_today_str,
+                max_past_str=max_past_str,
             ),
         )
 
@@ -1782,7 +1832,6 @@ class HrmisProfileRequestController(http.Controller):
             "district_id": district_id,
             "facility_id": facility_id,
             "hrmis_contact_info": post.get("hrmis_contact_info"),
-            "hrmis_leaves_taken": post.get("hrmis_leaves_taken"),
             "hrmis_merit_number": post.get("hrmis_merit_number"),
             "approver_id": approver_emp.id if approver_emp else False,
             "state": "submitted",
@@ -1894,7 +1943,25 @@ class HrmisProfileRequestController(http.Controller):
         l_start = form.getlist("leave_start[]")
         l_end = form.getlist("leave_end[]")
 
+        # Joining date boundary: disallow leaves before joining month.
+        join_raw = (post.get("hrmis_joining_date") or "").strip() or getattr(employee, "hrmis_joining_date", "") or ""
+        join_dt = fields.Date.to_date(join_raw) if join_raw else None
+        join_month_start = None
+        try:
+            if join_dt:
+                join_month_start = join_dt.replace(day=1)
+        except Exception:
+            join_month_start = None
+
         leave_lines = []
+        leave_calc_items = []  # (leave_type_id, start_date, end_date)
+        # Hard-block these leave types even if posted manually
+        blocked_leave_type_keys = {"paidtimeoff", "sicktimeoff", "unpaid"}
+        # Prefer submitted gender (profile request may be editing it), fallback to employee record.
+        emp_gender = (
+            (post.get("gender") or "")
+            or (getattr(employee, "gender", False) or getattr(employee, "hrmis_gender", False) or "")
+        ).strip().lower()
         for i in range(max(len(l_type), len(l_start), len(l_end))):
             leave_type_id = self._to_int(l_type[i] if i < len(l_type) else "")
             s = (l_start[i] if i < len(l_start) else "").strip()
@@ -1906,21 +1973,125 @@ class HrmisProfileRequestController(http.Controller):
             if not leave_type_id or not s or not e:
                 return self._render_profile_form_error(employee, req, env, "Leave History: Leave Type, Start Date and End Date are required.")
 
-            # server validation: end >= start
+            # Validate leave type (blocked)
+            try:
+                lt = env["hr.leave.type"].sudo().browse(int(leave_type_id)).exists()
+                if lt and _norm_leave_type_name(getattr(lt, "name", "")) in blocked_leave_type_keys:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: This leave type is not allowed.")
+                # Hide maternity for male employees (extra safety)
+                if lt and emp_gender == "male":
+                    key = _norm_leave_type_name(getattr(lt, "name", ""))
+                    if "maternity" in key:
+                        return self._render_profile_form_error(
+                            employee,
+                            req,
+                            env,
+                            "Leave History: Maternity leave is not allowed for male employees.",
+                        )
+            except Exception:
+                # If we cannot resolve the leave type reliably, keep going; other validations still apply.
+                pass
+
+            # Date validations
             try:
                 sd = fields.Date.to_date(s)
                 ed = fields.Date.to_date(e)
+                if not sd or not ed:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
                 if ed < sd:
                     return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be earlier than Start Date.")
+                if join_month_start and (sd < join_month_start or ed < join_month_start):
+                    return self._render_profile_form_error(
+                        employee,
+                        req,
+                        env,
+                        "Leave History: Leave dates cannot be before your joining month.",
+                    )
+                today_ctx = fields.Date.context_today(env.user)
+                # Start date must be before today; End date can be up to today.
+                if sd >= today_ctx:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: Start Date must be before today.")
+                if ed > today_ctx:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be after today.")
+                # End date must be at least 7 days after start date.
+                if (ed - sd).days < 7:
+                    return self._render_profile_form_error(employee, req, env, "Leave History: End Date must be at least 7 days after Start Date.")
             except Exception:
                 return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
 
             leave_lines.append({
                 "employee_id": employee.id,
                 "leave_type_id": leave_type_id,
-                "start_date": s,
-                "end_date": e,
+                "start_date": sd,
+                "end_date": ed,
             })
+            leave_calc_items.append((leave_type_id, sd, ed))
+
+        # Block overlaps across leave history rows (no reused days).
+        try:
+            ranges = [(sd, ed) for (_, sd, ed) in leave_calc_items]
+            ranges.sort(key=lambda r: (r[0], r[1]))
+            prev_s = None
+            prev_e = None
+            for s0, e0 in ranges:
+                if prev_s is None:
+                    prev_s, prev_e = s0, e0
+                    continue
+                # Inclusive overlap: if the next start is <= previous end, they share at least one day.
+                if prev_e and s0 and s0 <= prev_e:
+                    return self._render_profile_form_error(
+                        employee,
+                        req,
+                        env,
+                        "Leave History: Overlapping leave dates are not allowed (you cannot reuse the same day in multiple rows).",
+                    )
+                prev_s, prev_e = s0, e0
+        except Exception:
+            pass
+
+        # Auto-calculate Total Leaves Taken (UI field is read-only).
+        # Rules (match HRMIS balance logic):
+        # - Half-pay leaves count as ceil(effective_days / 2.0)
+        # - Earned/full-pay/LPR leaves count as effective_days
+        # - Without pay / EOL / unpaid / medical / maternity count as 0
+        try:
+            import math
+
+            total_taken = 0.0
+            LeaveModel = env["hr.leave"].sudo()
+            LeaveType = env["hr.leave.type"].sudo()
+            for lt_id, sd, ed in leave_calc_items:
+                lt = LeaveType.browse(int(lt_id)).exists()
+                name = (lt.name or "").strip().lower() if lt else ""
+
+                # 0-count types
+                if any(k in name for k in ("medical", "maternity", "without pay", "eol", "unpaid")):
+                    continue
+
+                factor = 0.0
+                if "half pay" in name:
+                    factor = 0.5
+                elif any(k in name for k in ("full pay", "earned", "lpr")):
+                    factor = 1.0
+                else:
+                    continue
+
+                eff = (
+                    float(LeaveModel._hrmis_effective_days(employee, sd, ed) or 0.0)
+                    if hasattr(LeaveModel, "_hrmis_effective_days")
+                    else float((ed - sd).days + 1)
+                )
+                if factor == 0.5:
+                    total_taken += float(math.ceil(eff / 2.0))
+                else:
+                    total_taken += eff
+
+            # Keep a compact numeric value (UI uses step 0.5).
+            total_taken = round(total_taken * 2.0) / 2.0
+            vals["hrmis_leaves_taken"] = total_taken
+        except Exception:
+            # Never block the request due to a calculation failure; keep existing value if any.
+            pass
 
         # -----------------------
         # Write histories (replace existing histories)

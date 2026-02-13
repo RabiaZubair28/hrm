@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <template id="hrmis_sanctioned_posts_upload_page" name="HRMIS Sanctioned Posts Upload">
+        <t t-call="hr_holidays_updates.hrmis_ui_layout">
+
+            <div class="hrmis-panel">
+                <div class="hrmis-panel__header">
+                    <div class="hrmis-panel__title">Sanctioned Posts - XLSX Upload</div>
+                </div>
+
+                <div class="hrmis-panel__body">
+
+                    <t t-if="not request.env.user.has_group('base.group_system')">
+                        <div class="alert alert-danger mb-0">
+                            You are not allowed to access this page.
+                        </div>
+                    </t>
+
+                    <t t-else="">
+
+                        <!-- Upload -->
+                        <div class="d-flex justify-content-center my-4">
+                            <form action="/hrmis/sanctioned_posts/upload_xlsx"
+                                  method="post"
+                                  enctype="multipart/form-data"
+                                  class="text-center">
+
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                                <input id="xlsx_file"
+                                       type="file"
+                                       name="xlsx_file"
+                                       accept=".xlsx"
+                                       class="d-none"
+                                       onchange="this.form.submit()"/>
+
+                                <label for="xlsx_file" class="btn btn-success">
+                                    Upload XLSX
+                                </label>
+
+                                <div class="text-muted mt-2" style="font-size: 0.9rem;">
+                                    Select an .xlsx file to upload; preview will appear below.
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Error -->
+                        <t t-if="upload_error">
+                            <div class="alert alert-danger">
+                                <t t-esc="upload_error"/>
+                            </div>
+                        </t>
+
+                        <!-- Preview / Results -->
+                        <t t-if="upload_result">
+                            <div class="alert alert-info">
+                                <div><strong>Total Records:</strong> <t t-esc="upload_result.get('count', 0)"/></div>
+                                <div class="mt-1">
+                                    <strong>Columns:</strong>
+                                    <t t-esc="', '.join(upload_result.get('columns', []))"/>
+                                </div>
+                            </div>
+
+                            <!-- Create Users button ONLY when attachment exists -->
+                            <t t-if="attachment_id">
+                                <div class="d-flex justify-content-center my-3">
+                                    <form action="/hrmis/sanctioned_posts/create_users" method="post" class="text-center">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <input type="hidden" name="attachment_id" t-att-value="attachment_id"/>
+                                        <button type="submit" class="btn btn-primary">
+                                            Create Users (Import All)
+                                        </button>
+                                        <div class="text-muted mt-2" style="font-size: 0.9rem;">
+                                            This will create users for all rows (skips duplicates by CNIC/login).
+                                        </div>
+                                    </form>
+                                </div>
+                            </t>
+
+                            <!-- Summary after import -->
+                            <t t-if="upload_result.get('created') is not None">
+                                <div class="alert alert-success">
+                                    <div><strong>Created:</strong> <t t-esc="upload_result.get('created')"/></div>
+                                    <div><strong>Skipped (duplicates/invalid):</strong> <t t-esc="upload_result.get('skipped')"/></div>
+                                </div>
+
+                                <t t-if="upload_result.get('errors')">
+                                    <div class="alert alert-warning">
+                                        <strong>Sample Errors (max 50):</strong>
+                                        <ul class="mb-0">
+                                            <t t-foreach="upload_result.get('errors')" t-as="err">
+                                                <li><t t-esc="err"/></li>
+                                            </t>
+                                        </ul>
+                                    </div>
+                                </t>
+                            </t>
+                            <t t-if="creds_attachment_id">
+                                <div class="alert alert-secondary d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>Credentials file ready.</strong>
+                                        Download CSV of created logins + passwords.
+                                    </div>
+                                    <a class="btn btn-outline-dark btn-sm"
+                                    t-att-href="'/web/content/%s?download=true' % creds_attachment_id">
+                                        Download credentials CSV
+                                    </a>
+                                </div>
+                            </t>
+
+                            <t t-if="creds_preview">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Login (CNIC)</th>
+                                                <th>Password</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="creds_preview" t-as="c">
+                                                <tr>
+                                                    <td><t t-esc="c.get('login')"/></td>
+                                                    <td><t t-esc="c.get('password')"/></td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                    <div class="text-muted" style="font-size:0.9rem;">
+                                        Showing first 50 created credentials. Download CSV for full list.
+                                    </div>
+                                </div>
+                            </t>
+
+
+                            <!-- Top 10 preview table -->
+                            <t t-if="upload_result.get('top10')">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered align-middle">
+                                        <thead>
+                                            <tr>
+                                                <t t-foreach="upload_result.get('columns', [])" t-as="col">
+                                                    <th><t t-esc="col"/></th>
+                                                </t>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="upload_result.get('top10')" t-as="row">
+                                                <tr>
+                                                    <t t-foreach="upload_result.get('columns', [])" t-as="col">
+                                                        <td><t t-esc="row.get(col, '')"/></td>
+                                                    </t>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </t>
+
+                        </t>
+
+                    </t>
+                </div>
+            </div>
+
+        </t>
+    </template>
+
+</odoo>

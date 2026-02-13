@@ -20,32 +20,45 @@
                             <!-- Current Password -->
                             <div class="mb-3">
                                 <label class="form-label">Current Password</label>
-                                <input
-                                    type="password"
-                                    name="current_password"
-                                    class="form-control"
-                                    required="required"/>
+                                <div class="input-group">
+                                    <input type="password"
+                                        name="current_password"
+                                        class="form-control password-field"
+                                        required="required"/>
+                                    <button type="button" class="btn btn-outline-secondary toggle-password">
+                                        <i class="bi bi-eye-slash"></i>
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- New Password -->
                             <div class="mb-3">
                                 <label class="form-label">New Password</label>
-                                <input
-                                    type="password"
-                                    name="new_password"
-                                    class="form-control"
-                                    required="required"/>
+                                <div class="input-group">
+                                    <input type="password"
+                                        name="new_password"
+                                        class="form-control password-field"
+                                        required="required"/>
+                                    <button type="button" class="btn btn-outline-secondary toggle-password">
+                                        <i class="bi bi-eye-slash"></i>
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Confirm Password -->
                             <div class="mb-4">
                                 <label class="form-label">Confirm New Password</label>
-                                <input
-                                    type="password"
-                                    name="confirm_password"
-                                    class="form-control"
-                                    required="required"/>
+                                <div class="input-group">
+                                    <input type="password"
+                                        name="confirm_password"
+                                        class="form-control password-field"
+                                        required="required"/>
+                                    <button type="button" class="btn btn-outline-secondary toggle-password">
+                                        <i class="bi bi-eye-slash"></i>
+                                    </button>
+                                </div>
                             </div>
+
 
                             <!-- Submit -->
                             <div class="d-grid">

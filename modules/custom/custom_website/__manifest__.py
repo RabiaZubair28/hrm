@@ -1,7 +1,7 @@
 {
     'name': 'Custom Website',
     'version': '1.0',
-    'depends': ['website', 'hrmis_transfer', 'custom_login','custom_section_officers', 'ms_dho'],
+    'depends': ['website', 'hrmis_transfer', 'custom_login','custom_section_officers', 'ms_dho', 'sanctioned_posts'],
     'data': [
         'views/home_page.xml',
         'views/hrmis_login.xml',
