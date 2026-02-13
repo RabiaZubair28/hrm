@@ -548,6 +548,7 @@
                                       and ('compensatory' not in lt_name)
                                       and ('paid time off' not in lt_name)
                                       and ('sick time off' not in lt_name)
+                                      and ('lpr' not in lt_name)
                                       and (lt_name.strip() != 'unpaid')
                                       and (emp_gender != 'male' or ('maternity' not in lt_name))
                                   ">
@@ -596,45 +597,48 @@
             </div><!-- /.hrmis-form__grid -->
 
 
-            <div class="hrmis-form__actions">
-              <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg"
-                      type="button"
-                      id="btn_open_confirm_modal"
-                      t-att-disabled="req.state != 'draft'">
-                Submit Request
-              </button>
-            </div>
+            <t t-if="req.state == 'draft'">
+              <div class="hrmis-form__actions">
+                <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg"
+                        type="button"
+                        id="btn_open_confirm_modal">
+                  Submit Request
+                </button>
+              </div>
+            </t>
 
           </form>
 
         </div><!-- /.hrmis-panel__body -->
       </div><!-- /.hrmis-panel -->
 
-      <!-- Confirmation Modal (ONLY ONCE) -->
-      <div class="modal fade" id="confirmSubmitModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable" style="display:flex; align-items:center">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" style="font-weight:800;">Confirm Profile Update Request</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <p class="mb-3">Please review the information below before submitting.</p>
-              <div class="table-responsive">
-                <table class="table table-sm align-middle">
-                  <tbody id="confirm_table_body"></tbody>
-                </table>
+      <t t-if="req.state == 'draft'">
+        <!-- Confirmation Modal (ONLY ONCE) -->
+        <div class="modal fade" id="confirmSubmitModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-scrollable" style="display:flex; align-items:center">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" style="font-weight:800;">Confirm Profile Update Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
-            </div>
+              <div class="modal-body">
+                <p class="mb-3">Please review the information below before submitting.</p>
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle">
+                    <tbody id="confirm_table_body"></tbody>
+                  </table>
+                </div>
+              </div>
 
-            <div class="modal-footer">
-              <button type="button" class="hrmis-btn hrmis-btn--primary hrmis-btn--lg" id="btn_confirm_submit">
-                Confirm &amp; Submit
-              </button>
+              <div class="modal-footer">
+                <button type="button" class="hrmis-btn hrmis-btn--primary hrmis-btn--lg" id="btn_confirm_submit">
+                  Confirm &amp; Submit
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </t>
 
     </t>
   </template>
