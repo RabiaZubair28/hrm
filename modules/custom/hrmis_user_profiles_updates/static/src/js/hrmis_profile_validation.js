@@ -13,6 +13,26 @@ function _isEmpty(val) {
   return val === null || val === undefined || String(val).trim() === "";
 }
 
+function _setHint(input, message) {
+  if (!input) return;
+  let hint = input.parentElement.querySelector(".hrmis-hint");
+  if (!hint) {
+    hint = document.createElement("div");
+    hint.className = "hrmis-hint";
+    hint.style.fontSize = "12px";
+    hint.style.marginTop = "4px";
+    hint.style.color = "#6c757d";
+    input.parentElement.appendChild(hint);
+  }
+  hint.textContent = message || "";
+  hint.style.display = message ? "" : "none";
+}
+
+function _normInt(v) {
+  const n = parseInt(String(v || "").trim(), 10);
+  return Number.isNaN(n) ? null : n;
+}
+
 function _showError(input, message) {
   if (!input) return;
   let error = input.parentElement.querySelector(".hrmis-error");
@@ -94,6 +114,13 @@ function _monthToIndex(v) {
     .split("-")
     .map((x) => parseInt(x, 10));
   return y * 12 + (m - 1);
+}
+
+function _todayMonth() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`; // YYYY-MM
 }
 
 /* ---------------------------------------------------------
@@ -1056,13 +1083,18 @@ function _initProfileDatePickers(form) {
   }
 
   if (comm) {
-    const syncCommMin = () => {
+    const syncCommMinMax = () => {
       const v = (dob?.value || "").trim();
       comm.min = v || "";
       if (comm.value && v && comm.value < v) comm.value = "";
+
+      // Commission cannot be after Joining (if joining selected)
+      const jv = (join?.value || "").trim();
+      if (jv) comm.max = jv;
     };
-    syncCommMin();
-    dob?.addEventListener("change", syncCommMin);
+    syncCommMinMax();
+    dob?.addEventListener("change", syncCommMinMax);
+    join?.addEventListener("change", syncCommMinMax);
 
     _attachHrmisLeaveDatePicker(comm, () => ({
       min: (comm.min || "").trim(),
@@ -1077,6 +1109,16 @@ function _initProfileDatePickers(form) {
       const v = (comm?.value || "").trim();
       join.min = v || "";
       if (join.value && v && join.value < v) join.value = "";
+
+      // Require commission first (UX)
+      const hasComm = !_isEmpty(v);
+      join.disabled = !hasComm;
+      if (!hasComm) {
+        join.value = "";
+        _setHint(join, "Select Commission Date first to enable Joining Date.");
+      } else {
+        _setHint(join, "");
+      }
     };
     syncJoinMin();
     comm?.addEventListener("change", syncJoinMin);
@@ -1088,6 +1130,19 @@ function _initProfileDatePickers(form) {
       openTo: (comm?.value || "").trim() || join.value || "",
     }));
   }
+}
+
+/* ---------------------------------------------------------
+ * Joining/Current BPS helpers
+ * --------------------------------------------------------- */
+function _joiningMonthValue(form) {
+  const joining = _qs(form, '[name="hrmis_joining_date"]'); // YYYY-MM-DD
+  const v = (joining?.value || "").trim();
+  return v ? v.slice(0, 7) : ""; // YYYY-MM
+}
+function _currentBpsValue(form) {
+  const bps = _qs(form, '[name="hrmis_bps"]');
+  return _normInt(bps?.value);
 }
 
 /* ---------------------------------------------------------
@@ -1114,6 +1169,51 @@ function _filterFacilitiesInRow(row) {
   if (sel && sel.hidden) facility.selectedIndex = 0;
 }
 
+/* ---------------------------------------------------------
+ * Posting BPS <= Current BPS (previous posting rows)
+ * --------------------------------------------------------- */
+function _postingRows() {
+  return _qsa(document, "#prev_post_rows .hrmis-repeat-row");
+}
+
+function _applyPostingBpsMaxFromCurrent(form, row) {
+  const bpsInp = _qs(row, 'input[name="posting_bps[]"]');
+  if (!bpsInp) return;
+
+  const currentBps = _currentBpsValue(form);
+  if (currentBps !== null && currentBps >= 1) {
+    bpsInp.setAttribute("max", String(currentBps));
+  } else {
+    bpsInp.setAttribute("max", "22");
+  }
+}
+
+function _syncPostingBpsConstraints(form) {
+  _postingRows().forEach((row) => _applyPostingBpsMaxFromCurrent(form, row));
+}
+
+function _validatePostingBpsAgainstCurrent(form, row) {
+  const bpsInp = _qs(row, 'input[name="posting_bps[]"]');
+  if (!bpsInp) return true;
+
+  const v = _normInt(bpsInp.value);
+  const currentBps = _currentBpsValue(form);
+
+  _clearError(bpsInp);
+
+  // If empty: other validations handle required; don't block here
+  if (v === null || currentBps === null) return true;
+
+  if (v > currentBps) {
+    _showError(
+      bpsInp,
+      `Posting BPS cannot be greater than current BPS (${currentBps})`,
+    );
+    return false;
+  }
+  return true;
+}
+
 function _removeRepeatRow(btn) {
   const row = btn.closest(".hrmis-repeat-row");
   if (row) row.remove();
@@ -1122,7 +1222,6 @@ function _removeRepeatRow(btn) {
 function _initRepeatables(form) {
   const btnQual = _qs(document, "#btn_add_qual_row");
   const btnPrevPost = _qs(document, "#btn_add_prev_post_row");
-  const btnPromo = _qs(document, "#btn_add_promo_row");
   const btnLeave = _qs(document, "#btn_add_leave_row");
 
   if (btnQual)
@@ -1137,12 +1236,8 @@ function _initRepeatables(form) {
       if (row) {
         _filterFacilitiesInRow(row);
         _togglePostCurrent(row);
+        _applyPostingBpsMaxFromCurrent(form, row);
       }
-    });
-
-  if (btnPromo)
-    btnPromo.addEventListener("click", () => {
-      _cloneFromTemplate("#tpl_promo_row", "#promo_rows");
     });
 
   if (btnLeave)
@@ -1221,6 +1316,11 @@ function _initRepeatables(form) {
       const raw = t.value || "";
       const digits = raw.replace(/\D/g, "").slice(0, 2);
       if (digits !== raw) t.value = digits;
+      const row = t.closest(".hrmis-repeat-row");
+      if (row) {
+        _applyPostingBpsMaxFromCurrent(form, row);
+        _validatePostingBpsAgainstCurrent(form, row);
+      }
     }
 
     if (
@@ -1237,8 +1337,284 @@ function _initRepeatables(form) {
   _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) =>
     _syncLeaveRowDateConstraints(row),
   );
+  _syncPostingBpsConstraints(form);
   _syncLeaveTypeSelectsByGender(form);
   _recalcLeavesTaken(form);
+}
+
+/* ---------------------------------------------------------
+ * Promotion History: strict chain
+ * - auto-add next row
+ * - next row From = previous To (locked)
+ * - last To must equal Current BPS (if promos exist)
+ * - To cannot exceed Current BPS
+ * - To must be > From
+ * - Promotion Date disabled until Joining selected; min=Joining month, max=today month
+ * - Promotion BPS To disabled until Current BPS is filled
+ * --------------------------------------------------------- */
+function _promoRows() {
+  return _qsa(document, "#promo_rows .hrmis-repeat-row");
+}
+function _promoRowIndex(row) {
+  return _promoRows().indexOf(row);
+}
+function _lockInput(inp) {
+  if (!inp) return;
+  inp.readOnly = true;
+  inp.style.pointerEvents = "none";
+  inp.tabIndex = -1;
+  inp.style.background = "#f3f4f6";
+  inp.style.cursor = "not-allowed";
+}
+function _unlockInput(inp) {
+  if (!inp) return;
+  inp.readOnly = false;
+  inp.style.pointerEvents = "";
+  inp.tabIndex = 0;
+  inp.style.background = "";
+  inp.style.cursor = "";
+}
+
+function _togglePromoBpsToEnabled(form, row) {
+  const to = _qs(row, 'input[name="promotion_bps_to[]"]');
+  if (!to) return;
+
+  const currentBps = _currentBpsValue(form);
+  const enabled = currentBps !== null && currentBps >= 1;
+  to.disabled = !enabled;
+  if (!enabled) {
+    to.value = "";
+    _clearError(to);
+    _setHint(to, "Fill Current BPS first to enable Promotion BPS To.");
+  } else {
+    _setHint(to, "");
+  }
+}
+
+function _applyPromoBpsToMaxFromCurrent(form, row) {
+  const to = _qs(row, 'input[name="promotion_bps_to[]"]');
+  if (!to) return;
+
+  const currentBps = _currentBpsValue(form);
+  if (currentBps !== null && currentBps >= 1)
+    to.setAttribute("max", String(currentBps));
+  else to.setAttribute("max", "22");
+}
+
+function _applyPromoToMinFromFrom(row) {
+  const from = _qs(row, 'input[name="promotion_bps_from[]"]');
+  const to = _qs(row, 'input[name="promotion_bps_to[]"]');
+  if (!from || !to) return;
+
+  const f = _normInt(from.value);
+  if (f !== null) to.setAttribute("min", String(Math.min(22, f + 1)));
+  else to.setAttribute("min", "1");
+}
+
+function _setPromoDateMinMax(form, row) {
+  const date = _qs(row, 'input[name="promotion_date[]"]');
+  if (!date) return;
+
+  date.setAttribute("max", _todayMonth());
+
+  const jm = _joiningMonthValue(form);
+  if (_isValidMonth(jm)) {
+    date.setAttribute("min", jm);
+    date.disabled = false;
+    _clearError(date);
+    _setHint(date, "");
+  } else {
+    date.removeAttribute("min");
+    date.value = "";
+    date.disabled = true;
+    _setHint(date, "Select Joining Date first to enable Promotion Date.");
+  }
+}
+
+function _syncPromoRowConstraints(form, row) {
+  _setPromoDateMinMax(form, row);
+  _applyPromoBpsToMaxFromCurrent(form, row);
+  _applyPromoToMinFromFrom(row);
+  _togglePromoBpsToEnabled(form, row);
+}
+
+function _validatePromoRow(form, row) {
+  let ok = true;
+
+  const from = _qs(row, 'input[name="promotion_bps_from[]"]');
+  const to = _qs(row, 'input[name="promotion_bps_to[]"]');
+  const date = _qs(row, 'input[name="promotion_date[]"]');
+  [from, to, date].forEach(_clearError);
+
+  const vDate = (date?.value || "").trim();
+  const emptyRow =
+    _isEmpty(from?.value) && _isEmpty(to?.value) && _isEmpty(vDate);
+  if (emptyRow) return true;
+
+  const f = _normInt(from?.value);
+  const t = _normInt(to?.value);
+  const currentBps = _currentBpsValue(form);
+
+  if (f === null) {
+    _showError(from, "BPS From is required");
+    ok = false;
+  } else if (f < 1 || f > 22) {
+    _showError(from, "BPS From must be 1 to 22");
+    ok = false;
+  }
+
+  if (t === null) {
+    _showError(to, "BPS To is required");
+    ok = false;
+  } else if (t < 1 || t > 22) {
+    _showError(to, "BPS To must be 1 to 22");
+    ok = false;
+  }
+
+  if (f !== null && t !== null) {
+    if (t <= f) {
+      _showError(to, "BPS To must be greater than BPS From");
+      ok = false;
+    }
+    if (currentBps !== null && t > currentBps) {
+      _showError(to, `BPS To cannot be greater than current BPS (${currentBps})`);
+      ok = false;
+    }
+  }
+
+  if (_isEmpty(vDate) || !_isValidMonth(vDate)) {
+    _showError(date, "Promotion month is required (YYYY-MM)");
+    ok = false;
+  } else {
+    const jm = _joiningMonthValue(form);
+    const tm = _todayMonth();
+    if (!_isValidMonth(jm)) {
+      _showError(date, "Select Joining Date first");
+      ok = false;
+    } else {
+      if (_monthToIndex(vDate) < _monthToIndex(jm)) {
+        _showError(date, "Promotion month cannot be before Joining Month");
+        ok = false;
+      }
+      if (_monthToIndex(vDate) > _monthToIndex(tm)) {
+        _showError(date, "Promotion month cannot be after current month");
+        ok = false;
+      }
+    }
+  }
+
+  return ok;
+}
+
+function _ensurePromoRow(form, i) {
+  const container = _qs(document, "#promo_rows");
+  if (!container) return null;
+
+  while (_promoRows().length <= i) {
+    const row = _cloneFromTemplate("#tpl_promo_row", "#promo_rows");
+    if (!row) break;
+    _syncPromoRowConstraints(form, row);
+
+    const from = _qs(row, 'input[name="promotion_bps_from[]"]');
+    // First row From is editable; subsequent rows can be locked by chain logic
+    _unlockInput(from);
+  }
+
+  return _promoRows()[i] || null;
+}
+
+function _removePromoRowsAfter(idx) {
+  _promoRows()
+    .slice(idx + 1)
+    .forEach((r) => r.remove());
+}
+
+function _continuePromoChainIfNeeded(form, row) {
+  const currentBps = _currentBpsValue(form);
+  if (currentBps === null) return;
+
+  const to = _qs(row, 'input[name="promotion_bps_to[]"]');
+  if (!to) return;
+
+  const t = _normInt(to.value);
+  if (t === null) return;
+  if (t === currentBps) return;
+
+  if (t < currentBps) {
+    const idx = _promoRowIndex(row);
+    const next = _ensurePromoRow(form, idx + 1);
+    if (!next) return;
+
+    const nextFrom = _qs(next, 'input[name="promotion_bps_from[]"]');
+    const nextTo = _qs(next, 'input[name="promotion_bps_to[]"]');
+    const nextDate = _qs(next, 'input[name="promotion_date[]"]');
+
+    if (nextFrom) {
+      nextFrom.value = String(t);
+      _lockInput(nextFrom);
+    }
+    if (nextTo) nextTo.value = "";
+    if (nextDate) nextDate.value = "";
+
+    _syncPromoRowConstraints(form, next);
+  }
+}
+
+function _initPromotionChain(form) {
+  const container = _qs(document, "#promo_rows");
+  const btnPromo = _qs(document, "#btn_add_promo_row");
+  if (!container) return;
+
+  if (btnPromo) {
+    btnPromo.addEventListener("click", () => {
+      if (_promoRows().length === 0) {
+        const first = _ensurePromoRow(form, 0);
+        if (first) _syncPromoRowConstraints(form, first);
+      } else {
+        _promoRows()[_promoRows().length - 1]?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    });
+  }
+
+  container.addEventListener("input", (e) => {
+    const row = e.target?.closest?.(".hrmis-repeat-row");
+    if (!row) return;
+    _syncPromoRowConstraints(form, row);
+    if (e.target && e.target.matches && e.target.matches('input[name="promotion_bps_from[]"]')) {
+      _applyPromoToMinFromFrom(row);
+    }
+  });
+
+  container.addEventListener("change", (e) => {
+    const row = e.target?.closest?.(".hrmis-repeat-row");
+    if (!row) return;
+    const idx = _promoRowIndex(row);
+    if (idx < 0) return;
+
+    const ok = _validatePromoRow(form, row);
+    _removePromoRowsAfter(idx);
+    if (!ok) return;
+    _continuePromoChainIfNeeded(form, row);
+  });
+
+  const joining = _qs(form, '[name="hrmis_joining_date"]');
+  if (joining) {
+    joining.addEventListener("change", () => {
+      _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
+    });
+  }
+
+  const bps = _qs(form, '[name="hrmis_bps"]');
+  if (bps) {
+    const refresh = () => {
+      _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
+    };
+    bps.addEventListener("input", refresh);
+    bps.addEventListener("change", refresh);
+  }
 }
 
 /* ---------------------------------------------------------
@@ -1356,41 +1732,46 @@ function _validateRepeatables(form) {
     }
   });
 
-  // Promotion rows
-  _qsa(document, "#promo_rows .hrmis-repeat-row").forEach((row) => {
-    const from = _qs(row, 'input[name="promotion_bps_from[]"]');
-    const to = _qs(row, 'input[name="promotion_bps_to[]"]');
-    const date = _qs(row, 'input[name="promotion_date[]"]');
+  // Promotion rows (strict chain)
+  const promoRows = _promoRows();
+  const currentBps = _currentBpsValue(form);
+  const filledPromoRows = promoRows.filter((row) => {
+    const from = _qs(row, 'input[name="promotion_bps_from[]"]')?.value || "";
+    const to = _qs(row, 'input[name="promotion_bps_to[]"]')?.value || "";
+    const date = _qs(row, 'input[name="promotion_date[]"]')?.value || "";
+    return !(_isEmpty(from) && _isEmpty(to) && _isEmpty(date));
+  });
 
-    const emptyRow =
-      _isEmpty(from?.value) && _isEmpty(to?.value) && _isEmpty(date?.value);
-    if (emptyRow) {
-      [from, to, date].forEach(_clearError);
-      return;
-    }
+  filledPromoRows.forEach((row, idx) => {
+    const fromEl = _qs(row, 'input[name="promotion_bps_from[]"]');
 
-    if (_isEmpty(from?.value)) {
-      _showError(from, "BPS From is required");
-      hasError = true;
-    }
-    if (_isEmpty(to?.value)) {
-      _showError(to, "BPS To is required");
-      hasError = true;
-    }
-    if (_isEmpty(date?.value) || !_isValidMonth(date.value)) {
-      _showError(date, "Promotion month is required (YYYY-MM)");
-      hasError = true;
-    }
+    if (!_validatePromoRow(form, row)) hasError = true;
 
-    if (!_isEmpty(from?.value) && !_isEmpty(to?.value)) {
-      const f = parseInt(from.value, 10);
-      const t = parseInt(to.value, 10);
-      if (!Number.isNaN(f) && !Number.isNaN(t) && t <= f) {
-        _showError(to, "BPS To must be greater than BPS From");
+    // Chain: From must equal previous To
+    if (idx > 0) {
+      const prev = filledPromoRows[idx - 1];
+      const prevTo = _normInt(_qs(prev, 'input[name="promotion_bps_to[]"]')?.value);
+      const thisFrom = _normInt(fromEl?.value);
+      if (prevTo !== null && thisFrom !== null && thisFrom !== prevTo) {
+        _showError(fromEl, "BPS From must equal previous row BPS To");
         hasError = true;
       }
     }
+
   });
+
+  if (filledPromoRows.length && currentBps !== null) {
+    const last = filledPromoRows[filledPromoRows.length - 1];
+    const lastToEl = _qs(last, 'input[name="promotion_bps_to[]"]');
+    const lastTo = _normInt(lastToEl?.value);
+    if (lastTo === null || lastTo !== currentBps) {
+      _showError(
+        lastToEl || _qs(form, '[name="hrmis_bps"]'),
+        `Complete Promotion History: last "BPS To" must equal current BPS (${currentBps}).`,
+      );
+      hasError = true;
+    }
+  }
 
   // Leave rows
   _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
@@ -1528,6 +1909,19 @@ function _initHRMISValidations() {
   }
 
   _initRepeatables(form);
+  _initPromotionChain(form);
+
+  // Keep constraints in sync when Current BPS changes
+  const bpsEl = _qs(form, '[name="hrmis_bps"]');
+  if (bpsEl) {
+    const refresh = () => {
+      _syncPostingBpsConstraints(form);
+      _postingRows().forEach((r) => _validatePostingBpsAgainstCurrent(form, r));
+      _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
+    };
+    bpsEl.addEventListener("input", refresh);
+    bpsEl.addEventListener("change", refresh);
+  }
 
   const requiredFields = [
     "hrmis_cnic",
