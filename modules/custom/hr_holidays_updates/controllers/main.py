@@ -21,18 +21,34 @@ import os
 
 _MAX_UPLOAD_BYTES = 4 * 1024 * 1024  # 4 MB
 _ALLOWED_UPLOAD_EXTS = {"pdf", "jpg", "jpeg", "png", "svg"}
+_ALLOWED_UPLOAD_MIMES = {
+    "application/pdf",
+    "application/x-pdf",
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/svg+xml",
+}
 
 def _norm_ext(filename: str) -> str:
     fn = (filename or "").strip().lower()
     _, ext = os.path.splitext(fn)
     return (ext or "").lstrip(".").lower()
 
-def _validate_upload_file(file_obj, label: str, *, max_bytes=_MAX_UPLOAD_BYTES, allowed_exts=_ALLOWED_UPLOAD_EXTS):
+def _validate_upload_file(
+    file_obj,
+    label: str,
+    *,
+    max_bytes=_MAX_UPLOAD_BYTES,
+    allowed_exts=_ALLOWED_UPLOAD_EXTS,
+    allowed_mimes=_ALLOWED_UPLOAD_MIMES,
+):
     """
     Validates a Werkzeug FileStorage-like object from request.httprequest.files.get(...)
 
     Rules:
     - Extension must be in allowed_exts
+    - MIME type must be in allowed_mimes (if provided by client)
     - File size must be <= max_bytes
 
     Returns: (ok: bool, error_msg: str, data: bytes)
@@ -45,6 +61,16 @@ def _validate_upload_file(file_obj, label: str, *, max_bytes=_MAX_UPLOAD_BYTES, 
 
     if ext not in allowed_exts:
         return False, f"{label}: Invalid file type. Allowed: PDF, JPG, JPEG, PNG, SVG.", b""
+
+    # MIME type check (clients sometimes send empty / octet-stream; allow those)
+    try:
+        mime = (getattr(file_obj, "mimetype", None) or getattr(file_obj, "content_type", None) or "").lower()
+    except Exception:
+        mime = ""
+    allowed_mimes_norm = {m.lower() for m in (allowed_mimes or set())}
+    if mime and mime not in allowed_mimes_norm:
+        if mime != "application/octet-stream":
+            return False, f"{label}: Invalid file format. Allowed: PDF, JPG, JPEG, PNG, SVG.", b""
 
     # Read once (we need bytes anyway for base64 storage).
     try:
@@ -1697,11 +1723,17 @@ class HrmisProfileRequestController(http.Controller):
         vals = {}
 
         if cnic_front:
-            vals["hrmis_cnic_front"] = base64.b64encode(cnic_front.read())
+            ok, err, data = _validate_upload_file(cnic_front, "CNIC Front Scan")
+            if not ok:
+                return self._render_profile_form_error(employee, req, env, err)
+            vals["hrmis_cnic_front"] = base64.b64encode(data)
             vals["hrmis_cnic_front_filename"] = cnic_front.filename
 
         if cnic_back:
-            vals["hrmis_cnic_back"] = base64.b64encode(cnic_back.read())
+            ok, err, data = _validate_upload_file(cnic_back, "CNIC Back Scan")
+            if not ok:
+                return self._render_profile_form_error(employee, req, env, err)
+            vals["hrmis_cnic_back"] = base64.b64encode(data)
             vals["hrmis_cnic_back_filename"] = cnic_back.filename
 
         # -----------------------
@@ -1818,6 +1850,12 @@ class HrmisProfileRequestController(http.Controller):
         # -----------------------
         # Build request values
         # -----------------------
+        # Keep the UI-calculated Total Leaves Taken as a fallback (server will re-calc later).
+        try:
+            posted_taken = float((post.get("hrmis_leaves_taken") or "").strip() or 0.0)
+        except Exception:
+            posted_taken = 0.0
+
         vals.update({
             "hrmis_employee_id": post.get("hrmis_employee_id"),
             "hrmis_cnic": post.get("hrmis_cnic"),
@@ -1833,6 +1871,7 @@ class HrmisProfileRequestController(http.Controller):
             "facility_id": facility_id,
             "hrmis_contact_info": post.get("hrmis_contact_info"),
             "hrmis_merit_number": post.get("hrmis_merit_number"),
+            "hrmis_leaves_taken": posted_taken,
             "approver_id": approver_emp.id if approver_emp else False,
             "state": "submitted",
 
@@ -2076,11 +2115,10 @@ class HrmisProfileRequestController(http.Controller):
                 else:
                     continue
 
-                eff = (
-                    float(LeaveModel._hrmis_effective_days(employee, sd, ed) or 0.0)
-                    if hasattr(LeaveModel, "_hrmis_effective_days")
-                    else float((ed - sd).days + 1)
-                )
+                # IMPORTANT: Keep server calculation aligned with the frontend.
+                # For history, we count inclusive calendar days (not "effective" working days),
+                # otherwise half-pay odd day ranges can mismatch (e.g., 11 days -> UI 6 but DB 5).
+                eff = float((ed - sd).days + 1)
                 if factor == 0.5:
                     total_taken += float(math.ceil(eff / 2.0))
                 else:
@@ -2088,6 +2126,15 @@ class HrmisProfileRequestController(http.Controller):
 
             # Keep a compact numeric value (UI uses step 0.5).
             total_taken = round(total_taken * 2.0) / 2.0
+
+            # If server calculation yields 0 but UI already calculated a value,
+            # keep the posted value (avoids mismatch due to leave type naming/effective-day helpers).
+            try:
+                if float(total_taken or 0.0) == 0.0 and float(posted_taken or 0.0) > 0.0:
+                    total_taken = float(posted_taken)
+            except Exception:
+                pass
+
             vals["hrmis_leaves_taken"] = total_taken
         except Exception:
             # Never block the request due to a calculation failure; keep existing value if any.
