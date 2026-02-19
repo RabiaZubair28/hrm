@@ -113,7 +113,7 @@ class EmployeeProfileRequest(models.Model):
     )   
     
     hrmis_contact_info = fields.Char(string="Contact Info")
-
+    
     # ---------------- QUALIFICATION / PROMOTION ---------------- #
 
     hrmis_domicile = fields.Char(string="Domicile")

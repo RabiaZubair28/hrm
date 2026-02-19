@@ -7,6 +7,16 @@ import re
 import datetime
 import csv
 from io import StringIO
+import logging
+
+
+
+
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment
+
+
+_logger = logging.getLogger(__name__)
 
 try:
     import openpyxl
@@ -380,3 +390,353 @@ class HrmisSanctionedPostsController(http.Controller):
         self._ensure_admin()
         # If you don't have hr_holidays_updates.sanctioned_posts_template, you can redirect to upload:
         return request.redirect("/hrmis/sanctioned_posts/upload")
+
+    @http.route(
+        "/hrmis/sanctioned_posts/download_xlsx",
+        type="http",
+        auth="user",
+        methods=["GET"],
+        csrf=False,
+        website=True,
+    )
+    def download_xlsx(self, attachment_id=None, **kw):
+        self._ensure_admin()
+
+        try:
+            att_id = int(attachment_id or 0)
+        except Exception:
+            att_id = 0
+
+        if not att_id:
+            raise UserError("Missing attachment_id. Please upload the XLSX again.")
+
+        attachment = request.env["ir.attachment"].sudo().browse(att_id).exists()
+        if not attachment:
+            raise UserError("File not found. Please upload the XLSX again.")
+
+        # (Optional) safety: ensure it looks like xlsx
+        mimetype = attachment.mimetype or ""
+        if "spreadsheetml" not in mimetype and not (attachment.name or "").lower().endswith(".xlsx"):
+            _logger.warning("[SANCTIONED_POSTS] Attachment %s is not xlsx: name=%s mimetype=%s",
+                            attachment.id, attachment.name, mimetype)
+
+        _logger.info("[SANCTIONED_POSTS] Downloading uploaded XLSX attachment_id=%s name=%s",
+                     attachment.id, attachment.name)
+
+        content = base64.b64decode(attachment.datas or b"")
+        filename = attachment.name or "sanctioned_posts.xlsx"
+
+        return request.make_response(
+            content,
+            headers=[
+                ("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+                ("Content-Disposition", f'attachment; filename="{filename}"'),
+            ],
+        )
+
+
+    @http.route(
+        ["/hrmis/staff/download_details"],
+        type="http",
+        auth="user",
+        methods=["GET"],
+        csrf=False,
+        website=True,
+    )
+    def hrmis_staff_download_details(self, ids="all", **kw):
+        """
+        Export Staff Details XLSX (ONLY selected fields).
+
+        - Main sheet: selected hr.employee fields (listed by you)
+        - Separate sheets: service history, trainings, posting, promotion, qualification, leave
+        - Prefer latest SUBMITTED hrmis.employee.profile.request values for overlapping fields
+        - Exclude employees whose user_id.hrmis_role == 'section_officer'
+        - ids=all OR ids=1,2,3
+        """
+        user = request.env.user
+        _logger.info("[STAFF_EXPORT] /hrmis/staff/download_details ids=%s by %s(%s)", ids, user.name, user.id)
+
+        # Access guard
+        if not (
+            user.has_group("hr.group_hr_user")
+            or user.has_group("hr.group_hr_manager")
+            or user.has_group("base.group_system")
+        ):
+            _logger.warning("[STAFF_EXPORT] Access denied user=%s(%s)", user.name, user.id)
+            raise AccessError("You are not allowed to export staff details.")
+
+        Employee = request.env["hr.employee"].with_context(active_test=False).sudo()
+        ProfileReq = request.env["hrmis.employee.profile.request"].sudo()
+
+        # Resolve employees
+        if (ids or "all") == "all":
+            employees = Employee.search([])
+        else:
+            try:
+                emp_ids = [int(x) for x in (ids or "").split(",") if x.strip()]
+            except Exception:
+                _logger.exception("[STAFF_EXPORT] Invalid ids param: %s", ids)
+                emp_ids = []
+            employees = Employee.browse(emp_ids).exists()
+
+        # Filter: exclude section_officer role
+        employees = employees.filtered(lambda e: (not e.user_id) or (e.user_id.hrmis_role != "section_officer"))
+        _logger.info("[STAFF_EXPORT] Employees after role filter: %s", len(employees))
+
+        # ---------- formatting helpers ----------
+        def fmt_date(d):
+            return d.strftime("%Y-%m-%d") if d else ""
+
+        def fmt_m2o(v):
+            return v.display_name if v else ""
+
+        def fmt_recordset_names(rs):
+            if not rs:
+                return ""
+            try:
+                return ", ".join(rs.mapped("display_name"))
+            except Exception:
+                return ", ".join(map(str, rs.ids))
+
+        def val_from(emp, req, field_name):
+            """
+            Prefer submitted request value if field exists on request and is non-empty,
+            otherwise use employee value.
+            """
+            emp_val = getattr(emp, field_name, False)
+            if req and field_name in req._fields:
+                req_val = getattr(req, field_name, False)
+                if req_val not in (False, None, ""):
+                    return req_val
+            return emp_val
+
+        # ---------- workbook ----------
+        wb = Workbook()
+
+        # MAIN SHEET
+        ws = wb.active
+        ws.title = "Staff"
+
+        main_fields = [
+            # identify
+            ("name", "Employee Name"),
+            ("work_email", "Work Email"),
+            ("user_login", "User Login"),
+            ("user_hrmis_role", "User HRMIS Role"),
+
+            # your listed fields
+            ("hrmis_employee_id", "Employee ID / Service Number"),
+            ("hrmis_cnic", "CNIC"),
+            ("birthday", "Date of Birth"),
+            ("hrmis_commission_date", "Commission Date"),
+            ("hrmis_father_name", "Father Name"),
+            ("hrmis_joining_date", "Joining Date"),
+            ("gender", "Gender"),
+            ("hrmis_cadre", "Cadre"),
+            ("hrmis_designation", "Designation"),
+            ("hrmis_bps", "BPS Grade"),
+            ("hrmis_merit_number", "Merit Number"),
+            ("district_id", "Current District"),
+            ("facility_id", "Current Facility"),
+            ("hrmis_contact_info", "Contact Info"),
+            ("hrmis_leaves_taken", "Total Leaves Taken (Days)"),
+
+            # attachments filenames only (not binary)
+            ("hrmis_cnic_front_filename", "CNIC Front Filename"),
+            ("hrmis_cnic_back_filename", "CNIC Back Filename"),
+
+            ("hrmis_domicile", "Domicile"),
+
+            # qualification/promotions
+            ("qualification", "Last Qualification Received"),
+            ("qualification_date", "Qualification Date"),
+            ("year_qualification", "Year of Qualification"),
+            ("date_promotion", "Last Promotion Date"),
+        ]
+
+        headers = [h for _, h in main_fields]
+        ws.append(headers)
+
+        header_font = Font(bold=True)
+        for col in range(1, len(headers) + 1):
+            c = ws.cell(row=1, column=col)
+            c.font = header_font
+            c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+        row_idx = 1
+
+        for emp in employees:
+            submitted_req = ProfileReq.search(
+                [("employee_id", "=", emp.id), ("state", "=", "submitted")],
+                order="id desc",
+                limit=1,
+            )
+
+            row = []
+            for fname, _label in main_fields:
+                # synthetic columns
+                if fname == "user_login":
+                    row.append(emp.user_id.login if emp.user_id else "")
+                    continue
+                if fname == "user_hrmis_role":
+                    row.append(emp.user_id.hrmis_role if emp.user_id else "")
+                    continue
+
+                v = val_from(emp, submitted_req, fname)
+
+                # format by type
+                fld = emp._fields.get(fname)
+                if fld:
+                    if fld.type == "many2one":
+                        row.append(fmt_m2o(v))
+                    elif fld.type in ("date", "datetime"):
+                        # v may be date/datetime
+                        row.append(fmt_date(v))
+                    elif fld.type in ("one2many", "many2many"):
+                        # keep main sheet clean: put counts only, details in separate sheets
+                        row.append(len(v) if v else 0)
+                    elif fld.type == "binary":
+                        # don't dump binary, show YES/NO
+                        row.append("YES" if v else "")
+                    else:
+                        row.append(v if v not in (None, False) else "")
+                else:
+                    row.append(v if v not in (None, False) else "")
+
+            ws.append(row)
+            row_idx += 1
+
+        ws.freeze_panes = "A2"
+        for col_idx in range(1, len(headers) + 1):
+            col_letter = ws.cell(row=1, column=col_idx).column_letter
+            ws.column_dimensions[col_letter].width = min(max(12, len(headers[col_idx - 1]) + 2), 45)
+
+        # ---------- Helper to create history sheets ----------
+        def add_sheet(title, sheet_headers):
+            sh = wb.create_sheet(title=title)
+            sh.append(sheet_headers)
+            for c in range(1, len(sheet_headers) + 1):
+                cell = sh.cell(row=1, column=c)
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            sh.freeze_panes = "A2"
+            return sh
+
+        # SERVICE HISTORY (hrmis_service_history_ids)
+        sh_service = add_sheet("Service History", [
+            "Employee ID", "Employee Name",
+            "District", "Facility",
+            "From Date", "End Date",
+            "Commission Date",
+        ])
+        for emp in employees:
+            for rec in emp.hrmis_service_history_ids:
+                sh_service.append([
+                    emp.hrmis_employee_id or "",
+                    emp.name or "",
+                    fmt_m2o(getattr(rec, "district_id", False)),
+                    fmt_m2o(getattr(rec, "facility_id", False)),
+                    fmt_date(getattr(rec, "from_date", False)),
+                    fmt_date(getattr(rec, "end_date", False)),
+                    fmt_date(getattr(rec, "commission_date", False)),
+                ])
+
+        # TRAININGS (hrmis_training_ids)
+        sh_training = add_sheet("Trainings", [
+            "Employee ID", "Employee Name",
+            "Title", "Institute", "From Date", "End Date", "Remarks",
+        ])
+        for emp in employees:
+            for rec in emp.hrmis_training_ids:
+                sh_training.append([
+                    emp.hrmis_employee_id or "",
+                    emp.name or "",
+                    getattr(rec, "name", "") or getattr(rec, "title", "") or "",
+                    getattr(rec, "institute", "") or "",
+                    fmt_date(getattr(rec, "start_date", False) or getattr(rec, "from_date", False)),
+                    fmt_date(getattr(rec, "end_date", False) or getattr(rec, "to_date", False)),
+                    getattr(rec, "remarks", "") or "",
+                ])
+
+        # QUALIFICATION HISTORY (qualification_history_ids)
+        sh_qh = add_sheet("Qualification History", [
+            "Employee ID", "Employee Name",
+            "Degree", "Specialization",
+            "Start Date", "End Date",
+        ])
+        for emp in employees:
+            for rec in emp.qualification_history_ids:
+                sh_qh.append([
+                    emp.hrmis_employee_id or "",
+                    emp.name or "",
+                    getattr(rec, "degree", "") or "",
+                    getattr(rec, "specialization", "") or "",
+                    fmt_date(getattr(rec, "start_date", False)),
+                    fmt_date(getattr(rec, "end_date", False)),
+                ])
+
+        # POSTING HISTORY (posting_history_ids)
+        sh_posting = add_sheet("Posting History", [
+            "Employee ID", "Employee Name",
+            "District", "Facility", "Designation", "BPS",
+            "Start Date", "End Date", "Is Current",
+        ])
+        for emp in employees:
+            for rec in emp.posting_history_ids:
+                sh_posting.append([
+                    emp.hrmis_employee_id or "",
+                    emp.name or "",
+                    fmt_m2o(getattr(rec, "district_id", False)),
+                    fmt_m2o(getattr(rec, "facility_id", False)),
+                    fmt_m2o(getattr(rec, "designation_id", False)),
+                    getattr(rec, "bps", "") or "",
+                    fmt_date(getattr(rec, "start_date", False)),
+                    fmt_date(getattr(rec, "end_date", False)),
+                    "YES" if getattr(rec, "is_current", False) else "",
+                ])
+
+        # PROMOTION HISTORY (promotion_history_ids)
+        sh_promo = add_sheet("Promotion History", [
+            "Employee ID", "Employee Name",
+            "BPS From", "BPS To", "Promotion Date",
+        ])
+        for emp in employees:
+            for rec in emp.promotion_history_ids:
+                sh_promo.append([
+                    emp.hrmis_employee_id or "",
+                    emp.name or "",
+                    getattr(rec, "bps_from", "") or "",
+                    getattr(rec, "bps_to", "") or "",
+                    fmt_date(getattr(rec, "promotion_date", False)),
+                ])
+
+        # LEAVE HISTORY (leave_history_ids)
+        sh_leave = add_sheet("Leave History", [
+            "Employee ID", "Employee Name",
+            "Leave Type", "Start Date", "End Date",
+        ])
+        for emp in employees:
+            for rec in emp.leave_history_ids:
+                sh_leave.append([
+                    emp.hrmis_employee_id or "",
+                    emp.name or "",
+                    fmt_m2o(getattr(rec, "leave_type_id", False)),
+                    fmt_date(getattr(rec, "start_date", False)),
+                    fmt_date(getattr(rec, "end_date", False)),
+                ])
+
+        # Output
+        bio = BytesIO()
+        wb.save(bio)
+        bio.seek(0)
+
+        filename = f"staff_details_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        _logger.info("[STAFF_EXPORT] Sending file %s", filename)
+
+        return request.make_response(
+            bio.getvalue(),
+            headers=[
+                ("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+                ("Content-Disposition", f'attachment; filename="{filename}"'),
+            ],
+        )

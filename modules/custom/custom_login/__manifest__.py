@@ -13,6 +13,8 @@
         "views/force_password_layout.xml",
         # "data/create_users.py",
            'data/hardcoded_users.xml',
+           "views/favicon.xml",
+           "views/404_template.xml",
 
         
         ],

@@ -4,76 +4,76 @@ from odoo.http import request
 
 class HRMISProfileRequest(http.Controller):
 
-    @http.route('/hrmis/profile/request', type='http', auth='user', website=True)
-    def profile_request_form(self):
-        user = request.env.user
-        employee = user.employee_id
+    # @http.route('/hrmis/profile/request', type='http', auth='user', website=True)
+    # def profile_request_form(self):
+    #     user = request.env.user
+    #     employee = user.employee_id
 
-        if not employee:
-            return request.render(
-                'hr_holidays_updates.hrmis_error',
-                {'error': 'No employee linked to your user.'}
-            )
+    #     if not employee:
+    #         return request.render(
+    #             'hr_holidays_updates.hrmis_error',
+    #             {'error': 'No employee linked to your user.'}
+    #         )
 
-        ProfileRequest = request.env['hrmis.employee.profile.request'].sudo()
+    #     ProfileRequest = request.env['hrmis.employee.profile.request'].sudo()
 
-        # Get existing draft/submitted request
-        req = ProfileRequest.search([
-            ('employee_id', '=', employee.id),
-            ('state', 'in', ['draft', 'submitted'])
-        ], limit=1)
+    #     # Get existing draft/submitted request
+    #     req = ProfileRequest.search([
+    #         ('employee_id', '=', employee.id),
+    #         ('state', 'in', ['draft', 'submitted'])
+    #     ], limit=1)
 
-        # If no request exists, create a draft
-        if not req:
-            req = ProfileRequest.create({
-                'employee_id': employee.id,
-                'user_id': user.id,
-                'state': 'draft',
-            })
+    #     # If no request exists, create a draft
+    #     if not req:
+    #         req = ProfileRequest.create({
+    #             'employee_id': employee.id,
+    #             'user_id': user.id,
+    #             'state': 'draft',
+    #         })
 
-        # Build pre_fill dictionary: take from employee, override with req if exists
-        pre_fill = {
-            'hrmis_employee_id': employee.hrmis_employee_id or '',
-            'hrmis_cnic': employee.hrmis_cnic or '',
-            'hrmis_father_name': employee.hrmis_father_name or '',
-            'gender': employee.gender or '',
-            'hrmis_joining_date': employee.hrmis_joining_date or '',
-            'hrmis_bps': employee.hrmis_bps or '',
-            'hrmis_cadre': employee.hrmis_cadre.id if employee.hrmis_cadre else False,
-            'hrmis_designation': employee.hrmis_designation or '',
-            'district_id': employee.district_id.id if employee.district_id else False,
-            'facility_id': employee.facility_id.id if employee.facility_id else False,
-            'hrmis_contact_info': employee.hrmis_contact_info or '',
-        }
+    #     # Build pre_fill dictionary: take from employee, override with req if exists
+    #     pre_fill = {
+    #         'hrmis_employee_id': employee.hrmis_employee_id or '',
+    #         'hrmis_cnic': employee.hrmis_cnic or '',
+    #         'hrmis_father_name': employee.hrmis_father_name or '',
+    #         'gender': employee.gender or '',
+    #         'hrmis_joining_date': employee.hrmis_joining_date or '',
+    #         'hrmis_bps': employee.hrmis_bps or '',
+    #         'hrmis_cadre': employee.hrmis_cadre.id if employee.hrmis_cadre else False,
+    #         'hrmis_designation': employee.hrmis_designation or '',
+    #         'district_id': employee.district_id.id if employee.district_id else False,
+    #         'facility_id': employee.facility_id.id if employee.facility_id else False,
+    #         'hrmis_contact_info': employee.hrmis_contact_info or '',
+    #     }
 
-        # Override with existing draft/submitted request values
-        if req:
-            for field in pre_fill.keys():
-                value = getattr(req, field, None)
-                if value:
-                    if field in ['district_id', 'facility_id', 'hrmis_cadre']:
-                        pre_fill[field] = value.id
-                    else:
-                        pre_fill[field] = value
+    #     # Override with existing draft/submitted request values
+    #     if req:
+    #         for field in pre_fill.keys():
+    #             value = getattr(req, field, None)
+    #             if value:
+    #                 if field in ['district_id', 'facility_id', 'hrmis_cadre']:
+    #                     pre_fill[field] = value.id
+    #                 else:
+    #                     pre_fill[field] = value
 
-        # Show message if request is already submitted
-        submitted_msg = None
-        if req.state == 'submitted':
-            submitted_msg = "You already have a submitted profile update request. You cannot submit another until it is processed."
+    #     # Show message if request is already submitted
+    #     submitted_msg = None
+    #     if req.state == 'submitted':
+    #         submitted_msg = "You already have a submitted profile update request. You cannot submit another until it is processed."
 
-        return request.render(
-            'hr_holidays_updates.hrmis_profile_request_form',
-            {
-                'employee': employee,
-                'req': req,
-                'pre_fill': pre_fill,
-                'districts': request.env['hrmis.district.master'].sudo().search([]),
-                'facilities': request.env['hrmis.facility.type'].sudo().search([]),
-                'active_menu': 'user_profile',
-                'current_employee': employee,
-                'info': submitted_msg, 
-            }
-        )
+    #     return request.render(
+    #         'hr_holidays_updates.hrmis_profile_request_form',
+    #         {
+    #             'employee': employee,
+    #             'req': req,
+    #             'pre_fill': pre_fill,
+    #             'districts': request.env['hrmis.district.master'].sudo().search([]),
+    #             'facilities': request.env['hrmis.facility.type'].sudo().search([]),
+    #             'active_menu': 'user_profile',
+    #             'current_employee': employee,
+    #             'info': submitted_msg, 
+    #         }
+    #     )
 
     @http.route('/hrmis/request/profile', type='http', auth='user', website=True)
     def profile_request_form_alias(self):

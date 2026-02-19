@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="custom_login_favicon_backend"
+              inherit_id="web.layout"
+              name="Custom favicon (backend only)">
+
+        <!-- Replace any existing favicon links -->
+        <xpath expr="//head/link[contains(@rel, 'icon') or contains(@rel, 'shortcut icon')]" position="replace">
+            <link rel="shortcut icon" type="image/x-icon"
+                  href="/custom_login/static/src/img/logo.ico"/>
+        </xpath>
+
+        <!-- Safety: if no logo link exists, inject one -->
+        <xpath expr="//head" position="inside">
+            <link rel="shortcut icon" type="image/x-icon"
+                  href="/custom_login/static/src/img/logo.ico"/>
+        </xpath>
+    </template>
+</odoo>

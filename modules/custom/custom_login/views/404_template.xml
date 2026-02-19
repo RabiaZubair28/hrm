@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="custom_404_page" name="Custom 404 Page (Blank - HRMIS)">
+        <t t-set="title">404 - Not Found</t>
+
+        <html>
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <title><t t-esc="title"/></title>
+
+                <style>
+                    :root{
+                        --hrmis-green: #064526;
+                        --bg: #f8fafc;
+                        --card: #ffffff;
+                        --border: rgba(6, 69, 38, .18);
+                        --shadow: 0 10px 30px rgba(0,0,0,.06);
+                    }
+
+                    html, body { height: 100%; }
+
+                    body{
+                        margin: 0;
+                        background: var(--bg);
+                        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+                        color: var(--hrmis-green);
+                        display: grid;
+                        place-items: center;
+                    }
+
+                    .wrap{
+                        width: min(560px, calc(100% - 40px));
+                        text-align: center;
+                        padding: 28px 22px;
+                        background: var(--card);
+                        border: 1px solid var(--border);
+                        border-radius: 18px;
+                        box-shadow: var(--shadow);
+                    }
+
+                    .logo{
+                        display: flex;
+                        justify-content: center;
+                        margin: 6px 0 18px 0;
+                    }
+
+                    .logo img{
+                        height: 54px;
+                        width: auto;
+                        object-fit: contain;
+                        opacity: .95;
+                    }
+
+                    .code{
+                        font-size: 88px;
+                        line-height: 1;
+                        font-weight: 900;
+                        margin: 0 0 10px 0;
+                        letter-spacing: -2px;
+                        color: var(--hrmis-green);
+                    }
+
+                    .title{
+                        font-size: 22px;
+                        font-weight: 800;
+                        margin: 0 0 8px 0;
+                        color: var(--hrmis-green);
+                    }
+
+                    .desc{
+                        margin: 0 0 20px 0;
+                        font-size: 14px;
+                        opacity: .85;
+                        color: var(--hrmis-green);
+                    }
+
+                    .hrmis-btn{
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 10px;
+
+                        text-decoration: none;
+                        font-weight: 700;
+                        font-size: 14px;
+
+                        padding: 10px 16px;
+                        border-radius: 10px;
+                        border: 1px solid rgba(6, 69, 38, .28);
+                        background: #fff;
+                        color: var(--hrmis-green);
+                        transition: all .15s ease;
+                    }
+
+                    .hrmis-btn:hover{
+                        background: #f4f8f6;
+                        border-color: rgba(6, 69, 38, .45);
+                    }
+
+                    /* Your theme snippets (kept compatible) */
+                    .hrmis-btn--icon {
+                        background: transparent !important;
+                        border: none !important;
+                        padding: 0 12px;
+                        cursor: pointer;
+                    }
+                    .hrmis-btn--icon i {
+                        color: #064526;
+                        font-size: 18px;
+                    }
+                    .hrmis-btn--icon:hover i {
+                        color: #064526;
+                    }
+                    .hrmis-btn {
+                        text-decoration: none;
+                    }
+
+                    @media (max-width: 420px){
+                        .code{ font-size: 72px; }
+                        .wrap{ padding: 22px 16px; border-radius: 16px; }
+                        .logo img{ height: 46px; }
+                    }
+                </style>
+            </head>
+
+            <body>
+                <main class="wrap" role="main" aria-label="404 page">
+                    <div class="logo">
+                        <!-- IMPORTANT: replace with your actual logo path -->
+                        <img t-att-src="'/custom_login/static/src/img/logo.png'" alt="HRMIS"/>
+                    </div>
+
+                    <h1 class="code">404</h1>
+                    <p class="title">Page not found</p>
+                    <p class="desc">
+                        The page you’re looking for doesn’t exist or the link is incorrect.
+                    </p>
+                    <p class="desc">HRMIS Custom 404 • <t t-esc="request.httprequest.path"/></p>
+                    <a class="hrmis-btn" href="/web">Go to Dashboard</a>
+                </main>
+            </body>
+        </html>
+    </template>
+</odoo>

@@ -14,7 +14,8 @@ class HRMISQualificationHistory(models.Model):
         [
             ("ms", "MS"),
             ("md", "MD"),
-            ("fcps", "FCPS"),
+            ('fcps_1', 'FCPS-I'),
+            ('fcps_2', 'FCPS-II'),
             ("mcps", "MCPS"),
             ("diploma", "Diploma"),
         ],

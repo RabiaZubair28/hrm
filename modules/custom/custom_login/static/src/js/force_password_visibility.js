@@ -8,15 +8,19 @@ function _qsa(root, sel) {
 }
 
 function _isResetPasswordPage() {
-  const hasForm = !!_qs(document, "#passwordForm");
-  const pathOk = (window.location.pathname || "") === "/force_password_reset";
-  console.log("[ForcePassword] page check:", {
-    hasForm,
-    path: window.location.pathname,
-    pathOk,
-  });
-  return hasForm || pathOk;
+  const path = (window.location.pathname || "");
+  const hasToggle = _qsa(document, ".toggle-password").length > 0;
+
+  const allowedPaths = [
+    "/force_password_reset",
+    "/web/login",
+  ];
+
+  const pathOk = allowedPaths.includes(path);
+
+  return hasToggle || pathOk;
 }
+
 
 function _setMsg(el, text, okState) {
   if (!el) return;
@@ -28,11 +32,9 @@ function _setMsg(el, text, okState) {
 }
 
 function _initPasswordMatch() {
-  console.log("[ForcePasswordMatch] init start");
 
   const form = _qs(document, "#passwordForm");
   if (!form) {
-    console.log("[ForcePasswordMatch] #passwordForm not found; skipping");
     return;
   }
 
@@ -40,15 +42,8 @@ function _initPasswordMatch() {
   const confirmPw = _qs(form, "#confirm_password");
   const msg = _qs(document, "#passwordMatchMsg");
 
-  console.log("[ForcePasswordMatch] elements:", {
-    form: !!form,
-    new_password: !!newPw,
-    confirm_password: !!confirmPw,
-    msg: !!msg,
-  });
 
   if (!newPw || !confirmPw || !msg) {
-    console.warn("[ForcePasswordMatch] missing required DOM elements");
     return;
   }
 
@@ -73,38 +68,31 @@ function _initPasswordMatch() {
   }
 
   if (form.dataset.pwMatchBound === "1") {
-    console.log("[ForcePasswordMatch] already bound; skipping rebind");
     check();
     return;
   }
   form.dataset.pwMatchBound = "1";
 
   newPw.addEventListener("input", () => {
-    console.log("[ForcePasswordMatch] new_password input");
     check();
   });
   confirmPw.addEventListener("input", () => {
-    console.log("[ForcePasswordMatch] confirm_password input");
     check();
   });
 
   // Block submit if mismatch
   form.addEventListener("submit", (ev) => {
-    console.log("[ForcePasswordMatch] form submit");
     const ok = check();
     if (!ok) {
-      console.warn("[ForcePasswordMatch] submit blocked (passwords mismatch / incomplete)");
       ev.preventDefault();
       confirmPw.focus();
     }
   });
 
-  console.log("[ForcePasswordMatch] init complete");
   check();
 }
 
 function _bindEyeButtons() {
-  console.log("[ForcePasswordEye] init start");
 
   if (!_isResetPasswordPage()) {
     console.log("[ForcePasswordEye] not reset page -> skip");
@@ -113,7 +101,6 @@ function _bindEyeButtons() {
 
   const root = _qs(document, "#passwordForm") || document;
   const buttons = _qsa(root, ".toggle-password");
-  console.log("[ForcePasswordEye] buttons found:", buttons.length);
 
   if (!buttons.length) {
     console.warn("[ForcePasswordEye] No .toggle-password found. Check template classes.");
@@ -134,12 +121,6 @@ function _bindEyeButtons() {
       const input = group ? _qs(group, ".password-field") : null;
       const icon = _qs(btn, "i");
 
-      console.log(`[ForcePasswordEye] (#${idx}) click`, {
-        hasGroup: !!group,
-        hasInput: !!input,
-        hasIcon: !!icon,
-      });
-
       if (!input) {
         console.warn(`[ForcePasswordEye] (#${idx}) .password-field not found near this button`);
         return;
@@ -148,6 +129,7 @@ function _bindEyeButtons() {
       const wasHidden = input.type === "password";
       input.type = wasHidden ? "text" : "password";
 
+      // FontAwesome toggle:
       // FontAwesome toggle:
       if (icon) {
         icon.classList.toggle("fa-eye", wasHidden);
@@ -158,20 +140,12 @@ function _bindEyeButtons() {
         }
       }
 
-      console.log(
-        `[ForcePasswordEye] (#${idx}) toggled`,
-        input.name || input.id || "(no-name)",
-        "=>",
-        input.type
-      );
     });
   });
 
-  console.log("[ForcePasswordEye] init complete");
 }
 
 function _initAll() {
-  console.log("[ForcePassword] initAll()");
   _bindEyeButtons();
   _initPasswordMatch();
 }

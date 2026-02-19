@@ -62,19 +62,29 @@
                                 </div>
                             </div>
 
-                            <!-- Create Users button ONLY when attachment exists -->
+                            <!-- Buttons (ONLY when attachment exists) -->
                             <t t-if="attachment_id">
-                                <div class="d-flex justify-content-center my-3">
-                                    <form action="/hrmis/sanctioned_posts/create_users" method="post" class="text-center">
+                                <div class="d-flex justify-content-center gap-2 my-3 flex-wrap">
+
+                                    <!-- Download Uploaded XLSX -->
+                                    <a class="btn btn-outline-success"
+                                       t-att-href="'/hrmis/sanctioned_posts/download_xlsx?attachment_id=%s' % attachment_id">
+                                        Download Uploaded XLSX
+                                    </a>
+
+                                    <!-- Create Users -->
+                                    <form action="/hrmis/sanctioned_posts/create_users" method="post" class="text-center m-0">
                                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                         <input type="hidden" name="attachment_id" t-att-value="attachment_id"/>
                                         <button type="submit" class="btn btn-primary">
                                             Create Users (Import All)
                                         </button>
-                                        <div class="text-muted mt-2" style="font-size: 0.9rem;">
-                                            This will create users for all rows (skips duplicates by CNIC/login).
-                                        </div>
                                     </form>
+
+                                </div>
+
+                                <div class="text-muted text-center mt-2" style="font-size: 0.9rem;">
+                                    This will create users for all rows (skips duplicates by CNIC/login). You can also download the uploaded XLSX.
                                 </div>
                             </t>
 
@@ -96,6 +106,7 @@
                                     </div>
                                 </t>
                             </t>
+
                             <t t-if="creds_attachment_id">
                                 <div class="alert alert-secondary d-flex justify-content-between align-items-center">
                                     <div>
@@ -103,7 +114,7 @@
                                         Download CSV of created logins + passwords.
                                     </div>
                                     <a class="btn btn-outline-dark btn-sm"
-                                    t-att-href="'/web/content/%s?download=true' % creds_attachment_id">
+                                       t-att-href="'/web/content/%s?download=true' % creds_attachment_id">
                                         Download credentials CSV
                                     </a>
                                 </div>
@@ -130,6 +141,14 @@
                                     <div class="text-muted" style="font-size:0.9rem;">
                                         Showing first 50 created credentials. Download CSV for full list.
                                     </div>
+                                </div>
+                            </t>
+                            <t t-if="request.env.user.has_group('base.group_system')">
+                                <div class="d-flex justify-content-center my-3">
+                                    <a class="btn btn-outline-primary"
+                                    t-att-href="'/hrmis/staff/download_details?ids=all'">
+                                        Download Staff Details
+                                    </a>
                                 </div>
                             </t>
 

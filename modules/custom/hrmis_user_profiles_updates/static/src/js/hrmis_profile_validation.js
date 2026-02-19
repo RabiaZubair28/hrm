@@ -1,5 +1,18 @@
 /** @odoo-module **/
 
+/* =========================================================
+ *  HRMIS VALIDATIONS + REPEATABLES (FULL FILE) — CORRECTED
+ *
+ *  Key fixes in this corrected file:
+ *   1) Removed duplicate _initPostingPrevChain definition (only ONE kept)
+ *   2) Removed orphan / out-of-scope posting-chain code (that caused runtime/syntax issues)
+ *   3) Month proxy (Commission/Joining) no longer conflicts with _initProfileDatePickers
+ *      - DOB uses HRMIS calendar widget
+ *      - Commission/Joining use month proxy ONLY
+ *   4) Added init guard to prevent double-binding on pageshow / bfcache
+ *   5) Combobox: errors now highlight visible input (not hidden select)
+ * ========================================================= */
+
 /* ---------------------------------------------------------
  * Helpers
  * --------------------------------------------------------- */
@@ -13,24 +26,529 @@ function _isEmpty(val) {
   return val === null || val === undefined || String(val).trim() === "";
 }
 
+function _setHint(input, message) {
+  if (!input) return;
+  let hint = input.parentElement?.querySelector?.(".hrmis-hint");
+  if (!hint) {
+    hint = document.createElement("div");
+    hint.className = "hrmis-hint";
+    hint.style.fontSize = "12px";
+    hint.style.marginTop = "4px";
+    hint.style.color = "#6c757d";
+    input.parentElement?.appendChild(hint);
+  }
+  hint.textContent = message || "";
+  hint.style.display = message ? "" : "none";
+}
+
+function _normInt(v) {
+  const n = parseInt(String(v || "").trim(), 10);
+  return Number.isNaN(n) ? null : n;
+}
+
+/* ---------------------------------------------------------
+ * Error helpers (combobox-safe)
+ * --------------------------------------------------------- */
+function _visualErrorTarget(el) {
+  // If this is a hidden select that has a visible combobox input, use that.
+  if (el && el.tagName === "SELECT" && el._hrmisComboboxInput)
+    return el._hrmisComboboxInput;
+  return el;
+}
+
 function _showError(input, message) {
   if (!input) return;
-  let error = input.parentElement.querySelector(".hrmis-error");
+  const target = _visualErrorTarget(input);
+
+  let error = target.parentElement?.querySelector?.(".hrmis-error");
   if (!error) {
     error = document.createElement("div");
     error.className = "hrmis-error";
-    input.parentElement.appendChild(error);
+    target.parentElement?.appendChild(error);
   }
   error.textContent = message;
-  input.classList.add("has-error");
-  input.style.borderColor = "#dc3545";
+
+  target.classList.add("has-error");
+  target.style.borderColor = "#dc3545";
+
+  // Also mark original element if different (e.g., select)
+  if (target !== input && input) {
+    input.classList.add("has-error");
+  }
 }
+
 function _clearError(input) {
   if (!input) return;
-  const error = input.parentElement.querySelector(".hrmis-error");
+  const target = _visualErrorTarget(input);
+
+  const error = target.parentElement?.querySelector?.(".hrmis-error");
   if (error) error.remove();
-  input.classList.remove("has-error");
-  input.style.borderColor = "";
+
+  target.classList.remove("has-error");
+  target.style.borderColor = "";
+
+  if (target !== input && input) {
+    input.classList.remove("has-error");
+  }
+}
+function _syncPostingRowDateConstraints(form, row) {
+  const startInp = _qs(row, 'input[name="posting_start[]"]');
+  const endInp = _qs(row, 'input[name="posting_end[]"]');
+  if (!startInp || !endInp) return;
+
+  const jm = _joiningMonthValue(form); // YYYY-MM
+  const cm = (_qs(form, '[name="current_posting_start"]')?.value || "").trim(); // YYYY-MM
+
+  // Upper bound is the month BEFORE current posting start (strictly before cm)
+  const upper = _isValidMonth(cm) ? _prevMonth(cm) : "";
+  const lower = _isValidMonth(jm) ? jm : "";
+
+  // apply min/max bounds
+  if (lower) {
+    startInp.setAttribute("min", lower);
+    endInp.setAttribute("min", lower);
+  } else {
+    startInp.removeAttribute("min");
+    endInp.removeAttribute("min");
+  }
+
+  if (upper) {
+    startInp.setAttribute("max", upper);
+    endInp.setAttribute("max", upper);
+  } else {
+    startInp.removeAttribute("max");
+    endInp.removeAttribute("max");
+  }
+
+  // end.min should also be >= start (if start is valid)
+  const s = _readMonthValueFromInput(startInp);
+  if (_isValidMonth(s)) endInp.setAttribute("min", s);
+
+  // clamp values if they are out of range
+  function clamp(inp) {
+    const v = _readMonthValueFromInput(inp);
+    if (!_isValidMonth(v)) return;
+
+    let nv = v;
+    if (lower && _monthToIndex(nv) < _monthToIndex(lower)) nv = lower;
+    if (upper && _monthToIndex(nv) > _monthToIndex(upper)) nv = upper;
+
+    if (nv !== v) _writeMonthValueToInput(inp, nv);
+  }
+
+  clamp(startInp);
+  clamp(endInp);
+}
+
+/* ---------------------------------------------------------
+ * Month helpers (YYYY-MM)
+ * --------------------------------------------------------- */
+function _isValidMonth(v) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(v || "").trim());
+}
+function _monthToIndex(v) {
+  const [y, m] = String(v)
+    .split("-")
+    .map((x) => parseInt(x, 10));
+  return y * 12 + (m - 1);
+}
+function _todayMonth() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+function _indexToMonth(idx) {
+  const y = Math.floor(idx / 12);
+  const m = (idx % 12) + 1;
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+function _addMonths(ym, delta) {
+  if (!_isValidMonth(ym)) return "";
+  return _indexToMonth(_monthToIndex(ym) + delta);
+}
+function _nextMonth(ym) {
+  return _addMonths(ym, 1);
+}
+function _prevMonth(ym) {
+  return _addMonths(ym, -1);
+}
+
+/* ---------------------------------------------------------
+ * Month <-> Date input compatibility
+ * --------------------------------------------------------- */
+function _inputTypeLower(inp) {
+  return String(inp?.getAttribute("type") || inp?.type || "").toLowerCase();
+}
+function _readMonthValueFromInput(inp) {
+  if (!inp) return "";
+  const v = (inp.value || "").trim();
+  if (_isEmpty(v)) return "";
+  const t = _inputTypeLower(inp);
+  if (t === "date") return v.slice(0, 7);
+  return v;
+}
+function _writeMonthValueToInput(inp, ym) {
+  if (!inp) return;
+  const t = _inputTypeLower(inp);
+  if (_isEmpty(ym)) {
+    inp.value = "";
+    return;
+  }
+  if (t === "date")
+    inp.value = `${ym}-01`; // important
+  else inp.value = ym;
+}
+
+/* ---------------------------------------------------------
+ * Month UI proxy for DATE fields (Commission/Joining)
+ *  - Shows month picker (YYYY-MM)
+ *  - Hidden original stays enabled and submits YYYY-MM-01
+ * --------------------------------------------------------- */
+function _toLocalYmd(d) {
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
+  const y = String(d.getFullYear()).padStart(4, "0");
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function _todayLocalYmd() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return _toLocalYmd(d);
+}
+
+function _attachMonthProxy(dateInput) {
+  if (!dateInput) return null;
+  if (dateInput.dataset.hrmisMonthProxyApplied === "1") {
+    return dateInput._hrmisMonthProxy || null;
+  }
+
+  dateInput.dataset.hrmisMonthProxyApplied = "1";
+
+  const proxy = document.createElement("input");
+  proxy.type = "month";
+  proxy.className = dateInput.className;
+  proxy.autocomplete = "off";
+
+  const parent = dateInput.parentNode;
+  if (parent) parent.insertBefore(proxy, dateInput);
+  dateInput.style.display = "none"; // keep enabled for submit
+
+  const dv = (dateInput.value || "").trim();
+  if (dv && dv.length >= 7) proxy.value = dv.slice(0, 7);
+
+  proxy.setAttribute("max", _todayMonth());
+  dateInput.setAttribute("max", _todayLocalYmd());
+
+  function syncToOriginal() {
+    const mv = (proxy.value || "").trim();
+    dateInput.value = mv ? `${mv}-01` : "";
+  }
+
+  proxy.addEventListener("input", () => {
+    syncToOriginal();
+    dateInput.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  proxy.addEventListener("change", () => {
+    syncToOriginal();
+    dateInput.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  dateInput._hrmisMonthProxy = proxy;
+  return proxy;
+}
+
+/* =========================================================
+ * QUALIFICATION VALIDATIONS/IMPROVEMENTS
+ * ========================================================= */
+function _qualRows() {
+  return _qsa(document, "#qual_rows .hrmis-repeat-row");
+}
+function _qualSelectedDegrees(exceptRow = null) {
+  const set = new Set();
+  _qualRows().forEach((r) => {
+    if (exceptRow && r === exceptRow) return;
+    const sel = _qs(r, 'select[name="qualification_degree[]"]');
+    const v = (sel?.value || "").trim();
+    if (v) set.add(v);
+  });
+  return set;
+}
+function _syncQualEndVisibility(row) {
+  const chk = _qs(row, ".js-qual-completed");
+  const wrap = _qs(row, ".js-qual-end-wrap");
+  const end = _qs(row, 'input[name="qualification_end[]"]');
+  if (!chk || !wrap || !end) return;
+
+  if (chk.checked) {
+    wrap.style.display = "";
+    end.setAttribute("required", "required");
+  } else {
+    wrap.style.display = "none";
+    end.removeAttribute("required");
+    end.value = "";
+    _clearError(end);
+  }
+}
+function _syncQualStartMax(row) {
+  const start = _qs(row, 'input[name="qualification_start[]"]');
+  if (!start) return;
+  start.setAttribute("max", _todayMonth());
+}
+function _syncQualEndMinMax(row) {
+  const start = _qs(row, 'input[name="qualification_start[]"]');
+  const end = _qs(row, 'input[name="qualification_end[]"]');
+  if (!start || !end) return;
+
+  end.setAttribute("max", _todayMonth());
+
+  const sv = (start.value || "").trim();
+  if (_isValidMonth(sv)) end.setAttribute("min", sv);
+  else end.removeAttribute("min");
+}
+function _syncQualDegreeOptions() {
+  const rows = _qualRows();
+
+  rows.forEach((row) => {
+    const sel = _qs(row, 'select[name="qualification_degree[]"]');
+    if (!sel) return;
+
+    const pickedElsewhere = _qualSelectedDegrees(row);
+    const currentVal = (sel.value || "").trim();
+
+    Array.from(sel.options || []).forEach((opt) => {
+      if (!opt.value) {
+        opt.hidden = false;
+        return;
+      }
+      opt.hidden = pickedElsewhere.has(opt.value) && opt.value !== currentVal;
+    });
+
+    if (sel._hrmisRefreshCombobox) sel._hrmisRefreshCombobox();
+  });
+}
+function _validateQualStartNotFuture(row) {
+  const start = _qs(row, 'input[name="qualification_start[]"]');
+  if (!start) return true;
+
+  _clearError(start);
+
+  const sv = (start.value || "").trim();
+  if (_isEmpty(sv) || !_isValidMonth(sv)) return true;
+
+  const tm = _todayMonth();
+  if (_monthToIndex(sv) > _monthToIndex(tm)) {
+    _showError(start, "Start month cannot be after current month");
+    return false;
+  }
+  return true;
+}
+function _validateQualificationRow(row) {
+  let ok = true;
+
+  const start = _qs(row, 'input[name="qualification_start[]"]');
+  const end = _qs(row, 'input[name="qualification_end[]"]');
+  const chk = _qs(row, ".js-qual-completed");
+
+  if (start) {
+    if (!_validateQualStartNotFuture(row)) ok = false;
+  }
+
+  if (!end || !chk) return ok;
+
+  _clearError(end);
+
+  if (!chk.checked) return ok;
+
+  const sv = (start?.value || "").trim();
+  const ev = (end.value || "").trim();
+
+  if (_isEmpty(sv) || !_isValidMonth(sv)) return ok;
+  if (_isEmpty(ev) || !_isValidMonth(ev)) return ok;
+
+  if (_monthToIndex(ev) < _monthToIndex(sv)) {
+    _showError(end, "End month cannot be earlier than Start month");
+    ok = false;
+  }
+
+  const tm = _todayMonth();
+  if (_monthToIndex(ev) > _monthToIndex(tm)) {
+    _showError(end, "End month cannot be after current month");
+    ok = false;
+  }
+
+  return ok;
+}
+function _syncQualificationRow(row) {
+  _syncQualEndVisibility(row);
+  _syncQualStartMax(row);
+  _syncQualEndMinMax(row);
+  _syncQualDegreeOptions();
+}
+
+/* =========================================================
+ * SEARCHABLE SELECT (Single input combobox)
+ * ========================================================= */
+function _isSelectSearchable(sel) {
+  if (!sel) return false;
+  if (sel.dataset.searchableApplied === "1") return false;
+  if (sel.multiple) return false;
+  if (sel.size && Number(sel.size) > 1) return false;
+  if (sel.closest(".o_field_widget")) return false;
+  return true;
+}
+
+function _enhanceSelect(select) {
+  if (!_isSelectSearchable(select)) return;
+
+  select.dataset.searchableApplied = "1";
+
+  const wrap = document.createElement("div");
+  wrap.className = "hrmis-combobox";
+  wrap.style.position = "relative";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = select.className;
+  input.autocomplete = "off";
+  input.placeholder = "Type to search…";
+
+  const dd = document.createElement("div");
+  dd.className = "hrmis-combobox-dd";
+  dd.style.position = "absolute";
+  dd.style.left = "0";
+  dd.style.right = "0";
+  dd.style.top = "calc(100% + 6px)";
+  dd.style.zIndex = "50";
+  dd.style.background = "#fff";
+  dd.style.border = "1px solid #dee2e6";
+  dd.style.borderRadius = "12px";
+  dd.style.boxShadow = "0 8px 24px rgba(0,0,0,0.10)";
+  dd.style.maxHeight = "240px";
+  dd.style.overflow = "auto";
+  dd.style.display = "none";
+
+  const parent = select.parentNode;
+  parent.insertBefore(wrap, select);
+  wrap.appendChild(input);
+  wrap.appendChild(select);
+  wrap.appendChild(dd);
+
+  select.style.display = "none";
+  input.disabled = !!select.disabled;
+
+  // keep reference so _showError() can highlight the visible input
+  select._hrmisComboboxInput = input;
+
+  function getVisibleOptions() {
+    const opts = Array.from(select.options || []);
+    return opts.filter((o, idx) => {
+      if (idx === 0 && (!o.value || o.disabled)) return false;
+      if (!o.value) return false;
+      if (o.hidden) return false;
+      return true;
+    });
+  }
+
+  function setDisplayFromSelect() {
+    const selOpt = select.options[select.selectedIndex];
+    input.value =
+      selOpt && selOpt.value ? (selOpt.textContent || "").trim() : "";
+  }
+
+  function rebuildDD(query) {
+    const q = (query || "").trim().toLowerCase();
+    dd.innerHTML = "";
+
+    const opts = getVisibleOptions().filter((o) => {
+      if (!q) return true;
+      return (o.textContent || "").toLowerCase().includes(q);
+    });
+
+    if (!opts.length) {
+      const empty = document.createElement("div");
+      empty.style.padding = "10px 12px";
+      empty.style.color = "#6c757d";
+      empty.textContent = "No matches";
+      dd.appendChild(empty);
+      return;
+    }
+
+    opts.forEach((opt) => {
+      const item = document.createElement("div");
+      item.style.padding = "10px 12px";
+      item.style.cursor = "pointer";
+      item.style.borderRadius = "10px";
+      item.style.margin = "4px";
+      item.textContent = (opt.textContent || "").trim();
+
+      item.addEventListener(
+        "mouseenter",
+        () => (item.style.background = "#f3f4f6"),
+      );
+      item.addEventListener("mouseleave", () => (item.style.background = ""));
+
+      item.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        select.value = opt.value;
+        setDisplayFromSelect();
+        _clearError(select);
+        _clearError(input);
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        dd.style.display = "none";
+      });
+
+      dd.appendChild(item);
+    });
+  }
+
+  function openDD() {
+    if (input.disabled) return;
+    rebuildDD(input.value || "");
+    dd.style.display = "block";
+  }
+  function closeDD() {
+    dd.style.display = "none";
+  }
+
+  input.addEventListener("focus", openDD);
+  input.addEventListener("input", openDD);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeDD();
+      input.blur();
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      closeDD();
+      setDisplayFromSelect();
+    }, 120);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!wrap.contains(e.target)) closeDD();
+  });
+
+  select.addEventListener("change", setDisplayFromSelect);
+
+  select._hrmisRefreshCombobox = () => {
+    const selOpt = select.options[select.selectedIndex];
+    if (selOpt && (selOpt.hidden || selOpt.style.display === "none")) {
+      select.selectedIndex = 0;
+    }
+    setDisplayFromSelect();
+    if (dd.style.display !== "none") rebuildDD(input.value || "");
+  };
+
+  setDisplayFromSelect();
+}
+
+function _initSearchableSelects(scopeRoot) {
+  const root = scopeRoot || document;
+  _qsa(root, "select").forEach((sel) => _enhanceSelect(sel));
 }
 
 /* ---------------------------------------------------------
@@ -41,7 +559,6 @@ function _digitsOnly(input, { maxLen = null } = {}) {
 
   input.setAttribute("inputmode", "numeric");
   input.setAttribute("autocomplete", "off");
-
   if (maxLen) input.setAttribute("maxlength", String(maxLen));
 
   input.addEventListener("keydown", (e) => {
@@ -84,118 +601,129 @@ function _digitsOnly(input, { maxLen = null } = {}) {
 }
 
 /* ---------------------------------------------------------
- * Month helpers (YYYY-MM)
+ * Joining/Current BPS helpers
  * --------------------------------------------------------- */
-function _isValidMonth(v) {
-  return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(v || "").trim());
+function _joiningMonthValue(form) {
+  const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date YYYY-MM-DD
+  const v = (joining?.value || "").trim();
+  return v ? v.slice(0, 7) : "";
 }
-function _monthToIndex(v) {
-  const [y, m] = String(v)
-    .split("-")
-    .map((x) => parseInt(x, 10));
-  return y * 12 + (m - 1);
+function _currentBpsValue(form) {
+  const bps = _qs(form, '[name="hrmis_bps"]');
+  return _normInt(bps?.value);
 }
 
 /* ---------------------------------------------------------
- * Completed/Current toggles + Posting auto-fill helpers
+ * Template-based repeatable rows
  * --------------------------------------------------------- */
-function _toggleQualCompleted(row) {
-  const chk = _qs(row, ".js-qual-completed");
-  const wrap = _qs(row, ".js-qual-end-wrap");
-  const end = _qs(row, ".js-qual-end");
-  if (!chk || !wrap || !end) return;
-
-  if (chk.checked) {
-    wrap.style.display = "";
-    end.setAttribute("required", "required");
-  } else {
-    wrap.style.display = "none";
-    end.removeAttribute("required");
-    end.value = "";
-    _clearError(end);
-  }
-}
-
-function _togglePostCurrent(row) {
-  const chk = _qs(row, ".js-post-current");
-  const wrap = _qs(row, ".js-post-end-wrap");
-  const end = _qs(row, ".js-post-end");
-  if (!chk || !wrap || !end) return;
-
-  if (chk.checked) {
-    wrap.style.display = "none";
-    end.value = "";
-    _clearError(end);
-  } else {
-    wrap.style.display = "";
-  }
-}
-
-function _setFirstPostingStartFromJoining(form) {
-  const joining = _qs(form, '[name="hrmis_joining_date"]')?.value; // YYYY-MM-DD
-  if (!joining) return;
-
-  const firstRow = _qs(document, "#post_rows .hrmis-repeat-row");
-  if (!firstRow) return;
-
-  const start = _qs(firstRow, 'input[name="posting_start[]"]');
-  if (!start) return;
-
-  start.value = joining.slice(0, 7); // YYYY-MM
-  start.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function _autofillPostingEndDates() {
-  const rows = _qsa(document, "#post_rows .hrmis-repeat-row");
-  const starts = rows.map(
-    (r) => _qs(r, 'input[name="posting_start[]"]')?.value || "",
-  );
-
-  rows.forEach((row, idx) => {
-    const isCurrent = _qs(row, ".js-post-current")?.checked;
-    const end = _qs(row, 'input[name="posting_end[]"]');
-    const endWrap = _qs(row, ".js-post-end-wrap");
-
-    if (!end) return;
-
-    if (isCurrent) {
-      end.value = "";
-      if (endWrap) endWrap.style.display = "none";
-      return;
-    }
-
-    const nextStart = starts[idx + 1];
-    end.value = _isValidMonth(nextStart) ? nextStart : "";
-
-    if (endWrap) endWrap.style.display = "";
-  });
-}
-
-/* ---------------------------------------------------------
- * Template-based repeatable rows (Add button shows row)
- * --------------------------------------------------------- */
-function _cloneFromTemplate(tplSel, containerSel) {
-  const tpl = _qs(document, tplSel);
-  const container = _qs(document, containerSel);
+function _cloneFromTemplate(tplSelector, containerSelector) {
+  const tpl = _qs(document, tplSelector);
+  const container = _qs(document, containerSelector);
   if (!tpl || !container) return null;
 
-  const row = tpl.content.firstElementChild?.cloneNode(true);
+  const row = tpl.content?.firstElementChild?.cloneNode(true);
   if (!row) return null;
 
-  // clear inputs/selects
   _qsa(row, "input").forEach((inp) => {
     const type = (inp.getAttribute("type") || "").toLowerCase();
     if (type === "checkbox" || type === "radio") inp.checked = false;
     else inp.value = "";
+
+    // IMPORTANT: ensure previous posting start never gets auto-filled
+    if (inp.name === "posting_start[]") inp.value = "";
+
     _clearError(inp);
   });
+
   _qsa(row, "select").forEach((sel) => {
     sel.selectedIndex = 0;
     _clearError(sel);
   });
 
   container.appendChild(row);
+  _initSearchableSelects(row);
   return row;
+}
+
+/* ---------------------------------------------------------
+ * Current Posting Start validation
+ * --------------------------------------------------------- */
+function _validateCurrentPostingStart(form) {
+  const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date
+  const currentStart = _qs(form, '[name="current_posting_start"]'); // YYYY-MM
+  if (!joining || !currentStart) return true;
+
+  _clearError(currentStart);
+
+  const joiningVal = (joining.value || "").trim();
+  const currentVal = (currentStart.value || "").trim();
+
+  if (_isEmpty(joiningVal)) {
+    _showError(currentStart, "Please select Joining Date first");
+    return false;
+  }
+
+  const joiningMonth = joiningVal.slice(0, 7);
+  if (!_isValidMonth(joiningMonth)) {
+    _showError(currentStart, "Joining Date is invalid");
+    return false;
+  }
+
+  if (_isEmpty(currentVal) || !_isValidMonth(currentVal)) {
+    _showError(currentStart, "Current Posting Start is required (YYYY-MM)");
+    return false;
+  }
+
+  if (_monthToIndex(currentVal) < _monthToIndex(joiningMonth)) {
+    _showError(
+      currentStart,
+      "Current Posting Start cannot be before Joining Month",
+    );
+    return false;
+  }
+
+  const tm = _todayMonth();
+  if (_monthToIndex(currentVal) > _monthToIndex(tm)) {
+    _showError(
+      currentStart,
+      "Current Posting Start cannot be after current month",
+    );
+    return false;
+  }
+
+  return true;
+}
+
+/* ---------------------------------------------------------
+ * Joining vs Commission date rule (compares submitted dates)
+ * --------------------------------------------------------- */
+function _validateJoiningCommission(form) {
+  const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date YYYY-MM-DD
+  const commission = _qs(form, '[name="hrmis_commission_date"]'); // hidden date YYYY-MM-DD
+  if (!joining || !commission) return true;
+
+  const joiningUI = joining._hrmisMonthProxy || null;
+  const commissionUI = commission._hrmisMonthProxy || null;
+
+  const jErrTarget = joiningUI || joining;
+  const cErrTarget = commissionUI || commission;
+
+  _clearError(jErrTarget);
+  _clearError(cErrTarget);
+
+  const jv = (joining.value || "").trim();
+  const cv = (commission.value || "").trim();
+  if (_isEmpty(jv) || _isEmpty(cv)) return true;
+
+  const j = new Date(jv + "T00:00:00");
+  const c = new Date(cv + "T00:00:00");
+
+  if (j < c) {
+    _showError(jErrTarget, "Joining Date cannot be before Commission Date");
+    _showError(cErrTarget, "Commission Date cannot be after Joining Date");
+    return false;
+  }
+  return true;
 }
 
 /* ---------------------------------------------------------
@@ -209,7 +737,7 @@ function _initCNIC(form) {
 
   cnicInput.setAttribute("inputmode", "numeric");
   cnicInput.setAttribute("autocomplete", "off");
-  cnicInput.setAttribute("maxlength", "15"); // includes dashes
+  cnicInput.setAttribute("maxlength", "15");
 
   function formatCNIC(digits) {
     digits = (digits || "").replace(/\D/g, "").slice(0, 13);
@@ -232,7 +760,6 @@ function _initCNIC(form) {
       e.key === "ArrowRight" ||
       e.key === "Home" ||
       e.key === "End";
-
     if (allowed) return;
     if (e.ctrlKey || e.metaKey) return;
 
@@ -287,7 +814,7 @@ function _initContact(form) {
 
   if (_isEmpty(contactInput.value)) {
     contactInput.value = "03";
-    contactInput.setSelectionRange(2, 2);
+    contactInput.setSelectionRange?.(2, 2);
   } else {
     normalize();
   }
@@ -301,20 +828,19 @@ function _initContact(form) {
       e.key === "ArrowRight" ||
       e.key === "Home" ||
       e.key === "End";
-
     if (allowed) return;
 
     if (e.key === "Backspace" && pos <= 2) {
       e.preventDefault();
       contactInput.value = "03";
-      contactInput.setSelectionRange(2, 2);
+      contactInput.setSelectionRange?.(2, 2);
       return;
     }
 
     if (e.key === "Delete" && pos < 2) {
       e.preventDefault();
       contactInput.value = "03";
-      contactInput.setSelectionRange(2, 2);
+      contactInput.setSelectionRange?.(2, 2);
       return;
     }
 
@@ -339,7 +865,7 @@ function _initContact(form) {
 
   contactInput.addEventListener("focus", () => {
     normalize();
-    contactInput.setSelectionRange(
+    contactInput.setSelectionRange?.(
       contactInput.value.length,
       contactInput.value.length,
     );
@@ -360,20 +886,8 @@ function _initContact(form) {
 }
 
 /* ---------------------------------------------------------
- * Dates
+ * Date helpers (YYYY-MM-DD local)
  * --------------------------------------------------------- */
-function _pad2(n) {
-  return String(n).padStart(2, "0");
-}
-
-function _toLocalYmd(d) {
-  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
-  const y = String(d.getFullYear()).padStart(4, "0");
-  const m = _pad2(d.getMonth() + 1);
-  const day = _pad2(d.getDate());
-  return `${y}-${m}-${day}`;
-}
-
 function _parseLocalYmd(ymd) {
   const s = String(ymd || "").trim();
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
@@ -384,19 +898,12 @@ function _parseLocalYmd(ymd) {
   if (!y || !mo || !d) return null;
   return new Date(y, mo - 1, d);
 }
-
 function _addDaysLocalYmd(ymd, days) {
   const base = _parseLocalYmd(ymd);
   if (!base) return "";
   base.setDate(base.getDate() + Number(days || 0));
   return _toLocalYmd(base);
 }
-
-function _minYmd(a, b) {
-  if (!_isEmpty(a) && !_isEmpty(b)) return a < b ? a : b; // YYYY-MM-DD lexicographic works
-  return !_isEmpty(a) ? a : b;
-}
-
 function _yesterdayLocalYmd() {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -404,15 +911,9 @@ function _yesterdayLocalYmd() {
   return _toLocalYmd(d);
 }
 
-function _todayLocalYmd() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return _toLocalYmd(d);
-}
-
-/* ---------------------------------------------------------
- * Lightweight datepicker (leave rows only)
- * --------------------------------------------------------- */
+/* =========================================================
+ * Leave datepicker + overlap logic (unchanged)
+ * ========================================================= */
 let _hrmisLeaveDatePickerStyleInjected = false;
 let _hrmisLeaveDatePickerPopup = null;
 let _hrmisLeaveDatePickerState = null; // { input, monthDate, min, max, disabledRanges }
@@ -438,7 +939,6 @@ function _injectHrmisLeaveDatePickerStyles() {
   style.textContent = css;
   document.head.appendChild(style);
 }
-
 function _ensureHrmisLeaveDatePickerPopup() {
   _injectHrmisLeaveDatePickerStyles();
   if (_hrmisLeaveDatePickerPopup) return _hrmisLeaveDatePickerPopup;
@@ -467,15 +967,14 @@ function _ensureHrmisLeaveDatePickerPopup() {
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape") _closeHrmisLeaveDatePicker();
   });
+
   return el;
 }
-
 function _closeHrmisLeaveDatePicker() {
   if (_hrmisLeaveDatePickerPopup)
     _hrmisLeaveDatePickerPopup.style.display = "none";
   _hrmisLeaveDatePickerState = null;
 }
-
 function _startOfMonth(d) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
@@ -493,7 +992,6 @@ function _inDisabledRanges(ymd, ranges) {
   }
   return false;
 }
-
 function _nextEnabledYmd(fromYmd, toYmd, disabledRanges) {
   if (_isEmpty(fromYmd) || _isEmpty(toYmd)) return "";
   const from = _parseLocalYmd(fromYmd);
@@ -514,7 +1012,6 @@ function _nextEnabledYmd(fromYmd, toYmd, disabledRanges) {
   }
   return "";
 }
-
 function _getAttrSafe(input, name) {
   try {
     return (input && input.getAttribute && input.getAttribute(name)) || "";
@@ -522,15 +1019,12 @@ function _getAttrSafe(input, name) {
     return "";
   }
 }
-
-function _getJoiningMonthStartYmd() {
+function _getJoiningMinLeaveStartYmd() {
   const form = _qs(document, ".hrmis-form");
   const joining = _qs(form, '[name="hrmis_joining_date"]')?.value || "";
   const d = _parseLocalYmd(joining);
   if (!d) return "";
-  const yyyy = String(d.getFullYear()).padStart(4, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${yyyy}-${mm}-01`;
+  return _addDaysLocalYmd(joining, 1);
 }
 
 function _renderHrmisLeaveDatePicker() {
@@ -558,7 +1052,6 @@ function _renderHrmisLeaveDatePicker() {
     "November",
     "December",
   ];
-  const title = `${monthNames[m0]} ${y}`;
 
   const prevMonth = new Date(y, m0 - 1, 1);
   const nextMonth = new Date(y, m0 + 1, 1);
@@ -603,6 +1096,7 @@ function _renderHrmisLeaveDatePicker() {
 
   const grid = popup.querySelector(".js-grid");
   if (!grid) return;
+
   const dows = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   for (const d of dows) {
     const dow = document.createElement("div");
@@ -712,9 +1206,6 @@ function _renderHrmisLeaveDatePicker() {
       _renderHrmisLeaveDatePicker();
     });
   }
-
-  // (title variable kept as you had it — no removal; not displayed but harmless)
-  void title;
 }
 
 function _openHrmisLeaveDatePicker(
@@ -767,7 +1258,6 @@ function _rangesOverlapYmd(aStart, aEnd, bStart, bEnd) {
     return false;
   return !(aEnd < bStart || aStart > bEnd);
 }
-
 function _collectLeaveRanges(excludeRow) {
   const out = [];
   _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
@@ -781,27 +1271,31 @@ function _collectLeaveRanges(excludeRow) {
   return out;
 }
 
+/* (leave gender filter + overlap + constraints + calc: unchanged from your file) */
 function _syncLeaveTypeSelectsByGender(form) {
   const genderEl = _qs(form, '[name="gender"]');
   const gender = String(genderEl?.value || "")
     .trim()
     .toLowerCase();
+
   const selects = _qsa(document, '#leave_rows select[name="leave_type_id[]"]');
   if (!selects.length) return;
 
   for (const sel of selects) {
     if (!(sel instanceof HTMLSelectElement)) continue;
 
+    // No gender -> disable + red look + message
     if (!gender) {
-      sel.disabled = true;
-      _showError(sel, "Please select the gender first.");
+      sel.value = "";
+      _setComboboxDisabled(sel, true, "Please select the gender first.");
       continue;
     }
 
-    sel.disabled = false;
-    _clearError(sel);
+    // Gender selected -> enable + clear red
+    _setComboboxDisabled(sel, false);
 
     const isMale = gender === "male";
+
     for (const opt of Array.from(sel.options || [])) {
       if (!opt || !opt.value) continue;
       const txt = String(opt.textContent || "")
@@ -810,8 +1304,11 @@ function _syncLeaveTypeSelectsByGender(form) {
       const isMaternity = txt.includes("maternity");
       opt.hidden = !!(isMale && isMaternity);
     }
+
     const cur = sel.selectedOptions?.[0];
     if (cur && cur.hidden) sel.selectedIndex = 0;
+
+    if (sel._hrmisRefreshCombobox) sel._hrmisRefreshCombobox();
   }
 }
 
@@ -863,7 +1360,7 @@ function _syncLeaveRowDateConstraints(row) {
 
   const yesterday = _yesterdayLocalYmd();
   const today = _todayLocalYmd();
-  const joinMin = _getJoiningMonthStartYmd();
+  const joinMin = _getJoiningMinLeaveStartYmd();
 
   if (!joinMin) {
     start.disabled = true;
@@ -876,32 +1373,35 @@ function _syncLeaveRowDateConstraints(row) {
     return;
   }
 
+  if (joinMin && yesterday && joinMin > yesterday) {
+    start.disabled = true;
+    end.disabled = true;
+    start.value = "";
+    end.value = "";
+    const msg = "Leave history cannot be added before your joining date.";
+    _showError(start, msg);
+    _showError(end, msg);
+    return;
+  }
+
   start.disabled = false;
   _clearError(start);
   _clearError(end);
-  if (joinMin) start.min = joinMin;
+
+  start.min = joinMin;
   start.max = yesterday;
+
   if (start.value && start.value > yesterday) start.value = yesterday;
   if (joinMin && start.value && start.value < joinMin) start.value = joinMin;
 
-  _attachHrmisLeaveDatePicker(start, () => ({
-    min: _getAttrSafe(start, "min") || joinMin || "",
-    max: _getAttrSafe(start, "max") || yesterday,
-    disabledRanges: _collectLeaveRanges(row),
-    openTo: joinMin || "",
-  }));
+  _ensureNativeDateInput(start);
 
   if (!start.value) {
     end.disabled = true;
     end.min = joinMin || "";
     end.max = today;
     if (end.value) end.value = "";
-    _attachHrmisLeaveDatePicker(end, () => ({
-      min: _getAttrSafe(end, "min") || joinMin || "",
-      max: _getAttrSafe(end, "max") || today,
-      disabledRanges: _collectLeaveRanges(row),
-      openTo: joinMin || "",
-    }));
+    _ensureNativeDateInput(end);
     _applyLeaveOverlapRule(row, start);
     return;
   }
@@ -916,6 +1416,7 @@ function _syncLeaveRowDateConstraints(row) {
   const curEnd = (end.value || "").trim();
   const minBound = (end.min || "").trim();
   const maxBound = (end.max || "").trim();
+
   const needsDefault =
     _isEmpty(curEnd) ||
     (minBound && curEnd < minBound) ||
@@ -927,12 +1428,7 @@ function _syncLeaveRowDateConstraints(row) {
     if (next) end.value = next;
   }
 
-  _attachHrmisLeaveDatePicker(end, () => ({
-    min: _getAttrSafe(end, "min") || minEnd || "",
-    max: _getAttrSafe(end, "max") || today,
-    disabledRanges,
-    openTo: minEnd || start.value || joinMin || "",
-  }));
+  _ensureNativeDateInput(end);
 
   if (end.min && end.max && end.min > end.max) {
     end.disabled = true;
@@ -947,12 +1443,12 @@ function _syncLeaveRowDateConstraints(row) {
   _applyLeaveOverlapRule(row, end);
 }
 
+/* leave contribution calc */
 function _normLeaveTypeForCalc(name) {
   return String(name || "")
     .trim()
     .toLowerCase();
 }
-
 function _leaveContributionFromTypeName(name, effectiveDays) {
   const s = _normLeaveTypeForCalc(name);
 
@@ -974,7 +1470,6 @@ function _leaveContributionFromTypeName(name, effectiveDays) {
 
   return 0;
 }
-
 function _daysInclusiveLocal(startYmd, endYmd) {
   const s = _parseLocalYmd(startYmd);
   const e = _parseLocalYmd(endYmd);
@@ -985,12 +1480,13 @@ function _daysInclusiveLocal(startYmd, endYmd) {
   if (Number.isNaN(ms) || ms < 0) return 0;
   return Math.floor(ms / (24 * 60 * 60 * 1000)) + 1;
 }
-
 function _recalcLeavesTaken(form) {
   const out = _qs(form, 'input[name="hrmis_leaves_taken"]');
   if (!out) return;
 
   let total = 0;
+  let hasAny = false;
+
   _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
     const typeSel = _qs(row, 'select[name="leave_type_id[]"]');
     const start = _qs(row, 'input[name="leave_start[]"]');
@@ -999,17 +1495,21 @@ function _recalcLeavesTaken(form) {
     if (_isEmpty(typeSel.value) || _isEmpty(start.value) || _isEmpty(end.value))
       return;
 
+    hasAny = true;
     const optText = typeSel.selectedOptions?.[0]?.textContent || "";
     const days = _daysInclusiveLocal(start.value, end.value);
     if (!days) return;
     total += _leaveContributionFromTypeName(optText, days);
   });
 
-  out.value = String(total);
+  out.value = String(total || 0);
 }
 
+/* ---------------------------------------------------------
+ * Dates (basic max=today)
+ * --------------------------------------------------------- */
 function _initDates(form) {
-  const today = new Date().toISOString().split("T")[0];
+  const today = _todayLocalYmd();
   ["hrmis_joining_date", "hrmis_commission_date"].forEach((name) => {
     const input = _qs(form, `[name="${name}"]`);
     if (input) input.setAttribute("max", today);
@@ -1017,29 +1517,530 @@ function _initDates(form) {
 }
 
 /* ---------------------------------------------------------
- * Repeatable sections: Add/Remove + Posting district->facility filter
+ * Profile date pickers
+ *  - DOB uses calendar widget
+ *  - Commission/Joining are month-proxy fields (handled elsewhere)
  * --------------------------------------------------------- */
-function _filterFacilitiesInRow(row) {
-  const district = _qs(row, ".js-post-district");
-  const facility = _qs(row, ".js-post-facility");
-  if (!district || !facility) return;
-
-  const districtId = district.value || "";
-  const options = Array.from(facility.options || []);
-
-  options.forEach((opt) => {
-    if (!opt.value) {
-      opt.hidden = false;
-      return;
-    }
-    const optDistrict = opt.getAttribute("data-district-id") || "";
-    opt.hidden = !!(districtId && optDistrict && optDistrict !== districtId);
-  });
-
-  const sel = facility.options[facility.selectedIndex];
-  if (sel && sel.hidden) facility.selectedIndex = 0;
+function _initProfileDatePickers(form) {
+  const dob = _qs(form, '[name="birthday"]');
+  if (dob) {
+    _ensureNativeDateInput(dob);
+  }
 }
 
+/* =========================================================
+ * Previous Posting (Manual Fill – No Auto Chain) — SINGLE, FIXED
+ * ========================================================= */
+function _postingRows() {
+  return _qsa(document, "#prev_post_rows .hrmis-repeat-row");
+}
+
+function _applyPostingBpsMaxFromCurrent(form, row) {
+  const bpsInp = _qs(row, 'input[name="posting_bps[]"]');
+  if (!bpsInp) return;
+
+  const currentBps = _currentBpsValue(form);
+  if (currentBps !== null && currentBps >= 1)
+    bpsInp.setAttribute("max", String(currentBps));
+  else bpsInp.setAttribute("max", "22");
+}
+
+function _syncPostingBpsConstraints(form) {
+  _postingRows().forEach((row) => _applyPostingBpsMaxFromCurrent(form, row));
+}
+
+function _validatePostingBpsAgainstCurrent(form, row) {
+  const bpsInp = _qs(row, 'input[name="posting_bps[]"]');
+  if (!bpsInp) return true;
+
+  const v = _normInt(bpsInp.value);
+  const currentBps = _currentBpsValue(form);
+
+  _clearError(bpsInp);
+
+  if (v === null || currentBps === null) return true;
+
+  if (v > currentBps) {
+    _showError(
+      bpsInp,
+      `Posting BPS cannot be greater than current BPS (${currentBps})`,
+    );
+    return false;
+  }
+  return true;
+}
+
+function _initPostingPrevChain(form) {
+  const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date YYYY-MM-DD
+  const currentStart = _qs(form, '[name="current_posting_start"]'); // YYYY-MM
+  const wrap = _qs(document, ".js-prev-posting-wrap");
+  const container = _qs(document, "#prev_post_rows");
+
+  if (!joining || !currentStart || !wrap || !container) return;
+
+  // prevent double-binding if init is called again
+  if (wrap.dataset.hrmisPrevPostingInited === "1") return;
+  wrap.dataset.hrmisPrevPostingInited = "1";
+
+  let msgBox = _qs(wrap, ".js-prev-posting-msg");
+  if (!msgBox) {
+    msgBox = document.createElement("div");
+    msgBox.className = "js-prev-posting-msg";
+    msgBox.style.margin = "10px 0";
+    msgBox.style.padding = "10px 12px";
+    msgBox.style.border = "1px solid #fde68a";
+    msgBox.style.background = "#fffbeb";
+    msgBox.style.borderRadius = "12px";
+    msgBox.style.color = "#92400e";
+    msgBox.style.fontSize = "14px";
+    msgBox.style.display = "none";
+    msgBox.textContent = "Please fill Previous Posting History, if any.";
+    wrap.prepend(msgBox);
+  }
+
+  const joiningMonth = () => {
+    const v = (joining.value || "").trim();
+    return v ? v.slice(0, 7) : "";
+  };
+  const currentMonth = () => (currentStart.value || "").trim();
+
+  const clearAll = () => {
+    container.innerHTML = "";
+  };
+
+  const ensureFirstRow = (jm) => {
+    const rows = _qsa(container, ".hrmis-repeat-row");
+    if (rows.length) return rows[0];
+
+    const row = _cloneFromTemplate("#tpl_prev_post_row", "#prev_post_rows");
+    if (!row) return null;
+
+    // helpful UX: set first start = joining month, keep end manual
+    // const s = _qs(row, 'input[name="posting_start[]"]');
+    // if (s) _writeMonthValueToInput(s, jm);
+
+    _applyPostingBpsMaxFromCurrent(form, row);
+    _syncPostingRowDateConstraints(form, row);
+    return row;
+  };
+
+  const rebuild = () => {
+    const jm = joiningMonth();
+    const cm = currentMonth();
+
+    // default hidden until both valid
+    wrap.style.display = "none";
+    msgBox.style.display = "none";
+
+    if (!_isValidMonth(jm) || !_isValidMonth(cm)) {
+      clearAll();
+      return;
+    }
+
+    // enforce cm >= jm
+    if (_monthToIndex(cm) < _monthToIndex(jm)) {
+      _showError(
+        currentStart,
+        "Current Posting Start cannot be before Joining Month",
+      );
+      clearAll();
+      return;
+    } else {
+      _clearError(currentStart);
+    }
+
+    // jm == cm => no previous posting section needed
+    if (jm === cm) {
+      clearAll();
+      return;
+    }
+
+    // jm != cm => show and keep rows
+    wrap.style.display = "";
+    msgBox.style.display = "";
+
+    // optional UX: add first row if none
+    ensureFirstRow(jm);
+
+    // always resync constraints for existing rows
+    _qsa(container, ".hrmis-repeat-row").forEach((r) => {
+      _applyPostingBpsMaxFromCurrent(form, r);
+      _syncPostingRowDateConstraints(form, r);
+    });
+  };
+
+  joining.addEventListener("change", rebuild);
+  currentStart.addEventListener("change", rebuild);
+
+  rebuild();
+}
+
+// function _initPostingPrevChain(form) {
+//   const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date YYYY-MM-DD
+//   const currentStart = _qs(form, '[name="current_posting_start"]'); // YYYY-MM
+//   const wrap = _qs(document, ".js-prev-posting-wrap");
+//   const container = _qs(document, "#prev_post_rows");
+
+//   if (!joining || !currentStart || !wrap || !container) return;
+
+//   let msgBox = _qs(wrap, ".js-prev-posting-msg");
+//   if (!msgBox) {
+//     msgBox = document.createElement("div");
+//     msgBox.className = "js-prev-posting-msg";
+//     msgBox.style.margin = "10px 0";
+//     msgBox.style.padding = "10px 12px";
+//     msgBox.style.border = "1px solid #fde68a";
+//     msgBox.style.background = "#fffbeb";
+//     msgBox.style.borderRadius = "12px";
+//     msgBox.style.color = "#92400e";
+//     msgBox.style.fontSize = "14px";
+//     msgBox.style.display = "none";
+//     msgBox.textContent =
+//       "Please fill Previous Posting History, if any.";
+//     wrap.prepend(msgBox);
+//   }
+
+//   function joiningMonth() {
+//     const v = (joining.value || "").trim();
+//     return v ? v.slice(0, 7) : "";
+//   }
+//   function currentMonth() {
+//     return (currentStart.value || "").trim();
+//   }
+//   function clearAll() {
+//     container.innerHTML = "";
+//   }
+
+//   function rebuild() {
+//     const jm = joiningMonth();
+//     const cm = currentMonth();
+
+//     wrap.style.display = "none";
+//     msgBox.style.display = "none";
+
+//     if (!_isValidMonth(jm) || !_isValidMonth(cm)) {
+//       clearAll();
+//       return;
+//     }
+
+//     if (_monthToIndex(cm) < _monthToIndex(jm)) {
+//       _showError(currentStart, "Current Posting Start cannot be before Joining Month");
+//       clearAll();
+//       return;
+//     } else {
+//       _clearError(currentStart);
+//     }
+
+//     if (jm !== cm) {
+//       wrap.style.display = "";
+//       msgBox.style.display = "";
+//       // user adds rows manually
+//     } else {
+//       clearAll();
+//     }
+//   }
+
+//   container.addEventListener("change", (e) => {
+//     const endInput = e.target?.closest?.('input[name="posting_end[]"]');
+//     if (!endInput) return;
+
+//     const rows = _qsa(container, ".hrmis-repeat-row");
+//     const row = endInput.closest(".hrmis-repeat-row");
+//     const idx = rows.indexOf(row);
+//     if (idx < 0) return;
+
+//     const cm = currentMonth();
+//     const startYM = _readMonthValueFromInput(
+//       _qs(row, 'input[name="posting_start[]"]'),
+//     );
+//     const endYM = _readMonthValueFromInput(endInput);
+
+//     const ok = validateEnd(row, startYM, endYM, cm);
+
+//     rows.slice(idx + 1).forEach((r) => r.remove());
+//     if (!ok) return;
+
+//     if (_nextMonth(endYM) === cm) return;
+
+//     const nextStartYM = _nextMonth(endYM);
+//     const next = ensureRow(idx + 1);
+//     if (!next) return;
+
+//     setRowStart(next, nextStartYM);
+//     setRowEnd(next, "");
+//   });
+
+//   joining.addEventListener("change", rebuild);
+//   currentStart.addEventListener("change", rebuild);
+
+//   rebuild();
+// }
+
+/* =========================================================
+ * PROMOTION CHAIN (strict chain) — unchanged
+ * ========================================================= */
+function _promoRows() {
+  return _qsa(document, "#promo_rows .hrmis-repeat-row");
+}
+function _promoRowIndex(row) {
+  return _promoRows().indexOf(row);
+}
+function _lockInput(inp) {
+  if (!inp) return;
+  inp.readOnly = true;
+  inp.style.pointerEvents = "none";
+  inp.tabIndex = -1;
+  inp.style.background = "#f3f4f6";
+  inp.style.cursor = "not-allowed";
+}
+function _unlockInput(inp) {
+  if (!inp) return;
+  inp.readOnly = false;
+  inp.style.pointerEvents = "";
+  inp.tabIndex = 0;
+  inp.style.background = "";
+  inp.style.cursor = "";
+}
+
+function _togglePromoBpsToEnabled(form, row) {
+  const to = _qs(row, 'input[name="promotion_bps_to[]"]');
+  if (!to) return;
+
+  const currentBps = _currentBpsValue(form);
+  const enabled = currentBps !== null && currentBps >= 1;
+  to.disabled = !enabled;
+  if (!enabled) {
+    to.value = "";
+    _clearError(to);
+    _setHint(to, "Fill Current BPS first to enable Promotion BPS To.");
+  } else {
+    _setHint(to, "");
+  }
+}
+function _applyPromoBpsToMaxFromCurrent(form, row) {
+  const to = _qs(row, 'input[name="promotion_bps_to[]"]');
+  if (!to) return;
+
+  const currentBps = _currentBpsValue(form);
+  if (currentBps !== null && currentBps >= 1)
+    to.setAttribute("max", String(currentBps));
+  else to.setAttribute("max", "22");
+}
+function _applyPromoToMinFromFrom(row) {
+  const from = _qs(row, 'input[name="promotion_bps_from[]"]');
+  const to = _qs(row, 'input[name="promotion_bps_to[]"]');
+  if (!from || !to) return;
+
+  const f = _normInt(from.value);
+  if (f !== null) to.setAttribute("min", String(Math.min(22, f + 1)));
+  else to.setAttribute("min", "1");
+}
+function _setPromoDateMinMax(form, row) {
+  const date = _qs(row, 'input[name="promotion_date[]"]');
+  if (!date) return;
+
+  date.setAttribute("max", _todayMonth());
+
+  const jm = _joiningMonthValue(form);
+  if (_isValidMonth(jm)) {
+    date.setAttribute("min", jm);
+    date.disabled = false;
+    _clearError(date);
+    _setHint(date, "");
+  } else {
+    date.removeAttribute("min");
+    date.value = "";
+    date.disabled = true;
+    _setHint(date, "Select Joining Date first to enable Promotion Date.");
+  }
+}
+function _syncPromoRowConstraints(form, row) {
+  _setPromoDateMinMax(form, row);
+  _applyPromoBpsToMaxFromCurrent(form, row);
+  _applyPromoToMinFromFrom(row);
+  _togglePromoBpsToEnabled(form, row);
+}
+function _validatePromoRow(form, row) {
+  let ok = true;
+
+  const from = _qs(row, 'input[name="promotion_bps_from[]"]');
+  const to = _qs(row, 'input[name="promotion_bps_to[]"]');
+  const date = _qs(row, 'input[name="promotion_date[]"]');
+  [from, to, date].forEach(_clearError);
+
+  const vDate = (date?.value || "").trim();
+  const emptyRow =
+    _isEmpty(from?.value) && _isEmpty(to?.value) && _isEmpty(vDate);
+  if (emptyRow) return true;
+
+  const f = _normInt(from?.value);
+  const t = _normInt(to?.value);
+  const currentBps = _currentBpsValue(form);
+
+  if (f === null) {
+    _showError(from, "BPS From is required");
+    ok = false;
+  } else if (f < 1 || f > 22) {
+    _showError(from, "BPS From must be 1 to 22");
+    ok = false;
+  }
+
+  if (t === null) {
+    _showError(to, "BPS To is required");
+    ok = false;
+  } else if (t < 1 || t > 22) {
+    _showError(to, "BPS To must be 1 to 22");
+    ok = false;
+  }
+
+  if (f !== null && t !== null) {
+    if (t <= f) {
+      _showError(to, "BPS To must be greater than BPS From");
+      ok = false;
+    }
+    if (currentBps !== null && t > currentBps) {
+      _showError(
+        to,
+        `BPS To cannot be greater than current BPS (${currentBps})`,
+      );
+      ok = false;
+    }
+  }
+
+  if (_isEmpty(vDate) || !_isValidMonth(vDate)) {
+    _showError(date, "Promotion month is required (YYYY-MM)");
+    ok = false;
+  } else {
+    const jm = _joiningMonthValue(form);
+    const tm = _todayMonth();
+    if (!_isValidMonth(jm)) {
+      _showError(date, "Select Joining Date first");
+      ok = false;
+    } else {
+      if (_monthToIndex(vDate) < _monthToIndex(jm)) {
+        _showError(date, "Promotion month cannot be before Joining Month");
+        ok = false;
+      }
+      if (_monthToIndex(vDate) > _monthToIndex(tm)) {
+        _showError(date, "Promotion month cannot be after current month");
+        ok = false;
+      }
+    }
+  }
+
+  return ok;
+}
+
+function _ensurePromoRow(form, i) {
+  const container = _qs(document, "#promo_rows");
+  if (!container) return null;
+
+  while (_promoRows().length <= i) {
+    const row = _cloneFromTemplate("#tpl_promo_row", "#promo_rows");
+    if (!row) break;
+
+    _syncPromoRowConstraints(form, row);
+
+    const from = _qs(row, 'input[name="promotion_bps_from[]"]');
+    _unlockInput(from);
+  }
+
+  return _promoRows()[i] || null;
+}
+function _removePromoRowsAfter(idx) {
+  _promoRows()
+    .slice(idx + 1)
+    .forEach((r) => r.remove());
+}
+function _continuePromoChainIfNeeded(form, row) {
+  const currentBps = _currentBpsValue(form);
+  if (currentBps === null) return;
+
+  const to = _qs(row, 'input[name="promotion_bps_to[]"]');
+  if (!to) return;
+
+  const t = _normInt(to.value);
+  if (t === null) return;
+  if (t === currentBps) return;
+
+  if (t < currentBps) {
+    const idx = _promoRowIndex(row);
+    const next = _ensurePromoRow(form, idx + 1);
+    if (!next) return;
+
+    const nextFrom = _qs(next, 'input[name="promotion_bps_from[]"]');
+    const nextTo = _qs(next, 'input[name="promotion_bps_to[]"]');
+    const nextDate = _qs(next, 'input[name="promotion_date[]"]');
+
+    if (nextFrom) {
+      nextFrom.value = String(t);
+      _lockInput(nextFrom);
+    }
+    if (nextTo) nextTo.value = "";
+    if (nextDate) nextDate.value = "";
+
+    _syncPromoRowConstraints(form, next);
+  }
+}
+
+function _initPromotionChain(form) {
+  const container = _qs(document, "#promo_rows");
+  const btnPromo = _qs(document, "#btn_add_promo_row");
+  if (!container) return;
+
+  if (btnPromo) {
+    btnPromo.addEventListener("click", () => {
+      if (_promoRows().length === 0) {
+        const first = _ensurePromoRow(form, 0);
+        if (first) _syncPromoRowConstraints(form, first);
+      } else {
+        _promoRows()[_promoRows().length - 1]?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    });
+  }
+
+  container.addEventListener("input", (e) => {
+    const row = e.target?.closest?.(".hrmis-repeat-row");
+    if (!row) return;
+    _syncPromoRowConstraints(form, row);
+    if (e.target?.matches?.('input[name="promotion_bps_from[]"]'))
+      _applyPromoToMinFromFrom(row);
+  });
+
+  container.addEventListener("change", (e) => {
+    const row = e.target?.closest?.(".hrmis-repeat-row");
+    if (!row) return;
+    const idx = _promoRowIndex(row);
+    if (idx < 0) return;
+
+    const ok = _validatePromoRow(form, row);
+    _removePromoRowsAfter(idx);
+    if (!ok) return;
+    _continuePromoChainIfNeeded(form, row);
+  });
+
+  const joining = _qs(form, '[name="hrmis_joining_date"]');
+  if (joining) {
+    joining.addEventListener("change", () => {
+      _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
+    });
+  }
+
+  const bps = _qs(form, '[name="hrmis_bps"]');
+  if (bps) {
+    const refresh = () =>
+      _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
+    bps.addEventListener("input", refresh);
+    bps.addEventListener("change", refresh);
+  }
+}
+
+/* ---------------------------------------------------------
+ * Repeatables init (Add/Remove + delegation)
+ * --------------------------------------------------------- */
 function _removeRepeatRow(btn) {
   const row = btn.closest(".hrmis-repeat-row");
   if (row) row.remove();
@@ -1048,27 +2049,21 @@ function _removeRepeatRow(btn) {
 function _initRepeatables(form) {
   const btnQual = _qs(document, "#btn_add_qual_row");
   const btnPrevPost = _qs(document, "#btn_add_prev_post_row");
-  const btnPromo = _qs(document, "#btn_add_promo_row");
   const btnLeave = _qs(document, "#btn_add_leave_row");
 
   if (btnQual)
     btnQual.addEventListener("click", () => {
       const row = _cloneFromTemplate("#tpl_qual_row", "#qual_rows");
-      if (row) _toggleQualCompleted(row);
+      if (row) _syncQualificationRow(row);
     });
 
   if (btnPrevPost)
     btnPrevPost.addEventListener("click", () => {
       const row = _cloneFromTemplate("#tpl_prev_post_row", "#prev_post_rows");
       if (row) {
-        _filterFacilitiesInRow(row);
-        _togglePostCurrent(row);
+        _applyPostingBpsMaxFromCurrent(form, row);
+        _syncPostingRowDateConstraints(form, row);
       }
-    });
-
-  if (btnPromo)
-    btnPromo.addEventListener("click", () => {
-      _cloneFromTemplate("#tpl_promo_row", "#promo_rows");
     });
 
   if (btnLeave)
@@ -1087,55 +2082,75 @@ function _initRepeatables(form) {
       e.preventDefault();
       _removeRepeatRow(btn);
       _recalcLeavesTaken(form);
+      setTimeout(() => _syncQualDegreeOptions(), 0);
     }
   });
 
   form.addEventListener("change", (e) => {
-    const district = e.target.closest(".js-post-district");
-    if (district) {
-      const row = district.closest(".hrmis-repeat-row");
-      if (row) _filterFacilitiesInRow(row);
-    }
+    const t = e.target;
+    if (!t) return;
 
+    // leave row changes
     if (
-      e.target &&
-      e.target.matches &&
-      e.target.matches(
+      t.matches?.(
         'input[name="leave_start[]"], input[name="leave_end[]"], select[name="leave_type_id[]"]',
       )
     ) {
-      const row = e.target.closest(".hrmis-repeat-row");
+      const row = t.closest(".hrmis-repeat-row");
       if (row) {
         _syncLeaveRowDateConstraints(row);
-        _applyLeaveOverlapRule(row, e.target);
+        _applyLeaveOverlapRule(row, t);
       }
       _recalcLeavesTaken(form);
     }
-
     if (
-      e.target &&
-      e.target.matches &&
-      e.target.matches('[name="hrmis_joining_date"]')
+      t.matches?.('input[name="posting_start[]"], input[name="posting_end[]"]')
     ) {
+      const row = t.closest(".hrmis-repeat-row");
+      if (row) _syncPostingRowDateConstraints(form, row);
+    }
+
+    if (t.matches?.('[name="hrmis_joining_date"]')) {
       _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) =>
         _syncLeaveRowDateConstraints(row),
       );
+      _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
     }
 
-    if (e.target && e.target.matches && e.target.matches('[name="gender"]')) {
-      _syncLeaveTypeSelectsByGender(form);
-    }
+    if (t.matches?.('[name="gender"]')) _syncLeaveTypeSelectsByGender(form);
 
-    const qualChk = e.target.closest(".js-qual-completed");
+    const qualChk = t.closest?.(".js-qual-completed");
     if (qualChk) {
       const row = qualChk.closest(".hrmis-repeat-row");
-      if (row) _toggleQualCompleted(row);
+      if (row) {
+        _syncQualEndVisibility(row);
+        _syncQualEndMinMax(row);
+        _validateQualificationRow(row);
+      }
     }
 
-    const postChk = e.target.closest(".js-post-current");
-    if (postChk) {
-      const row = postChk.closest(".hrmis-repeat-row");
-      if (row) _togglePostCurrent(row);
+    if (t.matches?.('select[name="qualification_degree[]"]'))
+      _syncQualDegreeOptions();
+
+    if (
+      t.matches?.(
+        'input[name="qualification_start[]"], input[name="qualification_end[]"]',
+      )
+    ) {
+      const row = t.closest(".hrmis-repeat-row");
+      if (row) {
+        _syncQualStartMax(row);
+        _syncQualEndMinMax(row);
+        _validateQualificationRow(row);
+      }
+    }
+
+    if (t.matches?.('input[name="posting_bps[]"]')) {
+      const row = t.closest(".hrmis-repeat-row");
+      if (row) {
+        _applyPostingBpsMaxFromCurrent(form, row);
+        _validatePostingBpsAgainstCurrent(form, row);
+      }
     }
   });
 
@@ -1143,14 +2158,20 @@ function _initRepeatables(form) {
     const t = e.target;
     if (!t) return;
 
-    if (t.matches('input[name="posting_bps[]"]')) {
+    if (t.matches?.('input[name="posting_bps[]"]')) {
       const raw = t.value || "";
       const digits = raw.replace(/\D/g, "").slice(0, 2);
       if (digits !== raw) t.value = digits;
+
+      const row = t.closest(".hrmis-repeat-row");
+      if (row) {
+        _applyPostingBpsMaxFromCurrent(form, row);
+        _validatePostingBpsAgainstCurrent(form, row);
+      }
     }
 
     if (
-      t.matches(
+      t.matches?.(
         'input[name="promotion_bps_from[]"], input[name="promotion_bps_to[]"]',
       )
     ) {
@@ -1163,17 +2184,20 @@ function _initRepeatables(form) {
   _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) =>
     _syncLeaveRowDateConstraints(row),
   );
+  _syncPostingBpsConstraints(form);
   _syncLeaveTypeSelectsByGender(form);
   _recalcLeavesTaken(form);
+  _qualRows().forEach((r) => _syncQualificationRow(r));
 }
 
 /* ---------------------------------------------------------
- * Validation for repeatable sections on submit
+ * Validation for repeatables on submit (unchanged from your file)
  * --------------------------------------------------------- */
 function _validateRepeatables(form) {
   let hasError = false;
+  const tm = _todayMonth();
 
-  // Qualification rows
+  // qualifications
   _qsa(document, "#qual_rows .hrmis-repeat-row").forEach((row) => {
     const degree = _qs(row, 'select[name="qualification_degree[]"]');
     const start = _qs(row, 'input[name="qualification_start[]"]');
@@ -1197,12 +2221,18 @@ function _validateRepeatables(form) {
       _showError(degree, "Degree is required");
       hasError = true;
     }
+
     if (_isEmpty(start?.value) || !_isValidMonth(start.value)) {
       _showError(start, "Start month is required (YYYY-MM)");
+      hasError = true;
+    } else if (_monthToIndex(start.value) > _monthToIndex(tm)) {
+      _showError(start, "Start month cannot be after current month");
       hasError = true;
     }
 
     if (completed) {
+      _syncQualEndMinMax(row);
+
       if (_isEmpty(end?.value) || !_isValidMonth(end.value)) {
         _showError(
           end,
@@ -1214,111 +2244,213 @@ function _validateRepeatables(form) {
           _showError(end, "End month cannot be earlier than Start month");
           hasError = true;
         }
-      }
-    } else {
-      if (end) _clearError(end);
-    }
-  });
-
-  // Previous Posting rows  (FIXED: end + isCurrent defined)
-  _qsa(document, "#prev_post_rows .hrmis-repeat-row").forEach((row) => {
-    const district = _qs(row, 'select[name="posting_district_id[]"]');
-    const designation = _qs(row, 'select[name="posting_designation_id[]"]');
-    const bps = _qs(row, 'input[name="posting_bps[]"]');
-    const start = _qs(row, 'input[name="posting_start[]"]');
-    const end = _qs(row, 'input[name="posting_end[]"]');
-    const facility = _qs(row, 'select[name="posting_facility_id[]"]');
-    const isCurrent = _qs(row, ".js-post-current")?.checked;
-
-    const emptyRow =
-      _isEmpty(district?.value) &&
-      _isEmpty(designation?.value) &&
-      _isEmpty(bps?.value) &&
-      _isEmpty(start?.value) &&
-      _isEmpty(end?.value) &&
-      _isEmpty(facility?.value) &&
-      !isCurrent;
-
-    if (emptyRow) {
-      [district, designation, bps, start, end, facility].forEach(_clearError);
-      return;
-    }
-
-    if (_isEmpty(district?.value)) {
-      _showError(district, "District is required");
-      hasError = true;
-    }
-    if (_isEmpty(designation?.value)) {
-      _showError(designation, "Designation is required");
-      hasError = true;
-    }
-    if (_isEmpty(bps?.value)) {
-      _showError(bps, "BPS is required");
-      hasError = true;
-    }
-    if (_isEmpty(start?.value) || !_isValidMonth(start.value)) {
-      _showError(start, "Start month is required (YYYY-MM)");
-      hasError = true;
-    }
-    if (_isEmpty(facility?.value)) {
-      _showError(facility, "Facility is required");
-      hasError = true;
-    }
-
-    // End month optional unless you want it required; keep your rule: validate only if provided and not current
-    if (!isCurrent && !_isEmpty(end?.value)) {
-      if (!_isValidMonth(end.value)) {
-        _showError(end, "End month must be YYYY-MM");
-        hasError = true;
-      }
-      if (_isValidMonth(start?.value) && _isValidMonth(end.value)) {
-        if (_monthToIndex(end.value) < _monthToIndex(start.value)) {
-          _showError(end, "End month cannot be earlier than Start month");
+        if (_monthToIndex(end.value) > _monthToIndex(tm)) {
+          _showError(end, "End month cannot be after current month");
           hasError = true;
         }
       }
     } else {
-      if (end) _clearError(end);
+      if (end) {
+        _clearError(end);
+        end.value = "";
+      }
     }
   });
 
-  // Promotion rows
-  _qsa(document, "#promo_rows .hrmis-repeat-row").forEach((row) => {
-    const from = _qs(row, 'input[name="promotion_bps_from[]"]');
-    const to = _qs(row, 'input[name="promotion_bps_to[]"]');
-    const date = _qs(row, 'input[name="promotion_date[]"]');
+  _syncQualDegreeOptions();
 
-    const emptyRow =
-      _isEmpty(from?.value) && _isEmpty(to?.value) && _isEmpty(date?.value);
-    if (emptyRow) {
-      [from, to, date].forEach(_clearError);
-      return;
-    }
+  // previous posting strict chain (only when jm != cm)
+  const joiningVal = _qs(form, '[name="hrmis_joining_date"]')?.value || "";
+  const currentVal = _qs(form, '[name="current_posting_start"]')?.value || "";
 
-    if (_isEmpty(from?.value)) {
-      _showError(from, "BPS From is required");
-      hasError = true;
-    }
-    if (_isEmpty(to?.value)) {
-      _showError(to, "BPS To is required");
-      hasError = true;
-    }
-    if (_isEmpty(date?.value) || !_isValidMonth(date.value)) {
-      _showError(date, "Promotion month is required (YYYY-MM)");
+  const jm = joiningVal ? joiningVal.slice(0, 7) : "";
+  const cm = (currentVal || "").trim();
+  const currentBps = _currentBpsValue(form);
+
+  if (_isValidMonth(jm) && _isValidMonth(cm)) {
+    if (_monthToIndex(cm) < _monthToIndex(jm)) {
+      _showError(
+        _qs(form, '[name="current_posting_start"]'),
+        "Current Posting Start cannot be before Joining Month",
+      );
       hasError = true;
     }
 
-    if (!_isEmpty(from?.value) && !_isEmpty(to?.value)) {
-      const f = parseInt(from.value, 10);
-      const t = parseInt(to.value, 10);
-      if (!Number.isNaN(f) && !Number.isNaN(t) && t <= f) {
-        _showError(to, "BPS To must be greater than BPS From");
+    if (jm !== cm) {
+      const rows = _qsa(document, "#prev_post_rows .hrmis-repeat-row");
+
+      if (rows.length === 0) {
+        _showError(
+          _qs(form, '[name="current_posting_start"]'),
+          "Please complete Previous Posting History.",
+        );
+        hasError = true;
+      } else {
+        let expectedStart = jm;
+
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+
+          const district = _qs(r, 'select[name="posting_district_id[]"]');
+          const designation = _qs(r, 'select[name="posting_designation_id[]"]');
+          const bps = _qs(r, 'input[name="posting_bps[]"]');
+          const startInp = _qs(r, 'input[name="posting_start[]"]');
+          const endInp = _qs(r, 'input[name="posting_end[]"]');
+
+          const start = _readMonthValueFromInput(startInp);
+          const end = _readMonthValueFromInput(endInp);
+          // hard bounds: not before joining, not after/beyond current posting start
+          if (_isValidMonth(jm)) {
+            if (
+              _isValidMonth(start) &&
+              _monthToIndex(start) < _monthToIndex(jm)
+            ) {
+              _showError(
+                startInp,
+                "Start month cannot be before Joining Month",
+              );
+              hasError = true;
+              break;
+            }
+            if (_isValidMonth(end) && _monthToIndex(end) < _monthToIndex(jm)) {
+              _showError(endInp, "End month cannot be before Joining Month");
+              hasError = true;
+              break;
+            }
+          }
+
+          if (_isValidMonth(cm)) {
+            if (
+              _isValidMonth(start) &&
+              _monthToIndex(start) >= _monthToIndex(cm)
+            ) {
+              _showError(
+                startInp,
+                "Start must be before Current Posting Start",
+              );
+              hasError = true;
+              break;
+            }
+            // you already check end >= cm, keep it; it enforces end < cm
+          }
+
+          if (_isEmpty(district?.value)) {
+            _showError(district, "District is required");
+            hasError = true;
+            break;
+          }
+          if (_isEmpty(designation?.value)) {
+            _showError(designation, "Designation is required");
+            hasError = true;
+            break;
+          }
+          if (_isEmpty(bps?.value)) {
+            _showError(bps, "BPS is required");
+            hasError = true;
+            break;
+          }
+
+          if (currentBps !== null) {
+            const pv = _normInt(bps?.value);
+            if (pv !== null && pv > currentBps) {
+              _showError(
+                bps,
+                `Posting BPS cannot be greater than current BPS (${currentBps})`,
+              );
+              hasError = true;
+              break;
+            }
+          }
+
+          if (!startInp || start !== expectedStart) {
+            _showError(
+              startInp,
+              "Start must match previous End / Joining Month",
+            );
+            hasError = true;
+            break;
+          }
+
+          if (!endInp || _isEmpty(end) || !_isValidMonth(end)) {
+            _showError(endInp, "End month is required (YYYY-MM)");
+            hasError = true;
+            break;
+          }
+
+          if (_monthToIndex(end) < _monthToIndex(start)) {
+            _showError(endInp, "End cannot be earlier than Start");
+            hasError = true;
+            break;
+          }
+
+          if (_monthToIndex(end) >= _monthToIndex(cm)) {
+            _showError(endInp, "End must be before Current Posting Start");
+            hasError = true;
+            break;
+          }
+
+          expectedStart = _nextMonth(end);
+        }
+
+        if (!hasError) {
+          const lastEndInp = _qs(
+            rows[rows.length - 1],
+            'input[name="posting_end[]"]',
+          );
+          const lastEnd = _readMonthValueFromInput(lastEndInp);
+          if (_nextMonth(lastEnd) !== cm) {
+            _showError(
+              lastEndInp,
+              "Last End must be exactly 1 month before Current Posting Start",
+            );
+            hasError = true;
+          }
+        }
+      }
+    }
+  }
+
+  // promotions strict chain
+  const promoRows = _promoRows();
+  const filledPromoRows = promoRows.filter((row) => {
+    const from = _qs(row, 'input[name="promotion_bps_from[]"]')?.value || "";
+    const to = _qs(row, 'input[name="promotion_bps_to[]"]')?.value || "";
+    const date = _qs(row, 'input[name="promotion_date[]"]')?.value || "";
+    return !(_isEmpty(from) && _isEmpty(to) && _isEmpty(date));
+  });
+
+  filledPromoRows.forEach((row, idx) => {
+    const fromEl = _qs(row, 'input[name="promotion_bps_from[]"]');
+
+    if (!_validatePromoRow(form, row)) hasError = true;
+
+    if (idx > 0) {
+      const prev = filledPromoRows[idx - 1];
+      const prevTo = _normInt(
+        _qs(prev, 'input[name="promotion_bps_to[]"]')?.value,
+      );
+      const thisFrom = _normInt(fromEl?.value);
+      if (prevTo !== null && thisFrom !== null && thisFrom !== prevTo) {
+        _showError(fromEl, "BPS From must equal previous row BPS To");
         hasError = true;
       }
     }
   });
 
-  // Leave rows
+  if (filledPromoRows.length && currentBps !== null) {
+    const last = filledPromoRows[filledPromoRows.length - 1];
+    const lastToEl = _qs(last, 'input[name="promotion_bps_to[]"]');
+    const lastTo = _normInt(lastToEl?.value);
+    if (lastTo === null || lastTo !== currentBps) {
+      _showError(
+        lastToEl || _qs(form, '[name="hrmis_bps"]'),
+        `Complete Promotion History: last "BPS To" must equal current BPS (${currentBps}).`,
+      );
+      hasError = true;
+    }
+  }
+
+  // leave validations + overlap
   _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
     const type = _qs(row, 'select[name="leave_type_id[]"]');
     const start = _qs(row, 'input[name="leave_start[]"]');
@@ -1346,6 +2478,7 @@ function _validateRepeatables(form) {
 
     const yesterday = _yesterdayLocalYmd();
     const today = _todayLocalYmd();
+
     if (
       !_isEmpty(start?.value) &&
       !_isEmpty(yesterday) &&
@@ -1374,7 +2507,6 @@ function _validateRepeatables(form) {
     }
   });
 
-  // Leave rows overlap check (no reused days)
   const leaveRanges = [];
   _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
     const start = _qs(row, 'input[name="leave_start[]"]')?.value || "";
@@ -1401,50 +2533,130 @@ function _validateRepeatables(form) {
   return hasError;
 }
 
-function _initPostingPrevToggle(form) {
-  const joining = _qs(form, '[name="hrmis_joining_date"]'); // YYYY-MM-DD
-  const currentStart = _qs(form, '[name="current_posting_start"]'); // YYYY-MM
-  const wrap = _qs(document, ".js-prev-posting-wrap");
+/* ---------------------------------------------------------
+ * File validation: CNIC scans (front/back) — unchanged
+ * --------------------------------------------------------- */
+function _initCnicScanFiles(form) {
+  const MAX_BYTES = 4 * 1024 * 1024;
+  const allowedExt = new Set(["pdf", "jpg", "jpeg", "png", "svg"]);
+  const allowedMime = new Set([
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/svg+xml",
+  ]);
 
-  if (!joining || !currentStart || !wrap) return;
+  const inputs = [
+    _qs(form, 'input[type="file"][name="hrmis_cnic_front"]'),
+    _qs(form, 'input[type="file"][name="hrmis_cnic_back"]'),
+  ].filter(Boolean);
 
-  function compute() {
-    const joiningVal = (joining.value || "").trim();
-    const startVal = (currentStart.value || "").trim();
-
-    const joiningMonth = joiningVal ? joiningVal.slice(0, 7) : ""; // YYYY-MM
-    const startMonth = startVal;
-
-    const show = !!(joiningMonth && startMonth && joiningMonth !== startMonth);
-
-    wrap.style.display = show ? "" : "none";
-
-    if (!show) {
-      const prevRows = _qs(document, "#prev_post_rows");
-      if (prevRows) prevRows.innerHTML = "";
-    }
+  function _extOf(fileName) {
+    const n = String(fileName || "").trim();
+    const idx = n.lastIndexOf(".");
+    return idx >= 0 ? n.slice(idx + 1).toLowerCase() : "";
+  }
+  function _humanMB(bytes) {
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(2)} MB`;
   }
 
-  joining.addEventListener("change", compute);
-  currentStart.addEventListener("change", compute);
-  compute();
+  function validateFileInput(input) {
+    if (!input) return true;
+
+    input.setCustomValidity("");
+    _clearError(input);
+
+    const file = input.files && input.files[0];
+    if (!file) return true;
+
+    const ext = _extOf(file.name);
+    const mime = String(file.type || "").toLowerCase();
+
+    if (!allowedExt.has(ext)) {
+      const msg = "Invalid file type. Allowed: PDF, JPG, JPEG, PNG, SVG.";
+      _showError(input, msg);
+      input.setCustomValidity(msg);
+      input.value = "";
+      return false;
+    }
+
+    if (mime && !allowedMime.has(mime)) {
+      if (!(ext === "svg" && mime === "")) {
+        const msg = "Invalid file format. Allowed: PDF, JPG, JPEG, PNG, SVG.";
+        _showError(input, msg);
+        input.setCustomValidity(msg);
+        input.value = "";
+        return false;
+      }
+    }
+
+    if (file.size > MAX_BYTES) {
+      const msg = `File too large (${_humanMB(file.size)}). Max allowed is 4.00 MB.`;
+      _showError(input, msg);
+      input.setCustomValidity(msg);
+      input.value = "";
+      return false;
+    }
+
+    _clearError(input);
+    input.setCustomValidity("");
+    return true;
+  }
+
+  inputs.forEach((inp) =>
+    inp.addEventListener("change", () => validateFileInput(inp)),
+  );
+
+  form._hrmisValidateCnicFiles = () => {
+    let ok = true;
+    inputs.forEach((inp) => {
+      if (!validateFileInput(inp)) ok = false;
+    });
+    return ok;
+  };
+}
+
+function _initAllowedToWorkToggle() {
+  const checkbox = document.getElementById("allowed_to_work_checkbox");
+  const box = document.getElementById("allowed_to_work_box");
+
+  if (!checkbox || !box) return;
+
+  function syncAllowedUI() {
+    box.style.display = checkbox.checked ? "" : "none";
+  }
+
+  checkbox.addEventListener("change", syncAllowedUI);
+
+  // Run once on load
+  syncAllowedUI();
 }
 
 /* ---------------------------------------------------------
- * Main init
+ * Main init (guarded)
  * --------------------------------------------------------- */
 function _initHRMISValidations() {
   const form = _qs(document, ".hrmis-form");
   if (!form) return;
 
+  // INIT GUARD: prevent double binding on pageshow/bfcache
+  if (form.dataset.hrmisInited === "1") return;
+  form.dataset.hrmisInited = "1";
+
+  _initSearchableSelects(form);
+
   _initDates(form);
+  _initProfileDatePickers(form); // DOB only (commission/joining use month proxy)
   _initCNIC(form);
   _initContact(form);
   _initCnicScanFiles(form);
+  // Status UI (Suspended hides current posting + shows suspension box)
+  _initFrontendStatusToggle(form);
+  _initAllowedToWorkToggle();
 
   _digitsOnly(_qs(form, '[name="hrmis_bps"]'), { maxLen: 2 });
   _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
-  _initPostingPrevToggle(form);
 
   const leavesTakenEl = _qs(form, '[name="hrmis_leaves_taken"]');
   if (leavesTakenEl) {
@@ -1452,7 +2664,121 @@ function _initHRMISValidations() {
     leavesTakenEl.setAttribute("readonly", "readonly");
   }
 
+  // Commission & Joining month/year UI proxy (keeps backend date intact)
+  const joiningInput = _qs(form, '[name="hrmis_joining_date"]');
+  const commissionInput = _qs(form, '[name="hrmis_commission_date"]');
+  const joiningUI = joiningInput ? _attachMonthProxy(joiningInput) : null;
+  const commissionUI = commissionInput
+    ? _attachMonthProxy(commissionInput)
+    : null;
+
+  // Previous posting visibility logic
+  _initPostingPrevChain(form);
+
+  // Current Posting Start: prevent future months
+  const cpsInput = _qs(form, '[name="current_posting_start"]');
+  if (cpsInput) cpsInput.setAttribute("max", _todayMonth());
+
+  // Require Joining before enabling current posting start (UX)
+  if (joiningInput && cpsInput) {
+    const toggle = () => {
+      const hasJoining = !_isEmpty(joiningInput.value);
+      cpsInput.disabled = !hasJoining;
+
+      if (!hasJoining) {
+        cpsInput.value = "";
+        _clearError(cpsInput);
+        _setHint(
+          cpsInput,
+          "Enter Joining Date first to enable Current Posting Start.",
+        );
+      } else {
+        _setHint(cpsInput, "");
+        _validateCurrentPostingStart(form);
+      }
+    };
+
+    joiningInput.addEventListener("change", () => {
+      toggle();
+      _validateCurrentPostingStart(form);
+      _validateJoiningCommission(form);
+      _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
+      _syncPostingBpsConstraints(form);
+    });
+
+    cpsInput.addEventListener("change", () => {
+      _validateCurrentPostingStart(form);
+      _postingRows().forEach((r) => _syncPostingRowDateConstraints(form, r));
+    });
+
+    toggle();
+  }
+
+  // Joining vs Commission: enforce order (Commission first) on UI proxies
+  if (joiningInput && commissionInput && joiningUI && commissionUI) {
+    const syncMinMax = () => {
+      const jmv = (joiningUI.value || "").trim(); // YYYY-MM
+      const cmv = (commissionUI.value || "").trim(); // YYYY-MM
+
+      commissionUI.setAttribute("max", _todayMonth());
+      commissionInput.setAttribute("max", _todayLocalYmd());
+
+      const hasCommission = !_isEmpty(cmv);
+
+      // Disable ONLY UI joining picker (do NOT disable hidden date input)
+      joiningUI.disabled = !hasCommission;
+
+      if (!hasCommission) {
+        joiningUI.value = "";
+        joiningInput.value = "";
+        _clearError(joiningUI);
+        _clearError(commissionUI);
+        _setHint(
+          joiningUI,
+          "Select Commission Date first to enable Joining Date.",
+        );
+        return;
+      } else {
+        _setHint(joiningUI, "");
+      }
+
+      joiningUI.setAttribute("min", cmv);
+      joiningInput.setAttribute("min", `${cmv}-01`);
+
+      // commission <= joining if joining exists
+      if (!_isEmpty(jmv)) {
+        commissionUI.setAttribute("max", jmv);
+        commissionInput.setAttribute("max", `${jmv}-01`);
+      } else {
+        commissionUI.setAttribute("max", _todayMonth());
+        commissionInput.setAttribute("max", _todayLocalYmd());
+      }
+
+      _validateJoiningCommission(form);
+    };
+
+    commissionUI.addEventListener("change", syncMinMax);
+    joiningUI.addEventListener("change", syncMinMax);
+    syncMinMax();
+  }
+
   _initRepeatables(form);
+  _initPromotionChain(form);
+
+  _promoRows().forEach((row) => _syncPromoRowConstraints(form, row));
+  _syncPostingBpsConstraints(form);
+
+  // Keep constraints in sync when Current BPS changes
+  const bpsEl = _qs(form, '[name="hrmis_bps"]');
+  if (bpsEl) {
+    const refresh = () => {
+      _syncPostingBpsConstraints(form);
+      _postingRows().forEach((r) => _validatePostingBpsAgainstCurrent(form, r));
+      _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
+    };
+    bpsEl.addEventListener("input", refresh);
+    bpsEl.addEventListener("change", refresh);
+  }
 
   const requiredFields = [
     "hrmis_cnic",
@@ -1475,11 +2801,24 @@ function _initHRMISValidations() {
     requiredFields.forEach((name) => {
       const input = _qs(form, `[name="${name}"]`);
       if (input && _isEmpty(input.value)) {
-        _showError(input, "This field is required");
+        if (name === "hrmis_joining_date" && joiningInput?._hrmisMonthProxy) {
+          _showError(joiningInput._hrmisMonthProxy, "This field is required");
+        } else if (
+          name === "hrmis_commission_date" &&
+          commissionInput?._hrmisMonthProxy
+        ) {
+          _showError(
+            commissionInput._hrmisMonthProxy,
+            "This field is required",
+          );
+        } else {
+          _showError(input, "This field is required");
+        }
         hasError = true;
       }
     });
 
+    // DOB 18+
     const dobVal = _qs(form, '[name="birthday"]')?.value;
     if (dobVal) {
       const dob = new Date(dobVal + "T00:00:00");
@@ -1496,11 +2835,12 @@ function _initHRMISValidations() {
       }
     }
 
-    const repeatHasError = _validateRepeatables(form);
-    if (repeatHasError) hasError = true;
-    if (form._hrmisValidateCnicFiles && !form._hrmisValidateCnicFiles()) {
+    if (!_validateCurrentPostingStart(form)) hasError = true;
+    if (!_validateJoiningCommission(form)) hasError = true;
+
+    if (_validateRepeatables(form)) hasError = true;
+    if (form._hrmisValidateCnicFiles && !form._hrmisValidateCnicFiles())
       hasError = true;
-    }
 
     if (hasError) {
       e.preventDefault();
@@ -1509,102 +2849,276 @@ function _initHRMISValidations() {
   });
 }
 
-/* ---------------------------------------------------------
- * File validation: CNIC scans (front/back)
- * - Max size: 4MB
- * - Allowed: pdf, jpg, jpeg, png, svg
- * - Uses existing _showError/_clearError and blocks submit via hasError
- * --------------------------------------------------------- */
-function _initCnicScanFiles(form) {
-  const MAX_BYTES = 4 * 1024 * 1024; // 4MB
-  const allowedExt = new Set(["pdf", "jpg", "jpeg", "png", "svg"]);
-  const allowedMime = new Set([
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "image/svg+xml",
-  ]);
+function _ensureNativeDateInput(input) {
+  if (!input) return;
 
-  const inputs = [
-    _qs(form, 'input[type="file"][name="hrmis_cnic_front"]'),
-    _qs(form, 'input[type="file"][name="hrmis_cnic_back"]'),
-  ].filter(Boolean);
-
-  function _extOf(fileName) {
-    const n = String(fileName || "").trim();
-    const idx = n.lastIndexOf(".");
-    return idx >= 0 ? n.slice(idx + 1).toLowerCase() : "";
+  // If this input was previously converted to text for custom popup,
+  // restore it back to native date input.
+  try {
+    input.type = "date";
+  } catch {
+    // ignore if browser refuses changing type (rare)
   }
 
-  function _humanMB(bytes) {
-    const mb = bytes / (1024 * 1024);
-    return `${mb.toFixed(2)} MB`;
+  input.readOnly = false;
+  input.removeAttribute("inputmode");
+  input.removeAttribute("autocomplete");
+
+  // prevent custom popup behavior if it was attached earlier
+  input._hrmisLeaveDatePickerAttached = false;
+}
+
+function _setComboboxDisabled(selectEl, disabled, msg = "") {
+  if (!selectEl) return;
+
+  const combo = selectEl.closest(".hrmis-combobox");
+  const comboInput = combo ? combo.querySelector("input[type='text']") : null;
+
+  // Sync BOTH: real select + the visible combobox input
+  selectEl.disabled = !!disabled;
+  if (comboInput) comboInput.disabled = !!disabled;
+
+  // Optional: pointer feel
+  if (comboInput) {
+    comboInput.style.cursor = disabled ? "not-allowed" : "";
+    comboInput.style.backgroundColor = disabled ? "#fff5f5" : "";
   }
 
-  function validateFileInput(input) {
-    if (!input) return true;
+  // Error styling on the visible input (so it becomes reddish)
+  if (disabled && msg) {
+    if (comboInput) _showError(comboInput, msg);
+    else _showError(selectEl, msg);
+  } else {
+    if (comboInput) _clearError(comboInput);
+    _clearError(selectEl);
+  }
+}
+function _initFrontendStatusToggle(formArg) {
+  const form = formArg || document.querySelector(".hrmis-form");
+  if (!form) return;
 
-    // Clear previous
-    input.setCustomValidity("");
-    _clearError(input);
+  const statusEl = form.querySelector('[name="hrmis_current_status_frontend"]');
+  if (!statusEl) return;
 
-    // No file selected => OK here (required is handled by your t-att-required and submit requiredFields if you add it)
-    const file = input.files && input.files[0];
-    if (!file) return true;
+  // status boxes (currently_posted, suspended, on_leave, eol_pgship etc.)
+  const boxes = Array.from(document.querySelectorAll(".js-status-box"));
 
-    const ext = _extOf(file.name);
-    const mime = String(file.type || "").toLowerCase();
+  // Allowed-to-work UI
+  const allowedCb = form.querySelector(".js-allowed-to-work-toggle");
+  const allowedBox = document.getElementById("allowed_to_work_box");
 
-    // Extension check (primary)
-    if (!allowedExt.has(ext)) {
-      const msg = "Invalid file type. Allowed: PDF, JPG, JPEG, PNG, SVG.";
-      _showError(input, msg);
-      input.setCustomValidity(msg);
-      // Reset selection so user must pick again
-      input.value = "";
-      return false;
+  // ---------- helpers ----------
+  function remember(el) {
+    if (!el || el.dataset.hrmisRemembered === "1") return;
+    el.dataset.hrmisRemembered = "1";
+    el.dataset.hrmisOrigDisabled = el.disabled ? "1" : "0";
+    el.dataset.hrmisOrigRequired = el.hasAttribute("required") ? "1" : "0";
+  }
+
+  function setBoxEnabled(box, enabled) {
+    if (!box) return;
+    box.querySelectorAll("input, select, textarea").forEach((el) => {
+      remember(el);
+      if (!enabled) {
+        el.disabled = true;
+        el.removeAttribute("required");
+      } else {
+        el.disabled = el.dataset.hrmisOrigDisabled === "1";
+        if (el.dataset.hrmisOrigRequired === "1")
+          el.setAttribute("required", "required");
+      }
+    });
+  }
+
+  function showOnly(statusValue) {
+    // hide + disable all
+    boxes.forEach((b) => {
+      b.style.display = "none";
+      setBoxEnabled(b, false);
+    });
+
+    // show + enable selected
+    const active = boxes.find((b) => (b.dataset.status || "") === statusValue);
+    if (active) {
+      active.style.display = "";
+      setBoxEnabled(active, true);
+    }
+    return active;
+  }
+
+  // ---------- Allowed-to-work toggle ----------
+  function setAllowedBoxVisible(visible) {
+    if (!allowedBox) return;
+
+    allowedBox.style.display = visible ? "" : "none";
+
+    allowedBox.querySelectorAll("input, select, textarea").forEach((el) => {
+      remember(el);
+
+      if (!visible) {
+        // clear values when hiding
+        if (el.tagName === "SELECT") el.value = "";
+        else if (el.type === "checkbox" || el.type === "radio")
+          el.checked = false;
+        else el.value = "";
+
+        el.disabled = true;
+        el.removeAttribute("required");
+      } else {
+        // restore original
+        el.disabled = el.dataset.hrmisOrigDisabled === "1";
+        if (el.dataset.hrmisOrigRequired === "1")
+          el.setAttribute("required", "required");
+      }
+    });
+  }
+
+  function syncAllowedToWork(activeStatus) {
+    const isCurrentlyPosted = activeStatus === "currently_posted";
+
+    // ✅ Merge change: ALWAYS force-hide unless currently_posted
+    if (!isCurrentlyPosted) {
+      if (allowedCb) {
+        allowedCb.checked = false;
+        allowedCb.disabled = true; // optional: prevents toggling when not relevant
+      }
+      setAllowedBoxVisible(false);
+      return;
     }
 
-    // MIME check (secondary — browsers sometimes provide empty type, especially for svg)
-    if (mime && !allowedMime.has(mime)) {
-      // accept svg if browser reports empty type but extension is svg (already allowed above)
-      if (!(ext === "svg" && mime === "")) {
-        const msg = "Invalid file format. Allowed: PDF, JPG, JPEG, PNG, SVG.";
-        _showError(input, msg);
-        input.setCustomValidity(msg);
-        input.value = "";
-        return false;
+    // currently posted: enable checkbox and follow its state
+    if (allowedCb) allowedCb.disabled = false;
+
+    const shouldShow = !!(allowedCb && allowedCb.checked);
+    setAllowedBoxVisible(shouldShow);
+  }
+
+  // ---------- suspension sub-toggle ----------
+  const suspensionReportingTo = form.querySelector(
+    '[name="frontend_reporting_to"]',
+  );
+  const suspensionFacilityWrap = document.getElementById(
+    "frontend_reporting_facility_wrap",
+  );
+  const suspensionFacilitySel = form.querySelector(
+    '[name="frontend_reporting_facility_id"]',
+  );
+
+  function syncSuspensionFacility() {
+    if (!suspensionReportingTo) return;
+
+    const showFacility = (suspensionReportingTo.value || "") === "facility";
+    if (suspensionFacilityWrap)
+      suspensionFacilityWrap.style.display = showFacility ? "" : "none";
+
+    if (suspensionFacilitySel) {
+      remember(suspensionFacilitySel);
+      if (showFacility) {
+        suspensionFacilitySel.disabled =
+          suspensionFacilitySel.dataset.hrmisOrigDisabled === "1";
+        if (suspensionFacilitySel.dataset.hrmisOrigRequired === "1") {
+          suspensionFacilitySel.setAttribute("required", "required");
+        }
+      } else {
+        suspensionFacilitySel.value = "";
+        suspensionFacilitySel.disabled = true;
+        suspensionFacilitySel.removeAttribute("required");
+      }
+    }
+  }
+
+  // ---------- on-leave sub-toggle ----------
+  const onLeaveReportingTo = form.querySelector(
+    '[name="frontend_onleave_reporting_to"]',
+  );
+  const onLeaveFacilityWrap = document.getElementById(
+    "frontend_onleave_facility_wrap",
+  );
+  const onLeaveFacilitySel = form.querySelector(
+    '[name="frontend_onleave_facility"]',
+  );
+
+  function syncOnLeaveFacility() {
+    if (!onLeaveReportingTo) return;
+
+    const showFacility = (onLeaveReportingTo.value || "") === "facility";
+    if (onLeaveFacilityWrap)
+      onLeaveFacilityWrap.style.display = showFacility ? "" : "none";
+
+    if (onLeaveFacilitySel) {
+      remember(onLeaveFacilitySel);
+      if (showFacility) {
+        onLeaveFacilitySel.disabled =
+          onLeaveFacilitySel.dataset.hrmisOrigDisabled === "1";
+        if (onLeaveFacilitySel.dataset.hrmisOrigRequired === "1") {
+          onLeaveFacilitySel.setAttribute("required", "required");
+        }
+      } else {
+        onLeaveFacilitySel.value = "";
+        onLeaveFacilitySel.disabled = true;
+        onLeaveFacilitySel.removeAttribute("required");
+      }
+    }
+  }
+
+  // remember original attrs once
+  boxes.forEach((box) =>
+    box.querySelectorAll("input, select, textarea").forEach(remember),
+  );
+  if (allowedCb) remember(allowedCb);
+  if (allowedBox)
+    allowedBox.querySelectorAll("input, select, textarea").forEach(remember);
+  if (suspensionFacilitySel) remember(suspensionFacilitySel);
+  if (onLeaveFacilitySel) remember(onLeaveFacilitySel);
+
+  // ---------- main sync ----------
+  function sync() {
+    const status = (statusEl.value || "").trim();
+
+    const active = showOnly(status);
+
+    // ✅ allowed-to-work must follow status + checkbox
+    syncAllowedToWork(status);
+
+    // run sub-toggles only when their box is active
+    if (active && active.dataset.status === "suspended") {
+      syncSuspensionFacility();
+    } else {
+      if (suspensionFacilityWrap) suspensionFacilityWrap.style.display = "none";
+      if (suspensionFacilitySel) {
+        suspensionFacilitySel.value = "";
+        suspensionFacilitySel.disabled = true;
+        suspensionFacilitySel.removeAttribute("required");
       }
     }
 
-    // Size check
-    if (file.size > MAX_BYTES) {
-      const msg = `File too large (${_humanMB(file.size)}). Max allowed is 4.00 MB.`;
-      _showError(input, msg);
-      input.setCustomValidity(msg);
-      input.value = "";
-      return false;
+    if (active && active.dataset.status === "on_leave") {
+      syncOnLeaveFacility();
+    } else {
+      if (onLeaveFacilityWrap) onLeaveFacilityWrap.style.display = "none";
+      if (onLeaveFacilitySel) {
+        onLeaveFacilitySel.value = "";
+        onLeaveFacilitySel.disabled = true;
+        onLeaveFacilitySel.removeAttribute("required");
+      }
     }
-
-    // All good
-    _clearError(input);
-    input.setCustomValidity("");
-    return true;
   }
 
-  // Validate on change
-  inputs.forEach((inp) => {
-    inp.addEventListener("change", () => validateFileInput(inp));
-  });
+  // events
+  statusEl.addEventListener("change", sync);
 
-  // Hook into submit by exposing a checker on the form
-  form._hrmisValidateCnicFiles = () => {
-    let ok = true;
-    inputs.forEach((inp) => {
-      if (!validateFileInput(inp)) ok = false;
+  if (allowedCb) {
+    allowedCb.addEventListener("change", () => {
+      syncAllowedToWork((statusEl.value || "").trim());
     });
-    return ok;
-  };
+  }
+
+  if (suspensionReportingTo)
+    suspensionReportingTo.addEventListener("change", syncSuspensionFacility);
+  if (onLeaveReportingTo)
+    onLeaveReportingTo.addEventListener("change", syncOnLeaveFacility);
+
+  sync(); // run once on load
 }
 
 function _initHRMIS() {

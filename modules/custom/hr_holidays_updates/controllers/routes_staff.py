@@ -32,14 +32,17 @@ class HrmisStaffController(http.Controller):
             base_ctx("Search staff", "staff", search_by=search_by, q=q, employees=employees),
         )
 
-    @http.route(["/hrmis/staff/<int:employee_id>"], type="http", auth="user", website=True)
-    def hrmis_staff_profile(self, employee_id: int, **kw):
-        employee = request.env["hr.employee"].sudo().browse(employee_id).exists()
+    @http.route(["/hrmis/staff/profile"], type="http", auth="user", website=True)
+    def hrmis_staff_profile(self, **kw):
+        user = request.env.user
+        
+        # Prefer your helper if it exists/works
+        employee = current_employee()
         if not employee:
             return request.not_found()
 
-        current_emp = current_employee()
-        active_menu = "user_profile" if current_emp and current_emp.id == employee.id else "staff"
+        active_menu = "user_profile"
+
         return request.render(
             "hr_holidays_updates.hrmis_staff_profile",
             base_ctx("User profile", active_menu, employee=employee),

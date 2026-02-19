@@ -28,6 +28,7 @@
         'views/hrmis_profile_request_views.xml',
         # Menus last
         'views/hrmis_menu.xml',
+        "views/hr_employee_download_button.xml",
     ],
 
     'assets': {

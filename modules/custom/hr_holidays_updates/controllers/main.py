@@ -2,7 +2,7 @@
 from __future__ import annotations
 import base64
 
-from datetime import date
+from datetime import date, timedelta
 from datetime import datetime, time
 import logging
 import re
@@ -21,18 +21,34 @@ import os
 
 _MAX_UPLOAD_BYTES = 4 * 1024 * 1024  # 4 MB
 _ALLOWED_UPLOAD_EXTS = {"pdf", "jpg", "jpeg", "png", "svg"}
+_ALLOWED_UPLOAD_MIMES = {
+    "application/pdf",
+    "application/x-pdf",
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/svg+xml",
+}
 
 def _norm_ext(filename: str) -> str:
     fn = (filename or "").strip().lower()
     _, ext = os.path.splitext(fn)
     return (ext or "").lstrip(".").lower()
 
-def _validate_upload_file(file_obj, label: str, *, max_bytes=_MAX_UPLOAD_BYTES, allowed_exts=_ALLOWED_UPLOAD_EXTS):
+def _validate_upload_file(
+    file_obj,
+    label: str,
+    *,
+    max_bytes=_MAX_UPLOAD_BYTES,
+    allowed_exts=_ALLOWED_UPLOAD_EXTS,
+    allowed_mimes=_ALLOWED_UPLOAD_MIMES,
+):
     """
     Validates a Werkzeug FileStorage-like object from request.httprequest.files.get(...)
 
     Rules:
     - Extension must be in allowed_exts
+    - MIME type must be in allowed_mimes (if provided by client)
     - File size must be <= max_bytes
 
     Returns: (ok: bool, error_msg: str, data: bytes)
@@ -45,6 +61,16 @@ def _validate_upload_file(file_obj, label: str, *, max_bytes=_MAX_UPLOAD_BYTES, 
 
     if ext not in allowed_exts:
         return False, f"{label}: Invalid file type. Allowed: PDF, JPG, JPEG, PNG, SVG.", b""
+
+    # MIME type check (clients sometimes send empty / octet-stream; allow those)
+    try:
+        mime = (getattr(file_obj, "mimetype", None) or getattr(file_obj, "content_type", None) or "").lower()
+    except Exception:
+        mime = ""
+    allowed_mimes_norm = {m.lower() for m in (allowed_mimes or set())}
+    if mime and mime not in allowed_mimes_norm:
+        if mime != "application/octet-stream":
+            return False, f"{label}: Invalid file format. Allowed: PDF, JPG, JPEG, PNG, SVG.", b""
 
     # Read once (we need bytes anyway for base64 storage).
     try:
@@ -461,7 +487,7 @@ class HrmisLeaveFrontendController(http.Controller):
                 _base_ctx("My Time Off", "services"),
             )
         # Default to history tab (matches "My Time Off")
-        return request.redirect(f"/hrmis/staff/{emp.id}")
+        return request.redirect(f"/hrmis/profile/request")
 
     @http.route(
         ["/odoo/my-time-off/new"], type="http", auth="user", website=True
@@ -569,37 +595,49 @@ class HrmisLeaveFrontendController(http.Controller):
         )
 
     @http.route(
-        ["/hrmis/staff/<int:employee_id>"], type="http", auth="user", website=True
+        ["/hrmis/staff/profile"],
+        type="http",
+        auth="user",
+        website=True,
     )
-    def hrmis_staff_profile(self, employee_id: int, **kw):
-        employee = request.env["hr.employee"].sudo().browse(employee_id).exists()
+    def hrmis_staff_profile(self, **kw):
+        user = request.env.user
+
+        # Get employee linked to logged-in user
+        employee = request.env["hr.employee"].sudo().search(
+            [("user_id", "=", user.id)], limit=1
+        )
+
         if not employee:
             return request.not_found()
 
-        current_emp = _current_employee()
-        active_menu = (
-            "user_profile"
-            if current_emp and current_emp.id == employee.id
-            else "staff"
-            
-        )
+        active_menu = "user_profile"
+
         tab = (kw.get("tab") or "personal").strip().lower()
         if tab not in ("personal", "posting", "disciplinary", "qualifications"):
             tab = "personal"
 
-        if request.env.user.has_group("custom_login.group_section_officer"):
+        # Section Officer restrictions
+        if user.has_group("custom_login.group_section_officer"):
             if tab in ("posting", "qualifications"):
+                _logger.info(
+                    "[HRMIS_PROFILE] Section Officer restricted tab '%s' -> forced to personal",
+                    tab,
+                )
                 tab = "personal"
+
         return request.render(
             "hr_holidays_updates.hrmis_staff_profile",
-            # _base_ctx("User profile", active_menu, employee=employee),
             _base_ctx(
                 "User profile",
                 active_menu,
                 employee=employee,
                 tab=tab,
-                # Used by the template to decide whether to show the service history table.
-                service_history=getattr(employee, "service_history_ids", request.env["hr.employee"].browse([])),
+                service_history=getattr(
+                    employee,
+                    "service_history_ids",
+                    request.env["hr.employee"].browse([]),
+                ),
             ),
         )
 
@@ -1372,21 +1410,55 @@ class HrmisProfileRequestController(http.Controller):
                 employee.sudo().write({"parent_id": old_parent_id})
             return False, str(e)
 
-    def _render_profile_form_error(self, employee, req, env, msg):
-        return request.render(
-            "hr_holidays_updates.hrmis_profile_request_form",
-            _base_ctx(
-                "Profile Update Request",
-                "user_profile",
-                employee=employee,
-                current_employee=employee,
-                req=req,
-                districts=env["hrmis.district.master"].sudo().search([]),
-                facilities=env["hrmis.facility.type"].sudo().search([]),
-                designations_unique=self._get_unique_designations(env),
-                error=msg,
-            ),
+    def _render_profile_form(self, env, employee, req, *, error=None, success=None, info=None, prefer_draft=False):
+        max_dob_str, max_today_str, max_past_str = self._build_max_date_strings(env)
+        pre_fill = self._build_prefill_dict(employee, req)
+        designations_unique = self._get_unique_designations(env)
+
+        ctx = _base_ctx(
+            "Profile Update Request",
+            "user_profile",
+            employee=employee,
+            current_employee=employee,
+            req=req,
+            pre_fill=pre_fill,
+            districts=env["hrmis.district.master"].sudo().search([]),
+            facilities=env["hrmis.facility.type"].sudo().search([]),
+            designations_unique=designations_unique,
+            max_dob_str=max_dob_str,
+            max_today_str=max_today_str,
+            max_past_str=max_past_str,
+            error=error,
+            success=success,
+            info=info,
         )
+
+        # ✅ This is the key: fill prefill_* rows
+        ctx = self._with_prefill_ctx(env, employee, ctx, prefer_draft=prefer_draft)
+
+        # ✅ Also include promo rows in JSON (and in ctx directly)
+        ctx["hrmis_profile_prefill_json"] = json.dumps({
+            "qual": ctx.get("prefill_qual_rows") or [],
+            "post": ctx.get("prefill_post_rows") or [],
+            "promo": ctx.get("prefill_promo_rows") or [],
+            "leave": ctx.get("prefill_leave_rows") or [],
+        })
+
+        _logger.warning(
+            "[PROFILE][RENDER][0] emp_id=%s req_id=%s state=%s prefer_draft=%s counts={qual:%s post:%s promo:%s leave:%s}",
+            employee.id, req.id, req.state, prefer_draft,
+            len(ctx.get("prefill_qual_rows") or []),
+            len(ctx.get("prefill_post_rows") or []),
+            len(ctx.get("prefill_promo_rows") or []),
+            len(ctx.get("prefill_leave_rows") or []),
+        )
+
+        return request.render("hr_holidays_updates.hrmis_profile_request_form", ctx)
+
+
+
+    def _render_profile_form_error(self, employee, req, env, msg, *, prefer_draft=True):
+        return self._render_profile_form(env, employee, req, error=msg, prefer_draft=prefer_draft)
 
     def _to_int(self, v):
         try:
@@ -1507,6 +1579,40 @@ class HrmisProfileRequestController(http.Controller):
                 unique.append(d)
         return unique
 
+    def _build_max_date_strings(self, env):
+        today = date.today()
+        max_dob_str = (today - relativedelta(years=18)).strftime("%Y-%m-%d")
+        max_today_str = today.strftime("%Y-%m-%d")
+        max_past_str = (today - timedelta(days=1)).strftime("%Y-%m-%d")
+        return max_dob_str, max_today_str, max_past_str
+
+
+    def _build_prefill_dict(self, employee, req):
+        # Keep behavior same: prefer req values, fallback to employee
+        return {
+            "hrmis_employee_id": req.hrmis_employee_id or employee.hrmis_employee_id or "",
+            "hrmis_cnic": req.hrmis_cnic or employee.hrmis_cnic or "",
+            "hrmis_father_name": req.hrmis_father_name or employee.hrmis_father_name or "",
+            "gender": req.gender or employee.gender or "",
+            "birthday": req.birthday or employee.birthday or "",
+            "hrmis_commission_date": req.hrmis_commission_date or employee.hrmis_commission_date or "",
+            "hrmis_joining_date": req.hrmis_joining_date or employee.hrmis_joining_date or "",
+            "hrmis_bps": req.hrmis_bps or employee.hrmis_bps or "",
+            "hrmis_cadre": (req.hrmis_cadre.id if req.hrmis_cadre else (employee.hrmis_cadre.id if employee.hrmis_cadre else False)),
+            "hrmis_designation": (req.hrmis_designation.id if req.hrmis_designation else (employee.hrmis_designation.id if employee.hrmis_designation else False)),
+            "district_id": (req.district_id.id if req.district_id else (employee.district_id.id if employee.district_id else False)),
+            "facility_id": (req.facility_id.id if req.facility_id else (employee.facility_id.id if employee.facility_id else False)),
+            "hrmis_contact_info": req.hrmis_contact_info or employee.hrmis_contact_info or "",
+            "hrmis_merit_number": req.hrmis_merit_number or employee.hrmis_merit_number or "",
+            "hrmis_leaves_taken": req.hrmis_leaves_taken if req.hrmis_leaves_taken is not False else (employee.hrmis_leaves_taken or 0),
+
+            "hrmis_domicile": req.hrmis_domicile or employee.hrmis_domicile or "",
+            "qualification": req.qualification or employee.qualification or "",
+            "qualification_date": req.qualification_date or employee.qualification_date or "",
+            "year_qualification": req.year_qualification or employee.year_qualification or "",
+            "date_promotion": req.date_promotion or employee.date_promotion or "",
+        }
+   
 
     @http.route("/hrmis/profile/request", type="http", auth="user", website=True, methods=["GET"], csrf=False)
     def hrmis_profile_request_form(self, **kw):
@@ -1514,23 +1620,9 @@ class HrmisProfileRequestController(http.Controller):
         employee = request.env["hr.employee"].sudo().search([("user_id", "=", user.id)], limit=1)
         if not employee:
             return request.render("hr_holidays_updates.hrmis_error", {"error": "No employee linked to your user."})
-        today = date.today()
-        max_dob_str = (today - relativedelta(years=18)).strftime("%Y-%m-%d")
-        max_today_str = today.strftime("%Y-%m-%d")   # for commission/joining max
-        # Leave History rows must not allow today/future dates
-        max_past_str = (today - relativedelta(days=1)).strftime("%Y-%m-%d")
-
+        
         ProfileRequest = request.env["hrmis.employee.profile.request"].sudo()
-        Post = request.env["hrmis.posting.history"].sudo()
-        Qual = request.env["hrmis.qualification.history"].sudo()
-        Promo = request.env["hrmis.promotion.history"].sudo()
-        Leave = request.env["hrmis.leave.history"].sudo()
-
-        posting_lines = Post.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
-        qualification_lines = Qual.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
-        promotion_lines = Promo.search([("employee_id", "=", employee.id)], order="promotion_date asc, id asc")
-        leave_lines = Leave.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
-
+    
         req = ProfileRequest.search(
             [("employee_id", "=", employee.id), ("state", "in", ["draft", "submitted"])], limit=1
         )
@@ -1552,68 +1644,45 @@ class HrmisProfileRequestController(http.Controller):
                 "qualification_date": employee.qualification_date,
                 "year_qualification": employee.year_qualification,
                 "date_promotion": employee.date_promotion,
-
+                "hrmis_commission_date": employee.hrmis_commission_date,
                 
             })
 
-        # Pre-fill dictionary (for form rendering)
-        pre_fill = {
-            "hrmis_employee_id": employee.hrmis_employee_id or "",
-            "hrmis_cnic": employee.hrmis_cnic or "",
-            "hrmis_father_name": employee.hrmis_father_name or "",
-            "gender": employee.gender or "",
-            "hrmis_joining_date": employee.hrmis_joining_date or "",
-            "hrmis_bps": employee.hrmis_bps or "",
-            "hrmis_cadre": req.hrmis_cadre.id if req.hrmis_cadre else False,
-            "hrmis_designation": req.hrmis_designation.id if req.hrmis_designation else False,
-            "district_id": req.district_id.id if req.district_id else False,
-            "facility_id": req.facility_id.id if req.facility_id else False,
-            "hrmis_contact_info": employee.hrmis_contact_info or "",
-            "birthday": employee.birthday or "",
-            "commission_date": employee.hrmis_commission_date or "",
-            "hrmis_leaves_taken": employee.hrmis_leaves_taken or "",
-            "hrmis_merit_number": employee.hrmis_merit_number or "",
-            "hrmis_cnic_front": req.hrmis_cnic_front_filename if req.hrmis_cnic_front else "",
-            "hrmis_cnic_back": req.hrmis_cnic_back_filename if req.hrmis_cnic_back else "",
-            # NEW
-            "hrmis_domicile": employee.hrmis_domicile or "",
-            "qualification": employee.qualification or "",
-            "qualification_date": employee.qualification_date or "",
-            "year_qualification": employee.year_qualification or "",
-            "date_promotion": employee.date_promotion or "",
-
-        }
-
         info = None
         if getattr(req, "state", "") == "submitted":
-            info = (
-                "You already have a submitted profile update request. "
-                "You cannot submit another until it is processed."
-            )
-
-        return request.render(
-            "hr_holidays_updates.hrmis_profile_request_form",
-            _base_ctx(
-                "Profile Update Request",
-                "user_profile",
-                employee=employee,
-                current_employee=employee,
-                req=req,
-                pre_fill=pre_fill,
-                districts=request.env["hrmis.district.master"].sudo().search([]),
-                facilities=request.env["hrmis.facility.type"].sudo().search([]),
-                posting_lines=posting_lines,
-                qualification_lines=qualification_lines,
-                promotion_lines=promotion_lines,
-                leave_lines=leave_lines,
-
-                designations_unique=self._get_unique_designations(request.env),
-                info=info,
-                max_dob_str=max_dob_str,
-                max_today_str=max_today_str,
-                max_past_str=max_past_str,
-            ),
+            info = "You already have a submitted profile update request. You cannot submit another until it is processed. You cannot submit another until it is processed."
+        _logger.warning(
+            "[PROFILE][GET] EMPLOYEE DATA id=%s name=%s "
+            "commission_date=%s joining_date=%s birthday=%s "
+            "cadre=%s designation=%s district=%s facility=%s "
+            "merit=%s domicile=%s contact=%s "
+            "qualification=%s qualification_date=%s year_qualification=%s promotion_date=%s",
+            req.id,
+            req.id,
+            req.hrmis_commission_date,
+            req.hrmis_joining_date,
+            req.birthday,
+            req.hrmis_cadre.id if req.hrmis_cadre else None,
+            req.hrmis_designation.id if req.hrmis_designation else None,
+            req.district_id.id if req.district_id else None,
+            req.facility_id.id if req.facility_id else None,
+            req.hrmis_merit_number,
+            req.hrmis_domicile,
+            req.hrmis_contact_info,
+            req.qualification,
+            req.qualification_date,
+            req.year_qualification,
+            req.date_promotion,
         )
+
+        return self._render_profile_form(
+            request.env,
+            employee,
+            req,
+            info=info,
+            prefer_draft=False,  # GET always loads DB histories
+        )
+        
 
     def _get_default_section_officer_user(self):
         """Always route to this SO user."""
@@ -1653,83 +1722,611 @@ class HrmisProfileRequestController(http.Controller):
 
 
 
-    # It submits the employees profile update request
-    @http.route(
-        "/hrmis/profile/request/submit",
-        type="http",
-        auth="user",
-        website=True,
-        methods=["POST"],
-        csrf=True,
-    )
-    def hrmis_profile_request_submit(self, **post):
-        env = request.env
-        user = env.user
+    # # It submits the employees profile update request
+    # @http.route(
+    #     "/hrmis/profile/request/submit",
+    #     type="http",
+    #     auth="user",
+    #     website=True,
+    #     methods=["POST"],
+    #     csrf=True,
+    # )
+    # def hrmis_profile_request_submit(self, **post):
+    #     env = request.env
+    #     user = env.user
 
-        message_override = None
+    #     message_override = None
         
+    #     employee = env["hr.employee"].sudo().search([("user_id", "=", user.id)], limit=1)
+    #     if not employee:
+    #         return request.render("hr_holidays_updates.hrmis_error", {"error": "No employee linked to your user."})
+
+    #     req = env["hrmis.employee.profile.request"].sudo().browse(int(post.get("request_id") or 0))
+    #     if not req.exists():
+    #         return request.render(
+    #             "hr_holidays_updates.hrmis_profile_request_form",
+    #             _base_ctx(
+    #                 "Profile Update Request",
+    #                 "user_profile",
+    #                 employee=employee,
+    #                 current_employee=employee,
+    #                 req=req,
+    #                 districts=env["hrmis.district.master"].sudo().search([]),
+    #                 facilities=env["hrmis.facility.type"].sudo().search([]),
+    #                 error="Invalid request.",
+    #             ),
+    #         )
+
+    #     # -----------------------
+    #     # Files
+    #     # -----------------------
+    #     cnic_front = request.httprequest.files.get("hrmis_cnic_front")
+    #     cnic_back = request.httprequest.files.get("hrmis_cnic_back")
+
+    #     vals = {}
+
+    #     if cnic_front:
+    #         ok, err, data = _validate_upload_file(cnic_front, "CNIC Front Scan")
+    #         if not ok:
+    #             return self._render_profile_form_error(employee, req, env, err)
+    #         vals["hrmis_cnic_front"] = base64.b64encode(data)
+    #         vals["hrmis_cnic_front_filename"] = cnic_front.filename
+
+    #     if cnic_back:
+    #         ok, err, data = _validate_upload_file(cnic_back, "CNIC Back Scan")
+    #         if not ok:
+    #             return self._render_profile_form_error(employee, req, env, err)
+    #         vals["hrmis_cnic_back"] = base64.b64encode(data)
+    #         vals["hrmis_cnic_back_filename"] = cnic_back.filename
+
+    #     # -----------------------
+    #     # Required fields validation
+    #     # -----------------------
+    #     required_fields = {
+    #         "hrmis_cnic": "CNIC",
+    #         "hrmis_father_name": "Father's Name",
+    #         "gender": "Gender",
+    #         "hrmis_joining_date": "Joining Date",
+           
+    #         "hrmis_cadre": "Cadre",
+            
+    #         "birthday": "Date Of Birth",
+    #         "hrmis_cnic_front": "CNIC Front Scan",
+    #         "hrmis_cnic_back": "CNIC Back Scan",
+    #         "hrmis_merit_number": "Merit Number",
+    #         "hrmis_contact_info": "Contact Number",
+
+    #         # NEW
+    #         "hrmis_domicile": "Domicile",
+    #     }
+
+
+    #     missing = []
+    #     for field, label in required_fields.items():
+    #         if field in ("hrmis_cnic_front", "hrmis_cnic_back"):
+    #             already = bool(getattr(req, field, False))  # ✅ already uploaded on req
+    #             file_obj = request.httprequest.files.get(field)
+    #             if not already and not file_obj:
+    #                 missing.append(label)
+    #         else:
+    #             if not (post.get(field) or "").strip():
+    #                 missing.append(label)
+
+
+    #     if missing:
+    #         return request.render(
+    #             "hr_holidays_updates.hrmis_profile_request_form",
+    #             _base_ctx(
+    #                 "Profile Update Request",
+    #                 "user_profile",
+    #                 employee=employee,
+    #                 current_employee=employee,
+    #                 req=req,
+    #                 districts=env["hrmis.district.master"].sudo().search([]),
+    #                 facilities=env["hrmis.facility.type"].sudo().search([]),
+    #                 error="Please complete the following fields before submitting:\n• " + "\n• ".join(missing),
+    #             ),
+    #         )
+
+    #     # -----------------------
+    #     # Handle Cadre safely
+    #     # -----------------------
+    #     cadre_val = post.get("hrmis_cadre")
+    #     designation_val = post.get("hrmis_designation")
+    #     designation_id = int(designation_val) if designation_val else False
+        
+    #     try:
+    #         cadre_id = int(cadre_val) if cadre_val else False
+    #     except Exception:
+    #         cadre_id = False
+
+    #     if not isinstance(cadre_id, (int, type(None))):
+    #         cadre_id = False
+
+    #     # -----------------------
+    #     # Parse BPS safely
+    #     # -----------------------
+    #     try:
+    #         bps = int(post.get("hrmis_bps") or 0)
+    #     except Exception:
+    #         bps = 0
+
+    #     # -----------------------
+    #     # Resolve manager + approver via helper
+    #     # -----------------------
+    #     manager_user_id = int(post.get("manager_user_id") or 0)  # optional
+    #     facility_id = int(post.get("facility_id") or 0)
+    #     district_id = int(post.get("district_id") or 0)
+
+    #     designation = env["hrmis.designation"].sudo().browse(designation_id) if designation_id else env["hrmis.designation"]
+    #     facility = env["hrmis.facility.type"].sudo().browse(facility_id) if facility_id else env["hrmis.facility.type"]
+
+    #     final_manager_employee, approver_emp, message_override, hard_error = self._resolve_manager_and_approver(
+    #         employee=employee,
+    #         designation=designation,
+    #         bps=bps,
+    #         manager_user_id=int(post.get("manager_user_id") or 0),
+    #     )
+
+    #     if hard_error:
+    #         return request.render(
+    #             "hr_holidays_updates.hrmis_profile_request_form",
+    #             _base_ctx(
+    #                 "Profile Update Request",
+    #                 "user_profile",
+    #                 employee=employee,
+    #                 current_employee=employee,
+    #                 req=req,
+    #                 districts=env["hrmis.district.master"].sudo().search([]),
+    #                 facilities=env["hrmis.facility.type"].sudo().search([]),
+    #                 error=message_override,   # contains the reason
+    #             ),
+    #         )
+    #     # If helper returns a hard error message, stop here
+    #     # (recommended: in helper, return message_override only for user-facing hard errors)
+    #     if message_override and (
+    #         message_override.lower().startswith("so-v user") or
+    #         message_override.lower().startswith("manager employee not found")
+    #     ):
+    #         return request.render("hr_holidays_updates.hrmis_error", {"error": message_override})
+
+    #     # -----------------------
+    #     # Build request values
+    #     # -----------------------
+    #     # Keep the UI-calculated Total Leaves Taken as a fallback (server will re-calc later).
+    #     try:
+    #         posted_taken = float((post.get("hrmis_leaves_taken") or "").strip() or 0.0)
+    #     except Exception:
+    #         posted_taken = 0.0
+
+    #     vals.update({
+    #         "hrmis_employee_id": post.get("hrmis_employee_id"),
+    #         "hrmis_cnic": post.get("hrmis_cnic"),
+    #         "hrmis_father_name": post.get("hrmis_father_name"),
+    #         "gender": post.get("gender"),
+    #         "birthday": post.get("birthday"),
+    #         "hrmis_commission_date": post.get("hrmis_commission_date"),
+    #         "hrmis_joining_date": post.get("hrmis_joining_date"),
+    #         "hrmis_bps": bps,
+    #         "hrmis_cadre": cadre_id,
+    #         "hrmis_designation": designation_id,
+    #         "district_id": district_id,
+    #         "facility_id": facility_id,
+    #         "hrmis_contact_info": post.get("hrmis_contact_info"),
+    #         "hrmis_merit_number": post.get("hrmis_merit_number"),
+    #         "hrmis_leaves_taken": posted_taken,
+    #         "approver_id": approver_emp.id if approver_emp else False,
+    #         "state": "submitted",
+
+    #         # NEW
+    #         "hrmis_domicile": post.get("hrmis_domicile"),
+    #         "qualification": post.get("qualification"),
+    #         "qualification_date": post.get("qualification_date"),
+    #         "year_qualification": post.get("year_qualification"),
+    #         "date_promotion": post.get("date_promotion"),
+    #     })
+    #     # -----------------------
+    #     # Parse Repeatable Sections (getlist arrays)
+    #     # -----------------------
+    #     form = request.httprequest.form
+
+    #     # 1) Qualification History
+    #     q_degree = form.getlist("qualification_degree[]")
+    #     q_spec = form.getlist("qualification_specialization[]")
+    #     q_start = form.getlist("qualification_start[]")
+    #     q_end = form.getlist("qualification_end[]")
+
+    #     qual_lines = []
+    #     for i in range(max(len(q_degree), len(q_start), len(q_spec), len(q_end))):
+    #         deg = (q_degree[i] if i < len(q_degree) else "").strip()
+    #         spec = (q_spec[i] if i < len(q_spec) else "").strip()
+    #         s = self._month_to_date(q_start[i] if i < len(q_start) else "")
+    #         e = self._month_to_date(q_end[i] if i < len(q_end) else "")
+
+    #         # skip completely empty rows
+    #         if not (deg or spec or s or e):
+    #             continue
+
+    #         # required fields
+    #         if not deg or not s:
+    #             return self._render_profile_form_error(employee, req, env, "Qualification History: Degree and Start Month are required.")
+
+    #         qual_lines.append({
+    #             "employee_id": employee.id,
+    #             "degree": deg,
+    #             "specialization": spec,
+    #             "start_date": s,
+    #             "end_date": e or False,
+    #         })
+
+    #     # 2) Posting History
+    #     p_district = form.getlist("posting_district_id[]")
+    #     p_facility = form.getlist("posting_facility_id[]")
+    #     p_designation = form.getlist("posting_designation_id[]")
+    #     p_bps = form.getlist("posting_bps[]")
+    #     p_start = form.getlist("posting_start[]")
+    #     p_end = form.getlist("posting_end[]")
+
+    #     post_lines = []
+    #     for i in range(max(len(p_district), len(p_designation), len(p_bps), len(p_start), len(p_end), len(p_facility))):
+    #         district_id = self._to_int(p_district[i] if i < len(p_district) else "")
+    #         facility_id = self._to_int(p_facility[i] if i < len(p_facility) else "")
+    #         designation_id = self._to_int(p_designation[i] if i < len(p_designation) else "")
+    #         bps_val = self._to_int(p_bps[i] if i < len(p_bps) else "")
+    #         s = self._month_to_date(p_start[i] if i < len(p_start) else "")
+    #         e = self._month_to_date(p_end[i] if i < len(p_end) else "")
+
+    #         # skip completely empty row
+    #         if not (district_id or facility_id or designation_id or bps_val or s or e):
+    #             continue
+
+    #         if not district_id or not designation_id or not bps_val or not s:
+    #             return self._render_profile_form_error(employee, req, env, "Posting History: District, Designation, BPS and Start Month are required.")
+
+    #         post_lines.append({
+    #             "employee_id": employee.id,
+    #             "district_id": district_id,
+    #             "facility_id": facility_id or False,
+    #             "designation_id": designation_id,
+    #             "bps": bps_val,
+    #             "start_date": s,
+    #             "end_date": e or False,
+    #         })
+
+    #     # 3) Promotion History
+    #     pr_from = form.getlist("promotion_bps_from[]")
+    #     pr_to = form.getlist("promotion_bps_to[]")
+    #     pr_date = form.getlist("promotion_date[]")
+
+    #     promo_lines = []
+    #     for i in range(max(len(pr_from), len(pr_to), len(pr_date))):
+    #         b_from = self._to_int(pr_from[i] if i < len(pr_from) else "")
+    #         b_to = self._to_int(pr_to[i] if i < len(pr_to) else "")
+    #         pdate = self._month_to_date(pr_date[i] if i < len(pr_date) else "")
+
+    #         if not (b_from or b_to or pdate):
+    #             continue
+
+    #         if not b_from or not b_to or not pdate:
+    #             return self._render_profile_form_error(employee, req, env, "Promotion History: BPS From, BPS To and Promotion Month are required.")
+
+    #         if b_to <= b_from:
+    #             return self._render_profile_form_error(employee, req, env, "Promotion History: BPS To must be greater than BPS From.")
+
+    #         promo_lines.append({
+    #             "employee_id": employee.id,
+    #             "bps_from": b_from,
+    #             "bps_to": b_to,
+    #             "promotion_date": pdate,
+    #         })
+
+    #     # 4) Leave History
+    #     l_type = form.getlist("leave_type_id[]")
+    #     l_start = form.getlist("leave_start[]")
+    #     l_end = form.getlist("leave_end[]")
+
+    #     # Joining date boundary: disallow leaves before joining month.
+    #     join_raw = (post.get("hrmis_joining_date") or "").strip() or getattr(employee, "hrmis_joining_date", "") or ""
+    #     join_dt = fields.Date.to_date(join_raw) if join_raw else None
+    #     join_month_start = None
+    #     try:
+    #         if join_dt:
+    #             join_month_start = join_dt.replace(day=1)
+    #     except Exception:
+    #         join_month_start = None
+
+    #     leave_lines = []
+    #     leave_calc_items = []  # (leave_type_id, start_date, end_date)
+    #     # Hard-block these leave types even if posted manually
+    #     blocked_leave_type_keys = {"paidtimeoff", "sicktimeoff", "unpaid"}
+    #     # Prefer submitted gender (profile request may be editing it), fallback to employee record.
+    #     emp_gender = (
+    #         (post.get("gender") or "")
+    #         or (getattr(employee, "gender", False) or getattr(employee, "hrmis_gender", False) or "")
+    #     ).strip().lower()
+    #     for i in range(max(len(l_type), len(l_start), len(l_end))):
+    #         leave_type_id = self._to_int(l_type[i] if i < len(l_type) else "")
+    #         s = (l_start[i] if i < len(l_start) else "").strip()
+    #         e = (l_end[i] if i < len(l_end) else "").strip()
+
+    #         if not (leave_type_id or s or e):
+    #             continue
+
+    #         if not leave_type_id or not s or not e:
+    #             return self._render_profile_form_error(employee, req, env, "Leave History: Leave Type, Start Date and End Date are required.")
+
+    #         # Validate leave type (blocked)
+    #         try:
+    #             lt = env["hr.leave.type"].sudo().browse(int(leave_type_id)).exists()
+    #             if lt and _norm_leave_type_name(getattr(lt, "name", "")) in blocked_leave_type_keys:
+    #                 return self._render_profile_form_error(employee, req, env, "Leave History: This leave type is not allowed.")
+    #             # Hide maternity for male employees (extra safety)
+    #             if lt and emp_gender == "male":
+    #                 key = _norm_leave_type_name(getattr(lt, "name", ""))
+    #                 if "maternity" in key:
+    #                     return self._render_profile_form_error(
+    #                         employee,
+    #                         req,
+    #                         env,
+    #                         "Leave History: Maternity leave is not allowed for male employees.",
+    #                     )
+    #         except Exception:
+    #             # If we cannot resolve the leave type reliably, keep going; other validations still apply.
+    #             pass
+
+    #         # Date validations
+    #         try:
+    #             sd = fields.Date.to_date(s)
+    #             ed = fields.Date.to_date(e)
+    #             if not sd or not ed:
+    #                 return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
+    #             if ed < sd:
+    #                 return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be earlier than Start Date.")
+    #             if join_month_start and (sd < join_month_start or ed < join_month_start):
+    #                 return self._render_profile_form_error(
+    #                     employee,
+    #                     req,
+    #                     env,
+    #                     "Leave History: Leave dates cannot be before your joining month.",
+    #                 )
+    #             today_ctx = fields.Date.context_today(env.user)
+    #             # Start date must be before today; End date can be up to today.
+    #             if sd >= today_ctx:
+    #                 return self._render_profile_form_error(employee, req, env, "Leave History: Start Date must be before today.")
+    #             if ed > today_ctx:
+    #                 return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be after today.")
+    #             # End date must be at least 7 days after start date.
+    #             if (ed - sd).days < 7:
+    #                 return self._render_profile_form_error(employee, req, env, "Leave History: End Date must be at least 7 days after Start Date.")
+    #         except Exception:
+    #             return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
+
+    #         leave_lines.append({
+    #             "employee_id": employee.id,
+    #             "leave_type_id": leave_type_id,
+    #             "start_date": sd,
+    #             "end_date": ed,
+    #         })
+    #         leave_calc_items.append((leave_type_id, sd, ed))
+
+    #     # Block overlaps across leave history rows (no reused days).
+    #     try:
+    #         ranges = [(sd, ed) for (_, sd, ed) in leave_calc_items]
+    #         ranges.sort(key=lambda r: (r[0], r[1]))
+    #         prev_s = None
+    #         prev_e = None
+    #         for s0, e0 in ranges:
+    #             if prev_s is None:
+    #                 prev_s, prev_e = s0, e0
+    #                 continue
+    #             # Inclusive overlap: if the next start is <= previous end, they share at least one day.
+    #             if prev_e and s0 and s0 <= prev_e:
+    #                 return self._render_profile_form_error(
+    #                     employee,
+    #                     req,
+    #                     env,
+    #                     "Leave History: Overlapping leave dates are not allowed (you cannot reuse the same day in multiple rows).",
+    #                 )
+    #             prev_s, prev_e = s0, e0
+    #     except Exception:
+    #         pass
+
+    #     # Auto-calculate Total Leaves Taken (UI field is read-only).
+    #     # Rules (match HRMIS balance logic):
+    #     # - Half-pay leaves count as ceil(effective_days / 2.0)
+    #     # - Earned/full-pay/LPR leaves count as effective_days
+    #     # - Without pay / EOL / unpaid / medical / maternity count as 0
+    #     try:
+    #         import math
+
+    #         total_taken = 0.0
+    #         LeaveModel = env["hr.leave"].sudo()
+    #         LeaveType = env["hr.leave.type"].sudo()
+    #         for lt_id, sd, ed in leave_calc_items:
+    #             lt = LeaveType.browse(int(lt_id)).exists()
+    #             name = (lt.name or "").strip().lower() if lt else ""
+
+    #             # 0-count types
+    #             if any(k in name for k in ("medical", "maternity", "without pay", "eol", "unpaid")):
+    #                 continue
+
+    #             factor = 0.0
+    #             if "half pay" in name:
+    #                 factor = 0.5
+    #             elif any(k in name for k in ("full pay", "earned", "lpr")):
+    #                 factor = 1.0
+    #             else:
+    #                 continue
+
+    #             # IMPORTANT: Keep server calculation aligned with the frontend.
+    #             # For history, we count inclusive calendar days (not "effective" working days),
+    #             # otherwise half-pay odd day ranges can mismatch (e.g., 11 days -> UI 6 but DB 5).
+    #             eff = float((ed - sd).days + 1)
+    #             if factor == 0.5:
+    #                 total_taken += float(math.ceil(eff / 2.0))
+    #             else:
+    #                 total_taken += eff
+
+    #         # Keep a compact numeric value (UI uses step 0.5).
+    #         total_taken = round(total_taken * 2.0) / 2.0
+
+    #         # If server calculation yields 0 but UI already calculated a value,
+    #         # keep the posted value (avoids mismatch due to leave type naming/effective-day helpers).
+    #         try:
+    #             if float(total_taken or 0.0) == 0.0 and float(posted_taken or 0.0) > 0.0:
+    #                 total_taken = float(posted_taken)
+    #         except Exception:
+    #             pass
+
+    #         vals["hrmis_leaves_taken"] = total_taken
+    #     except Exception:
+    #         # Never block the request due to a calculation failure; keep existing value if any.
+    #         pass
+
+    #     # -----------------------
+    #     # Write histories (replace existing histories)
+    #     # If you want append-only, remove the unlink() blocks.
+    #     # -----------------------
+    #     Qual = env["hrmis.qualification.history"].sudo()
+    #     Post = env["hrmis.posting.history"].sudo()
+    #     Promo = env["hrmis.promotion.history"].sudo()
+    #     Leave = env["hrmis.leave.history"].sudo()
+
+    #     Qual.search([("employee_id", "=", employee.id)]).unlink()
+    #     Post.search([("employee_id", "=", employee.id)]).unlink()
+    #     Promo.search([("employee_id", "=", employee.id)]).unlink()
+    #     Leave.search([("employee_id", "=", employee.id)]).unlink()
+
+    #     if qual_lines:
+    #         Qual.create(qual_lines)
+    #     if post_lines:
+    #         Post.create(post_lines)
+    #     if promo_lines:
+    #         Promo.create(promo_lines)
+    #     if leave_lines:
+    #         Leave.create(leave_lines)
+
+    #     # ✅ store merit number into employee AFTER req is updated
+    #     employee.sudo().write({
+    #         "hrmis_merit_number": (post.get("hrmis_merit_number") or "").strip() or employee.hrmis_merit_number,
+    #     })
+
+    #     # -----------------------
+    #     # Write req inside savepoint while temporarily assigning parent_id
+    #     # -----------------------
+    #     def _work():
+    #         req.sudo().write(vals)
+
+    #     ok, err = self._with_temporary_parent(employee, final_manager_employee, _work)
+    #     if not ok:
+    #         return request.render(
+    #             "hr_holidays_updates.hrmis_profile_request_form",
+    #             _base_ctx(
+    #                 "Profile Update Request",
+    #                 "user_profile",
+    #                 employee=employee,
+    #                 current_employee=employee,
+    #                 req=req,
+    #                 districts=env["hrmis.district.master"].sudo().search([]),
+    #                 facilities=env["hrmis.facility.type"].sudo().search([]),
+                    
+    #                 error=f"Could not submit request. Changes reverted. Error: {err}",
+    #             ),
+    #         )
+
+    #     # -----------------------
+    #     # Success
+    #     # -----------------------
+    #     success_msg = message_override or "Profile update request submitted successfully."
+
+    #     return request.render(
+    #         "hr_holidays_updates.hrmis_profile_request_form",
+    #         _base_ctx(
+    #             "Profile Update Request",
+    #             "user_profile",
+    #             employee=employee,
+    #             current_employee=employee,
+    #             req=req,
+    #             districts=env["hrmis.district.master"].sudo().search([]),
+    #             facilities=env["hrmis.facility.type"].sudo().search([]),
+    #             success=success_msg,
+    #         ),
+    #     )
+
+    # -------------------------------------------------------------------------
+    # Small render helpers (keep render payloads identical)
+    # -------------------------------------------------------------------------
+
+    def _render_error_page(self, msg):
+        return request.render("hr_holidays_updates.hrmis_error", {"error": msg})
+
+    # -------------------------------------------------------------------------
+    # Load/validate core records
+    # -------------------------------------------------------------------------
+    def _get_current_employee_or_error(self, env):
+        user = env.user
         employee = env["hr.employee"].sudo().search([("user_id", "=", user.id)], limit=1)
         if not employee:
-            return request.render("hr_holidays_updates.hrmis_error", {"error": "No employee linked to your user."})
+            return None, self._render_error_page("No employee linked to your user.")
+        return employee, None
 
-        req = env["hrmis.employee.profile.request"].sudo().browse(int(post.get("request_id") or 0))
+    def _get_request_or_form_error(self, env, employee, post):
+        req_id = int(post.get("request_id") or 0)
+        req = env["hrmis.employee.profile.request"].sudo().browse(req_id)
         if not req.exists():
-            return request.render(
-                "hr_holidays_updates.hrmis_profile_request_form",
-                _base_ctx(
-                    "Profile Update Request",
-                    "user_profile",
-                    employee=employee,
-                    current_employee=employee,
-                    req=req,
-                    districts=env["hrmis.district.master"].sudo().search([]),
-                    facilities=env["hrmis.facility.type"].sudo().search([]),
-                    error="Invalid request.",
-                ),
-            )
+            # keep original behavior: render the form with "Invalid request."
+            return None, self._render_profile_form(env, employee, req, error="Invalid request.")
+        return req, None
 
-        # -----------------------
-        # Files
-        # -----------------------
+    # -------------------------------------------------------------------------
+    # Files handling
+    # -------------------------------------------------------------------------
+    def _handle_cnic_files_or_error(self, employee, req, env):
+        vals = {}
+
         cnic_front = request.httprequest.files.get("hrmis_cnic_front")
         cnic_back = request.httprequest.files.get("hrmis_cnic_back")
 
-        vals = {}
-
         if cnic_front:
-            vals["hrmis_cnic_front"] = base64.b64encode(cnic_front.read())
+            ok, err, data = _validate_upload_file(cnic_front, "CNIC Front Scan")
+            if not ok:
+                return None, self._render_profile_form(env, employee, req, error=err, prefer_draft=True)
+            vals["hrmis_cnic_front"] = base64.b64encode(data)
             vals["hrmis_cnic_front_filename"] = cnic_front.filename
 
         if cnic_back:
-            vals["hrmis_cnic_back"] = base64.b64encode(cnic_back.read())
+            ok, err, data = _validate_upload_file(cnic_back, "CNIC Back Scan")
+            if not ok:
+                return None, self._render_profile_form(env, employee, req, error=err, prefer_draft=True)
+            vals["hrmis_cnic_back"] = base64.b64encode(data)
             vals["hrmis_cnic_back_filename"] = cnic_back.filename
 
-        # -----------------------
-        # Required fields validation
-        # -----------------------
+        return vals, None
+
+    # -------------------------------------------------------------------------
+    # Required fields validation (same rules)
+    # -------------------------------------------------------------------------
+    def _validate_required_fields_or_form_error(self, env, employee, req, post):
         required_fields = {
             "hrmis_cnic": "CNIC",
             "hrmis_father_name": "Father's Name",
             "gender": "Gender",
             "hrmis_joining_date": "Joining Date",
-           
+            "hrmis_commission_date": "Commission Date",
+            "hrmis_merit_number": "Merit Number",
             "hrmis_cadre": "Cadre",
-            
             "birthday": "Date Of Birth",
             "hrmis_cnic_front": "CNIC Front Scan",
             "hrmis_cnic_back": "CNIC Back Scan",
             "hrmis_merit_number": "Merit Number",
             "hrmis_contact_info": "Contact Number",
-
-            # NEW
             "hrmis_domicile": "Domicile",
         }
-
 
         missing = []
         for field, label in required_fields.items():
             if field in ("hrmis_cnic_front", "hrmis_cnic_back"):
-                already = bool(getattr(req, field, False))  # ✅ already uploaded on req
+                already = bool(getattr(req, field, False))  # already uploaded on req
                 file_obj = request.httprequest.files.get(field)
                 if not already and not file_obj:
                     missing.append(label)
@@ -1737,29 +2334,23 @@ class HrmisProfileRequestController(http.Controller):
                 if not (post.get(field) or "").strip():
                     missing.append(label)
 
-
         if missing:
-            return request.render(
-                "hr_holidays_updates.hrmis_profile_request_form",
-                _base_ctx(
-                    "Profile Update Request",
-                    "user_profile",
-                    employee=employee,
-                    current_employee=employee,
-                    req=req,
-                    districts=env["hrmis.district.master"].sudo().search([]),
-                    facilities=env["hrmis.facility.type"].sudo().search([]),
-                    error="Please complete the following fields before submitting:\n• " + "\n• ".join(missing),
-                ),
+            return self._render_profile_form(
+                env, employee, req,
+                error="Please complete the following fields before submitting:\n• " + "\n• ".join(missing),
+                prefer_draft=True,
             )
 
-        # -----------------------
-        # Handle Cadre safely
-        # -----------------------
+        return None
+
+    # -------------------------------------------------------------------------
+    # Parsing primitives (cadre/designation/bps + related browse)
+    # -------------------------------------------------------------------------
+    def _parse_designation_cadre_bps(self, env, post):
         cadre_val = post.get("hrmis_cadre")
         designation_val = post.get("hrmis_designation")
         designation_id = int(designation_val) if designation_val else False
-        
+
         try:
             cadre_id = int(cadre_val) if cadre_val else False
         except Exception:
@@ -1768,23 +2359,25 @@ class HrmisProfileRequestController(http.Controller):
         if not isinstance(cadre_id, (int, type(None))):
             cadre_id = False
 
-        # -----------------------
-        # Parse BPS safely
-        # -----------------------
         try:
             bps = int(post.get("hrmis_bps") or 0)
         except Exception:
             bps = 0
 
-        # -----------------------
-        # Resolve manager + approver via helper
-        # -----------------------
-        manager_user_id = int(post.get("manager_user_id") or 0)  # optional
+        designation = env["hrmis.designation"].sudo().browse(designation_id) if designation_id else env["hrmis.designation"]
+        return designation_id, cadre_id, bps, designation
+
+    def _parse_facility_district(self, env, post):
         facility_id = int(post.get("facility_id") or 0)
         district_id = int(post.get("district_id") or 0)
-
-        designation = env["hrmis.designation"].sudo().browse(designation_id) if designation_id else env["hrmis.designation"]
         facility = env["hrmis.facility.type"].sudo().browse(facility_id) if facility_id else env["hrmis.facility.type"]
+        return facility_id, district_id, facility
+
+    # -------------------------------------------------------------------------
+    # Manager/approver resolution wrapper (keeps your existing behavior)
+    # -------------------------------------------------------------------------
+    def _resolve_manager_and_approver_or_form_error(self, env, employee, req, post, designation, bps):
+        message_override = None
 
         final_manager_employee, approver_emp, message_override, hard_error = self._resolve_manager_and_approver(
             employee=employee,
@@ -1794,31 +2387,29 @@ class HrmisProfileRequestController(http.Controller):
         )
 
         if hard_error:
-            return request.render(
-                "hr_holidays_updates.hrmis_profile_request_form",
-                _base_ctx(
-                    "Profile Update Request",
-                    "user_profile",
-                    employee=employee,
-                    current_employee=employee,
-                    req=req,
-                    districts=env["hrmis.district.master"].sudo().search([]),
-                    facilities=env["hrmis.facility.type"].sudo().search([]),
-                    error=message_override,   # contains the reason
-                ),
-            )
-        # If helper returns a hard error message, stop here
-        # (recommended: in helper, return message_override only for user-facing hard errors)
-        if message_override and (
-            message_override.lower().startswith("so-v user") or
-            message_override.lower().startswith("manager employee not found")
-        ):
-            return request.render("hr_holidays_updates.hrmis_error", {"error": message_override})
+            return None, None, None, self._render_profile_form(env, employee, req, error=message_override, prefer_draft=True)
 
-        # -----------------------
-        # Build request values
-        # -----------------------
-        vals.update({
+
+        # preserve your extra “hard” stops
+        if message_override and (
+            message_override.lower().startswith("so-v user")
+            or message_override.lower().startswith("manager employee not found")
+        ):
+            return None, None, None, self._render_error_page(message_override)
+
+        return final_manager_employee, approver_emp, message_override, None
+
+    # -------------------------------------------------------------------------
+    # Build req vals (includes leaves taken fallback, then overwritten after calc)
+    # -------------------------------------------------------------------------
+    def _get_posted_taken(self, post):
+        try:
+            return float((post.get("hrmis_leaves_taken") or "").strip() or 0.0)
+        except Exception:
+            return 0.0
+
+    def _build_req_vals(self, post, *, bps, cadre_id, designation_id, district_id, facility_id, approver_emp, posted_taken):
+        vals = {
             "hrmis_employee_id": post.get("hrmis_employee_id"),
             "hrmis_cnic": post.get("hrmis_cnic"),
             "hrmis_father_name": post.get("hrmis_father_name"),
@@ -1833,6 +2424,7 @@ class HrmisProfileRequestController(http.Controller):
             "facility_id": facility_id,
             "hrmis_contact_info": post.get("hrmis_contact_info"),
             "hrmis_merit_number": post.get("hrmis_merit_number"),
+            "hrmis_leaves_taken": posted_taken,  # fallback (server recalcs below)
             "approver_id": approver_emp.id if approver_emp else False,
             "state": "submitted",
 
@@ -1842,13 +2434,13 @@ class HrmisProfileRequestController(http.Controller):
             "qualification_date": post.get("qualification_date"),
             "year_qualification": post.get("year_qualification"),
             "date_promotion": post.get("date_promotion"),
-        })
-        # -----------------------
-        # Parse Repeatable Sections (getlist arrays)
-        # -----------------------
-        form = request.httprequest.form
+        }
+        return vals
 
-        # 1) Qualification History
+    # -------------------------------------------------------------------------
+    # Histories parsing (same validations/messages)
+    # -------------------------------------------------------------------------
+    def _parse_qualification_history_or_error(self, employee, req, env, form):
         q_degree = form.getlist("qualification_degree[]")
         q_spec = form.getlist("qualification_specialization[]")
         q_start = form.getlist("qualification_start[]")
@@ -1861,13 +2453,13 @@ class HrmisProfileRequestController(http.Controller):
             s = self._month_to_date(q_start[i] if i < len(q_start) else "")
             e = self._month_to_date(q_end[i] if i < len(q_end) else "")
 
-            # skip completely empty rows
             if not (deg or spec or s or e):
                 continue
 
-            # required fields
             if not deg or not s:
-                return self._render_profile_form_error(employee, req, env, "Qualification History: Degree and Start Month are required.")
+                return None, self._render_profile_form_error(
+                    employee, req, env, "Qualification History: Degree and Start Month are required."
+                )
 
             qual_lines.append({
                 "employee_id": employee.id,
@@ -1877,7 +2469,9 @@ class HrmisProfileRequestController(http.Controller):
                 "end_date": e or False,
             })
 
-        # 2) Posting History
+        return qual_lines, None
+
+    def _parse_posting_history_or_error(self, employee, req, env, form):
         p_district = form.getlist("posting_district_id[]")
         p_facility = form.getlist("posting_facility_id[]")
         p_designation = form.getlist("posting_designation_id[]")
@@ -1885,21 +2479,81 @@ class HrmisProfileRequestController(http.Controller):
         p_start = form.getlist("posting_start[]")
         p_end = form.getlist("posting_end[]")
 
-        post_lines = []
-        for i in range(max(len(p_district), len(p_designation), len(p_bps), len(p_start), len(p_end), len(p_facility))):
-            district_id = self._to_int(p_district[i] if i < len(p_district) else "")
-            facility_id = self._to_int(p_facility[i] if i < len(p_facility) else "")
-            designation_id = self._to_int(p_designation[i] if i < len(p_designation) else "")
-            bps_val = self._to_int(p_bps[i] if i < len(p_bps) else "")
-            s = self._month_to_date(p_start[i] if i < len(p_start) else "")
-            e = self._month_to_date(p_end[i] if i < len(p_end) else "")
+        # ---------------------------------------------------------
+        # LOG 1: raw arrays (what browser actually posted)
+        # ---------------------------------------------------------
+        _logger.warning(
+            "[PROFILE][POSTING][RAW] emp_id=%s req_id=%s lens={district:%s facility:%s desig:%s bps:%s start:%s end:%s}",
+            employee.id, req.id,
+            len(p_district), len(p_facility), len(p_designation), len(p_bps), len(p_start), len(p_end),
+        )
+        _logger.warning("[PROFILE][POSTING][RAW] posting_district_id[]=%s", p_district)
+        _logger.warning("[PROFILE][POSTING][RAW] posting_facility_id[]=%s", p_facility)
+        _logger.warning("[PROFILE][POSTING][RAW] posting_designation_id[]=%s", p_designation)
+        _logger.warning("[PROFILE][POSTING][RAW] posting_bps[]=%s", p_bps)
+        _logger.warning("[PROFILE][POSTING][RAW] posting_start[]=%s", p_start)
+        _logger.warning("[PROFILE][POSTING][RAW] posting_end[]=%s", p_end)
 
-            # skip completely empty row
+        post_lines = []
+        n = max(len(p_district), len(p_designation), len(p_bps), len(p_start), len(p_end), len(p_facility))
+
+        _logger.warning("[PROFILE][POSTING] rows_to_process=%s", n)
+
+        for i in range(n):
+            # raw per-index (before parsing)
+            raw_district = (p_district[i] if i < len(p_district) else "")
+            raw_facility = (p_facility[i] if i < len(p_facility) else "")
+            raw_desig = (p_designation[i] if i < len(p_designation) else "")
+            raw_bps = (p_bps[i] if i < len(p_bps) else "")
+            raw_start = (p_start[i] if i < len(p_start) else "")
+            raw_end = (p_end[i] if i < len(p_end) else "")
+
+            # parsed values
+            district_id = self._to_int(raw_district)
+            facility_id = self._to_int(raw_facility)
+            designation_id = self._to_int(raw_desig)
+            bps_val = self._to_int(raw_bps)
+            s = self._month_to_date(raw_start)
+            e = self._month_to_date(raw_end)
+
+            # ---------------------------------------------------------
+            # LOG 2: per row, raw + parsed
+            # ---------------------------------------------------------
+            _logger.warning(
+                "[PROFILE][POSTING][ROW %s] raw={district:%r facility:%r desig:%r bps:%r start:%r end:%r}",
+                i, raw_district, raw_facility, raw_desig, raw_bps, raw_start, raw_end
+            )
+            _logger.warning(
+                "[PROFILE][POSTING][ROW %s] parsed={district_id:%s facility_id:%s designation_id:%s bps:%s start_date:%s end_date:%s}",
+                i, district_id, facility_id, designation_id, bps_val, s, e
+            )
+
+            # skip completely empty row (same logic)
             if not (district_id or facility_id or designation_id or bps_val or s or e):
+                _logger.warning("[PROFILE][POSTING][ROW %s] skipped (all empty after parse)", i)
                 continue
 
+            # required fields validation (same logic)
             if not district_id or not designation_id or not bps_val or not s:
-                return self._render_profile_form_error(employee, req, env, "Posting History: District, Designation, BPS and Start Month are required.")
+                missing = []
+                if not district_id:
+                    missing.append("district_id")
+                if not designation_id:
+                    missing.append("designation_id")
+                if not bps_val:
+                    missing.append("bps")
+                if not s:
+                    missing.append("start_month")
+
+                _logger.warning(
+                    "[PROFILE][POSTING][ROW %s] VALIDATION FAIL missing=%s parsed={district_id:%s designation_id:%s bps:%s start_date:%s}",
+                    i, ",".join(missing), district_id, designation_id, bps_val, s
+                )
+
+                return None, self._render_profile_form_error(
+                    employee, req, env,
+                    "Posting History: District, Designation, BPS and Start Month are required."
+                )
 
             post_lines.append({
                 "employee_id": employee.id,
@@ -1911,7 +2565,17 @@ class HrmisProfileRequestController(http.Controller):
                 "end_date": e or False,
             })
 
-        # 3) Promotion History
+            _logger.warning("[PROFILE][POSTING][ROW %s] accepted -> %s", i, post_lines[-1])
+
+        # ---------------------------------------------------------
+        # LOG 3: final result
+        # ---------------------------------------------------------
+        _logger.warning("[PROFILE][POSTING] parsed_lines_count=%s lines=%s", len(post_lines), post_lines)
+
+        return post_lines, None
+
+
+    def _parse_promotion_history_or_error(self, employee, req, env, form):
         pr_from = form.getlist("promotion_bps_from[]")
         pr_to = form.getlist("promotion_bps_to[]")
         pr_date = form.getlist("promotion_date[]")
@@ -1926,10 +2590,14 @@ class HrmisProfileRequestController(http.Controller):
                 continue
 
             if not b_from or not b_to or not pdate:
-                return self._render_profile_form_error(employee, req, env, "Promotion History: BPS From, BPS To and Promotion Month are required.")
+                return None, self._render_profile_form_error(
+                    employee, req, env, "Promotion History: BPS From, BPS To and Promotion Month are required."
+                )
 
             if b_to <= b_from:
-                return self._render_profile_form_error(employee, req, env, "Promotion History: BPS To must be greater than BPS From.")
+                return None, self._render_profile_form_error(
+                    employee, req, env, "Promotion History: BPS To must be greater than BPS From."
+                )
 
             promo_lines.append({
                 "employee_id": employee.id,
@@ -1938,7 +2606,9 @@ class HrmisProfileRequestController(http.Controller):
                 "promotion_date": pdate,
             })
 
-        # 4) Leave History
+        return promo_lines, None
+
+    def _parse_leave_history_or_error(self, employee, req, env, post, form):
         l_type = form.getlist("leave_type_id[]")
         l_start = form.getlist("leave_start[]")
         l_end = form.getlist("leave_end[]")
@@ -1955,13 +2625,13 @@ class HrmisProfileRequestController(http.Controller):
 
         leave_lines = []
         leave_calc_items = []  # (leave_type_id, start_date, end_date)
-        # Hard-block these leave types even if posted manually
+
         blocked_leave_type_keys = {"paidtimeoff", "sicktimeoff", "unpaid"}
-        # Prefer submitted gender (profile request may be editing it), fallback to employee record.
         emp_gender = (
             (post.get("gender") or "")
             or (getattr(employee, "gender", False) or getattr(employee, "hrmis_gender", False) or "")
         ).strip().lower()
+
         for i in range(max(len(l_type), len(l_start), len(l_end))):
             leave_type_id = self._to_int(l_type[i] if i < len(l_type) else "")
             s = (l_start[i] if i < len(l_start) else "").strip()
@@ -1971,25 +2641,24 @@ class HrmisProfileRequestController(http.Controller):
                 continue
 
             if not leave_type_id or not s or not e:
-                return self._render_profile_form_error(employee, req, env, "Leave History: Leave Type, Start Date and End Date are required.")
+                return None, None, self._render_profile_form_error(
+                    employee, req, env, "Leave History: Leave Type, Start Date and End Date are required."
+                )
 
             # Validate leave type (blocked)
             try:
                 lt = env["hr.leave.type"].sudo().browse(int(leave_type_id)).exists()
                 if lt and _norm_leave_type_name(getattr(lt, "name", "")) in blocked_leave_type_keys:
-                    return self._render_profile_form_error(employee, req, env, "Leave History: This leave type is not allowed.")
-                # Hide maternity for male employees (extra safety)
+                    return None, None, self._render_profile_form_error(
+                        employee, req, env, "Leave History: This leave type is not allowed."
+                    )
                 if lt and emp_gender == "male":
                     key = _norm_leave_type_name(getattr(lt, "name", ""))
                     if "maternity" in key:
-                        return self._render_profile_form_error(
-                            employee,
-                            req,
-                            env,
-                            "Leave History: Maternity leave is not allowed for male employees.",
+                        return None, None, self._render_profile_form_error(
+                            employee, req, env, "Leave History: Maternity leave is not allowed for male employees."
                         )
             except Exception:
-                # If we cannot resolve the leave type reliably, keep going; other validations still apply.
                 pass
 
             # Date validations
@@ -1997,27 +2666,30 @@ class HrmisProfileRequestController(http.Controller):
                 sd = fields.Date.to_date(s)
                 ed = fields.Date.to_date(e)
                 if not sd or not ed:
-                    return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
+                    return None, None, self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
                 if ed < sd:
-                    return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be earlier than Start Date.")
+                    return None, None, self._render_profile_form_error(
+                        employee, req, env, "Leave History: End Date cannot be earlier than Start Date."
+                    )
                 if join_month_start and (sd < join_month_start or ed < join_month_start):
-                    return self._render_profile_form_error(
-                        employee,
-                        req,
-                        env,
-                        "Leave History: Leave dates cannot be before your joining month.",
+                    return None, None, self._render_profile_form_error(
+                        employee, req, env, "Leave History: Leave dates cannot be before your joining month."
                     )
                 today_ctx = fields.Date.context_today(env.user)
-                # Start date must be before today; End date can be up to today.
                 if sd >= today_ctx:
-                    return self._render_profile_form_error(employee, req, env, "Leave History: Start Date must be before today.")
+                    return None, None, self._render_profile_form_error(
+                        employee, req, env, "Leave History: Start Date must be before today."
+                    )
                 if ed > today_ctx:
-                    return self._render_profile_form_error(employee, req, env, "Leave History: End Date cannot be after today.")
-                # End date must be at least 7 days after start date.
+                    return None, None, self._render_profile_form_error(
+                        employee, req, env, "Leave History: End Date cannot be after today."
+                    )
                 if (ed - sd).days < 7:
-                    return self._render_profile_form_error(employee, req, env, "Leave History: End Date must be at least 7 days after Start Date.")
+                    return None, None, self._render_profile_form_error(
+                        employee, req, env, "Leave History: End Date must be at least 7 days after Start Date."
+                    )
             except Exception:
-                return self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
+                return None, None, self._render_profile_form_error(employee, req, env, "Leave History: Invalid dates.")
 
             leave_lines.append({
                 "employee_id": employee.id,
@@ -2037,9 +2709,8 @@ class HrmisProfileRequestController(http.Controller):
                 if prev_s is None:
                     prev_s, prev_e = s0, e0
                     continue
-                # Inclusive overlap: if the next start is <= previous end, they share at least one day.
                 if prev_e and s0 and s0 <= prev_e:
-                    return self._render_profile_form_error(
+                    return None, None, self._render_profile_form_error(
                         employee,
                         req,
                         env,
@@ -2049,22 +2720,22 @@ class HrmisProfileRequestController(http.Controller):
         except Exception:
             pass
 
-        # Auto-calculate Total Leaves Taken (UI field is read-only).
-        # Rules (match HRMIS balance logic):
-        # - Half-pay leaves count as ceil(effective_days / 2.0)
-        # - Earned/full-pay/LPR leaves count as effective_days
-        # - Without pay / EOL / unpaid / medical / maternity count as 0
+        return leave_lines, leave_calc_items, None
+
+    # -------------------------------------------------------------------------
+    # Leaves total calculation (unchanged)
+    # -------------------------------------------------------------------------
+    def _calc_total_leaves_taken_safely(self, env, leave_calc_items, posted_taken):
         try:
             import math
 
             total_taken = 0.0
-            LeaveModel = env["hr.leave"].sudo()
             LeaveType = env["hr.leave.type"].sudo()
+
             for lt_id, sd, ed in leave_calc_items:
                 lt = LeaveType.browse(int(lt_id)).exists()
                 name = (lt.name or "").strip().lower() if lt else ""
 
-                # 0-count types
                 if any(k in name for k in ("medical", "maternity", "without pay", "eol", "unpaid")):
                     continue
 
@@ -2076,27 +2747,28 @@ class HrmisProfileRequestController(http.Controller):
                 else:
                     continue
 
-                eff = (
-                    float(LeaveModel._hrmis_effective_days(employee, sd, ed) or 0.0)
-                    if hasattr(LeaveModel, "_hrmis_effective_days")
-                    else float((ed - sd).days + 1)
-                )
+                eff = float((ed - sd).days + 1)
                 if factor == 0.5:
                     total_taken += float(math.ceil(eff / 2.0))
                 else:
                     total_taken += eff
 
-            # Keep a compact numeric value (UI uses step 0.5).
             total_taken = round(total_taken * 2.0) / 2.0
-            vals["hrmis_leaves_taken"] = total_taken
-        except Exception:
-            # Never block the request due to a calculation failure; keep existing value if any.
-            pass
 
-        # -----------------------
-        # Write histories (replace existing histories)
-        # If you want append-only, remove the unlink() blocks.
-        # -----------------------
+            try:
+                if float(total_taken or 0.0) == 0.0 and float(posted_taken or 0.0) > 0.0:
+                    total_taken = float(posted_taken)
+            except Exception:
+                pass
+
+            return total_taken
+        except Exception:
+            return None  # caller keeps existing
+
+    # -------------------------------------------------------------------------
+    # DB writes (histories + employee merit + request with temp parent)
+    # -------------------------------------------------------------------------
+    def _replace_histories(self, env, employee, qual_lines, post_lines, promo_lines, leave_lines):
         Qual = env["hrmis.qualification.history"].sudo()
         Post = env["hrmis.posting.history"].sudo()
         Promo = env["hrmis.promotion.history"].sudo()
@@ -2116,53 +2788,308 @@ class HrmisProfileRequestController(http.Controller):
         if leave_lines:
             Leave.create(leave_lines)
 
-        # ✅ store merit number into employee AFTER req is updated
+    def _update_employee_merit(self, employee, post):
         employee.sudo().write({
             "hrmis_merit_number": (post.get("hrmis_merit_number") or "").strip() or employee.hrmis_merit_number,
         })
 
-        # -----------------------
-        # Write req inside savepoint while temporarily assigning parent_id
-        # -----------------------
+    def _write_req_with_temp_parent_or_form_error(self, env, employee, req, final_manager_employee, vals):
         def _work():
             req.sudo().write(vals)
 
         ok, err = self._with_temporary_parent(employee, final_manager_employee, _work)
         if not ok:
-            return request.render(
-                "hr_holidays_updates.hrmis_profile_request_form",
-                _base_ctx(
-                    "Profile Update Request",
-                    "user_profile",
-                    employee=employee,
-                    current_employee=employee,
-                    req=req,
-                    districts=env["hrmis.district.master"].sudo().search([]),
-                    facilities=env["hrmis.facility.type"].sudo().search([]),
-                    
-                    error=f"Could not submit request. Changes reverted. Error: {err}",
-                ),
+            return self._render_profile_form(
+                env, employee, req,
+                error=f"Could not submit request. Changes reverted. Error: {err}",
+                prefer_draft=True,
             )
 
-        # -----------------------
-        # Success
-        # -----------------------
-        success_msg = message_override or "Profile update request submitted successfully."
+        return None
 
-        return request.render(
-            "hr_holidays_updates.hrmis_profile_request_form",
-            _base_ctx(
-                "Profile Update Request",
-                "user_profile",
-                employee=employee,
-                current_employee=employee,
-                req=req,
-                districts=env["hrmis.district.master"].sudo().search([]),
-                facilities=env["hrmis.facility.type"].sudo().search([]),
-                success=success_msg,
-            ),
+    def _ym(self, d):
+        """date -> 'YYYY-MM' for <input type='month'>"""
+        try:
+            if not d:
+                return ""
+            if isinstance(d, str):
+                # already formatted
+                return d[:7] if len(d) >= 7 else d
+            return d.strftime("%Y-%m")
+        except Exception:
+            return ""
+
+    def _yd(self, d):
+        """date -> 'YYYY-MM-DD' for <input type='date'>"""
+        try:
+            if not d:
+                return ""
+            if isinstance(d, str):
+                return d
+            return d.strftime("%Y-%m-%d")
+        except Exception:
+            return ""
+
+    def _load_employee_histories(self, env, employee):
+        Qual = env["hrmis.qualification.history"].sudo()
+        Post = env["hrmis.posting.history"].sudo()
+        Promo = env["hrmis.promotion.history"].sudo()
+        Leave = env["hrmis.leave.history"].sudo()
+
+        qual_recs = Qual.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+        post_recs = Post.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+        promo_recs = Promo.search([("employee_id", "=", employee.id)], order="promotion_date asc, id asc")
+        leave_recs = Leave.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
+
+        prefill_qual = [{
+            "degree": (q.degree or ""),
+            "specialization": (q.specialization or ""),
+            "start_month": self._ym(q.start_date),
+            "end_month": self._ym(q.end_date) if q.end_date else "",
+            "completed": bool(q.end_date),
+        } for q in qual_recs]
+
+        prefill_post = [{
+            "district_id": q.district_id.id if q.district_id else 0,
+            "facility_id": q.facility_id.id if getattr(q, "facility_id", False) else 0,
+            "designation_id": q.designation_id.id if q.designation_id else 0,
+            "bps": int(q.bps or 0),
+            "start_month": self._ym(q.start_date),
+            "end_month": self._ym(q.end_date) if q.end_date else "",
+        } for q in post_recs]
+
+        prefill_promo = [{
+            "bps_from": int(p.bps_from or 0),
+            "bps_to": int(p.bps_to or 0),
+            "promotion_month": self._ym(p.promotion_date),
+        } for p in promo_recs]
+
+        prefill_leave = [{
+            "leave_type_id": q.leave_type_id.id if q.leave_type_id else 0,
+            "start_date": self._yd(q.start_date),
+            "end_date": self._yd(q.end_date),
+        } for q in leave_recs]
+
+        return {
+            "prefill_qual_rows": prefill_qual,
+            "prefill_post_rows": prefill_post,
+            "prefill_promo_rows": prefill_promo,
+            "prefill_leave_rows": prefill_leave,
+        }
+
+
+    def _draft_histories_from_post(self):
+        """
+        Build prefill from the submitted form so errors don't wipe the user's input.
+        Uses request.httprequest.form.getlist(...) names from your XML.
+        """
+        form = request.httprequest.form
+
+        # Qualification
+        q_degree = form.getlist("qualification_degree[]")
+        q_spec = form.getlist("qualification_specialization[]")
+        q_start = form.getlist("qualification_start[]")
+        q_end = form.getlist("qualification_end[]")
+        # Note: checkbox list only posts checked ones; we infer "completed" from end_month.
+        draft_qual = []
+        for i in range(max(len(q_degree), len(q_spec), len(q_start), len(q_end))):
+            deg = (q_degree[i] if i < len(q_degree) else "").strip()
+            spec = (q_spec[i] if i < len(q_spec) else "").strip()
+            s = (q_start[i] if i < len(q_start) else "").strip()
+            e = (q_end[i] if i < len(q_end) else "").strip()
+            if not (deg or spec or s or e):
+                continue
+            draft_qual.append({
+                "degree": deg,
+                "specialization": spec,
+                "start_month": s,
+                "end_month": e,
+                "completed": bool(e),
+            })
+
+        # Previous Posting
+        p_district = form.getlist("posting_district_id[]")
+        p_facility = form.getlist("posting_facility_id[]")  # IMPORTANT: your XML currently doesn't post this (see note below)
+        p_designation = form.getlist("posting_designation_id[]")
+        p_bps = form.getlist("posting_bps[]")
+        p_start = form.getlist("posting_start[]")
+        p_end = form.getlist("posting_end[]")
+
+        draft_post = []
+        for i in range(max(len(p_district), len(p_facility), len(p_designation), len(p_bps), len(p_start), len(p_end))):
+            draft_post.append({
+                "district_id": int(p_district[i] or 0) if i < len(p_district) else 0,
+                "facility_id": int(p_facility[i] or 0) if i < len(p_facility) else 0,
+                "designation_id": int(p_designation[i] or 0) if i < len(p_designation) else 0,
+                "bps": int(p_bps[i] or 0) if i < len(p_bps) else 0,
+                "start_month": (p_start[i] if i < len(p_start) else "").strip(),
+                "end_month": (p_end[i] if i < len(p_end) else "").strip(),
+            })
+
+        # Leaves
+        l_type = form.getlist("leave_type_id[]")
+        l_start = form.getlist("leave_start[]")
+        l_end = form.getlist("leave_end[]")
+
+        draft_leave = []
+        for i in range(max(len(l_type), len(l_start), len(l_end))):
+            lt = (l_type[i] if i < len(l_type) else "").strip()
+            s = (l_start[i] if i < len(l_start) else "").strip()
+            e = (l_end[i] if i < len(l_end) else "").strip()
+            if not (lt or s or e):
+                continue
+            draft_leave.append({
+                "leave_type_id": int(lt or 0),
+                "start_date": s,
+                "end_date": e,
+            })
+
+        pr_from = form.getlist("promotion_bps_from[]")
+        pr_to = form.getlist("promotion_bps_to[]")
+        pr_date = form.getlist("promotion_date[]")
+
+        draft_promo = []
+        for i in range(max(len(pr_from), len(pr_to), len(pr_date))):
+            b_from = (pr_from[i] if i < len(pr_from) else "").strip()
+            b_to = (pr_to[i] if i < len(pr_to) else "").strip()
+            p_dt = (pr_date[i] if i < len(pr_date) else "").strip()
+            if not (b_from or b_to or p_dt):
+                continue
+            draft_promo.append({
+                "bps_from": int(b_from or 0),
+                "bps_to": int(b_to or 0),
+                "promotion_month": p_dt,  # already YYYY-MM
+            })
+
+        return {
+            "draft_qual_rows": draft_qual,
+            "draft_post_rows": draft_post,
+            "draft_promo_rows": draft_promo,
+            "draft_leave_rows": draft_leave,
+        }
+
+    def _with_prefill_ctx(self, env, employee, ctx, *, prefer_draft=False):
+        db = self._load_employee_histories(env, employee)
+
+        if prefer_draft:
+            draft = self._draft_histories_from_post()
+            ctx["prefill_qual_rows"] = draft["draft_qual_rows"] or db["prefill_qual_rows"]
+            ctx["prefill_post_rows"] = draft["draft_post_rows"] or db["prefill_post_rows"]
+            ctx["prefill_promo_rows"] = draft["draft_promo_rows"] or db["prefill_promo_rows"]
+            ctx["prefill_leave_rows"] = draft["draft_leave_rows"] or db["prefill_leave_rows"]
+            return ctx
+
+        ctx.update(db)
+        return ctx
+
+
+    # -------------------------------------------------------------------------
+    # MAIN ROUTE (now orchestration only)
+    # -------------------------------------------------------------------------
+    @http.route(
+        "/hrmis/profile/request/submit",
+        type="http",
+        auth="user",
+        website=True,
+        methods=["POST"],
+        csrf=True,
+    )
+    def hrmis_profile_request_submit(self, **post):
+        env = request.env
+        message_override = None
+
+        # 1) Employee
+        employee, resp = self._get_current_employee_or_error(env)
+        if resp:
+            return resp
+
+        # 2) Request
+        req, resp = self._get_request_or_form_error(env, employee, post)
+        if resp:
+            return resp
+        if req.state != "draft":
+            return self._render_profile_form(
+                env,
+                employee,
+                req,
+                error="This request has already been submitted and cannot be edited.",
+                prefer_draft=False,
+            )
+        # 3) Files
+        file_vals, resp = self._handle_cnic_files_or_error(employee, req, env)
+        if resp:
+            return resp
+
+        # 4) Required fields
+        resp = self._validate_required_fields_or_form_error(env, employee, req, post)
+        if resp:
+            return resp
+
+        # 5) Parse cadre/designation/bps + facility/district (browse kept)
+        designation_id, cadre_id, bps, designation = self._parse_designation_cadre_bps(env, post)
+        facility_id, district_id, facility = self._parse_facility_district(env, post)
+
+        # 6) Resolve manager/approver
+        final_manager_employee, approver_emp, message_override, resp = self._resolve_manager_and_approver_or_form_error(
+            env, employee, req, post, designation, bps
         )
+        if resp:
+            return resp
 
+        # 7) Build vals (start with files + base fields)
+        posted_taken = self._get_posted_taken(post)
+        vals = {}
+        vals.update(file_vals)
+        vals.update(self._build_req_vals(
+            post,
+            bps=bps,
+            cadre_id=cadre_id,
+            designation_id=designation_id,
+            district_id=district_id,
+            facility_id=facility_id,
+            approver_emp=approver_emp,
+            posted_taken=posted_taken,
+        ))
+
+        # 8) Parse repeatable histories
+        form = request.httprequest.form
+
+        qual_lines, resp = self._parse_qualification_history_or_error(employee, req, env, form)
+        if resp:
+            return resp
+
+        post_lines, resp = self._parse_posting_history_or_error(employee, req, env, form)
+        if resp:
+            return resp
+
+        promo_lines, resp = self._parse_promotion_history_or_error(employee, req, env, form)
+        if resp:
+            return resp
+
+        leave_lines, leave_calc_items, resp = self._parse_leave_history_or_error(employee, req, env, post, form)
+        if resp:
+            return resp
+
+        # 9) Auto-calculate leaves taken (same rules)
+        total_taken = self._calc_total_leaves_taken_safely(env, leave_calc_items, posted_taken)
+        if total_taken is not None:
+            vals["hrmis_leaves_taken"] = total_taken
+        # else: keep existing vals["hrmis_leaves_taken"] (posted_taken)
+
+        # 10) Replace histories
+        self._replace_histories(env, employee, qual_lines, post_lines, promo_lines, leave_lines)
+
+        # 11) Update employee merit (unchanged timing)
+        self._update_employee_merit(employee, post)
+
+        # 12) Write req inside savepoint/temp parent logic
+        resp = self._write_req_with_temp_parent_or_form_error(env, employee, req, final_manager_employee, vals)
+        if resp:
+            return resp
+
+        # 13) Success
+        success_msg = message_override or "Profile update request submitted successfully."
+        return self._render_profile_form(env, employee, req, success=success_msg)
 
 
 class HrmisProfileUpdateRequests(http.Controller):
@@ -2322,6 +3249,32 @@ class HrmisProfileUpdateRequests(http.Controller):
                 "can_approve": can_approve,
             },
         )
+
+    @http.route("/hrmis/api/facilities", type="json", auth="user", csrf=False)
+    def hrmis_api_facilities(self, district_id=None, **kw):
+
+        district_raw = (district_id or "").strip()
+        District = request.env["hrmis.district.master"].sudo()
+
+        district = False
+        if district_raw.isdigit():
+            district = District.browse(int(district_raw)).exists()
+        elif district_raw:
+            # adjust "code" to whatever field you actually use
+            district = District.search([("code", "=", district_raw)], limit=1)
+
+        resolved_district_id = district.id if district else False
+
+        domain = [("active", "=", True)]
+        if resolved_district_id:
+            domain.append(("district_id", "=", resolved_district_id))
+
+        facilities = request.env["hrmis.facility.type"].sudo().search(domain, order="name ASC")
+        payload = [{"id": f.id, "name": f.name or ""} for f in facilities]
+
+       
+        return {"ok": True, "district_id": resolved_district_id, "facilities": payload}
+
 
 
     @http.route('/hrmis/profile/request/approve/<int:request_id>', type='http', auth='user', website=True, methods=['POST', 'GET'])

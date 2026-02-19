@@ -2,8 +2,11 @@
 from odoo import http
 from odoo.http import request
 from odoo.addons.web.controllers.home import Home
+from odoo.addons.website.controllers.main import Website
+import logging
 
 
+_logger = logging.getLogger(__name__)
 
 class CustomLogin(Home):
 
@@ -91,3 +94,28 @@ class ForcePasswordController(http.Controller):
         return request.redirect("/odoo/custom-time-off")
 
 
+
+class Custom404Controller(http.Controller):
+
+    @http.route('/404', type='http', auth='public', website=True)
+    def custom_404(self, **kw):
+        resp = request.render("custom_login.custom_404_page")
+        resp.status_code = 404
+        return resp
+    
+class Website404Override(Website):
+
+    def _handle_exception(self, exception):
+        response = super()._handle_exception(exception)
+
+        status = getattr(response, "status_code", None)
+        _logger.warning("[404 OVERRIDE] path=%s status=%s exc=%s",
+                        request.httprequest.path, status, repr(exception))
+
+        if status == 404:
+            # Render your qweb and set status properly
+            resp = request.render("custom_login.custom_404_page")
+            resp.status_code = 404
+            return resp
+
+        return response

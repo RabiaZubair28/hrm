@@ -16,7 +16,7 @@
                                 <div style="font-size: 32px; margin-bottom: 12px;">👤</div>
                                 <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600;">User Profile</h3>
                                 <p style="color: #666; font-size: 14px; margin: 0 0 16px 0;">View and manage your personal information</p>
-                                <a t-att-href="'/hrmis/staff/%s' % current_employee.id" 
+                                <a t-att-href="'/hrmis/staff/profile'" 
                                    class="hrmis-btn hrmis-btn--primary" 
                                    style="display: inline-block; padding: 10px 20px; background: #007bff; color: #fff; border-radius: 6px; text-decoration: none;">
                                     View Profile
@@ -109,7 +109,7 @@
                             <div style="font-size: 32px; margin-bottom: 12px;">👤</div>
                             <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600;">User Profile</h3>
                             <p style="color: #666; font-size: 14px; margin: 0 0 16px 0;">View profile information</p>
-                            <a t-att-href="'/hrmis/staff/%s' % employee.id" 
+                            <a t-att-href="'/hrmis/staff/profile'" 
                                class="hrmis-btn hrmis-btn--primary" 
                                style="display: inline-block; padding: 10px 20px; background: #007bff; color: #fff; border-radius: 6px; text-decoration: none;">
                                 View Profile
@@ -195,7 +195,7 @@
                         </div>
                         <t t-if="current_employee">
                             <div class="hrmis-user-stack">
-                                <a class="hrmis-user-link" t-att-href="'/hrmis/staff/%s' % current_employee.id">
+                                <a class="hrmis-user-link" t-att-href="'/hrmis/staff/profile'">
                                     <div class="hrmis-user">
                                         <div class="hrmis-user__avatar">
                                             <img t-att-alt="current_employee.name"
@@ -267,7 +267,7 @@
     <t t-set="is_hrmis_employee" t-value="request.env.user.has_group('custom_login.group_hrmis_employee_self')"/>
 
     <a t-attf-class="hrmis-nav__item #{'is-active' if active_menu == 'user_profile' else ''}"
-       t-att-href="current_employee and ('/hrmis/staff/%s' % current_employee.id) or '/hrmis/services'">
+       t-att-href="current_employee and ('/hrmis/staff/profile') or '/hrmis/staff'">
         User profile
     </a>
 
@@ -383,7 +383,7 @@
                                     </t>
                                 </div>
                             </div>
-                            <a class="hrmis-btn hrmis-btn--outline" t-att-href="'/hrmis/staff/%s' % emp.id">View Profile</a>
+                            <a class="hrmis-btn hrmis-btn--outline" t-att-href="'/hrmis/staff/profile'">View Profile</a>
                         </div>
                     </t>
                 </div>

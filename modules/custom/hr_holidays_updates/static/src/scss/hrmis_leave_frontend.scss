@@ -682,6 +682,41 @@
   min-width: 240px;
   outline: none;
 }
+
+/* Profile Update: shade + lock appearance after submission */
+.hrmis-form.is-submitted .hrmis-input,
+.hrmis-form.is-submitted select.hrmis-input {
+  background: #f3f4f6 !important;
+  color: #6c757d !important;
+  opacity: 0.75;
+  filter: blur(0.15px);
+}
+
+.hrmis-form.is-submitted .hrmis-input[type="file"] {
+  display: none;
+}
+
+/* Responsive: stack all history row fields on tablet/mobile */
+@media (max-width: 992px) {
+  .hrmis-form .hrmis-form__grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .hrmis-form .hrmis-form__grid .hrmis-field {
+    grid-column: 1 / -1 !important;
+    width: 100%;
+  }
+
+  .hrmis-form .hrmis-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .hrmis-form .hrmis-leave-row-wrap {
+    flex-direction: column;
+  }
+  
+}
 .hrmis-input--wide {
   min-width: 520px;
   width: 100%;
@@ -1538,4 +1573,29 @@
   .hrmis-table--profile-approvals .hrmis-table__row > div[data-label="Employee"]::before {
     display: none;
   }
+}
+/* =========================================================
+   FIX: leftover thick border line after deleting dynamic rows
+   Cause: border is on .hrmis-leave-row-wrap (wrapper) so when
+          inner card is removed, wrapper border remains.
+   Solution: remove wrapper border; apply border to the row/card.
+   ========================================================= */
+
+/* 1) Always kill wrapper border (even if inline style exists) */
+.hrmis-leave-row-wrap {
+  border: 0 !important;
+  padding: 0 !important;   /* optional: prevents leftover spacing */
+  margin: 0 !important;    /* optional */
+}
+
+/* 2) Put the border on the element that actually gets removed */
+.hrmis-leave-row-wrap > .hrmis-repeat-row,
+.hrmis-leave-row-wrap > .hrmis-card {
+  border: 2px solid #000 !important;   /* same as your inline black */
+}
+
+/* 3) If your inner row already had a border, force it off so it's not double */
+.hrmis-leave-row-wrap > .hrmis-repeat-row[style],
+.hrmis-leave-row-wrap > .hrmis-card[style] {
+  border-color: #000 !important;
 }

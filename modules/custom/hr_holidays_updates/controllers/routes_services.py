@@ -30,7 +30,7 @@ class HrmisServicesController(http.Controller):
 
     @http.route(["/hrmis", "/hrmis/"], type="http", auth="user", website=True)
     def hrmis_root(self, **kw):
-        return request.redirect("/hrmis/services")
+        return request.redirect("/hrmis/staff")
 
     @http.route(["/hrmis/services"], type="http", auth="user", website=True)
     def hrmis_services(self, **kw):
