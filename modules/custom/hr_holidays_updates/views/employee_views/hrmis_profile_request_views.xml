@@ -419,13 +419,20 @@
           </select>
         </div>
 
+        <div class="hrmis-field" id="frontend_reporting_district_wrap" style="grid-column: span 4; display:none;">
+          <label>District</label>
+          <select class="hrmis-input js-suspension-district" name="frontend_reporting_district_id">
+            <option value="" selected="selected" disabled="disabled" hidden="hidden">Select District</option>
+            <t t-foreach="districts" t-as="d">
+              <option t-att-value="d.id"><t t-esc="d.name"/></option>
+            </t>
+          </select>
+        </div>
+
         <div class="hrmis-field" id="frontend_reporting_facility_wrap" style="grid-column: span 4; display:none;">
           <label>Facility</label>
-          <select class="hrmis-input" name="frontend_reporting_facility_id">
+          <select class="hrmis-input js-suspension-facility" name="frontend_reporting_facility_id">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Facility</option>
-            <t t-foreach="facilities" t-as="f">
-              <option t-att-value="f.id"><t t-esc="f.name"/></option>
-            </t>
           </select>
         </div>
       </div>
@@ -473,13 +480,20 @@
           </select>
         </div>
 
+        <div class="hrmis-field" id="frontend_onleave_district_wrap" style="grid-column: span 3; display:none;">
+          <label>District</label>
+          <select class="hrmis-input js-onleave-district" name="frontend_onleave_district_id">
+            <option value="" selected="selected" disabled="disabled" hidden="hidden">Select District</option>
+            <t t-foreach="districts" t-as="d">
+              <option t-att-value="d.id"><t t-esc="d.name"/></option>
+            </t>
+          </select>
+        </div>
+
         <div class="hrmis-field" id="frontend_onleave_facility_wrap" style="grid-column: span 3; display:none;">
           <label>Facility</label>
-          <select class="hrmis-input" name="frontend_onleave_facility">
+          <select class="hrmis-input js-onleave-facility" name="frontend_onleave_facility">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Facility</option>
-            <t t-foreach="facilities" t-as="f">
-              <option t-att-value="f.id"><t t-esc="f.name"/></option>
-            </t>
           </select>
         </div>
       </div>
@@ -502,6 +516,8 @@
           <label>Training Institute</label>
           <select class="hrmis-input" name="frontend_eol_institute">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Institute</option>
+            <option value="example_inst_1">Example Institute 1</option>
+            <option value="example_inst_2">Example Institute 2</option>
             <t t-foreach="institutes" t-as="inst">
               <option t-att-value="inst.id"><t t-esc="inst.name"/></option>
             </t>
@@ -512,9 +528,20 @@
           <label>Specialization</label>
           <select class="hrmis-input" name="frontend_eol_specialization">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Specialization</option>
+            <option value="example_spec_1">Example Specialization 1</option>
+            <option value="example_spec_2">Example Specialization 2</option>
             <t t-foreach="specializations" t-as="sp">
               <option t-att-value="sp.id"><t t-esc="sp.name"/></option>
             </t>
+          </select>
+        </div>
+
+        <div class="hrmis-field" style="grid-column: span 3;">
+          <label>Status</label>
+          <select class="hrmis-input" name="frontend_eol_status">
+            <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Status</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Complete</option>
           </select>
         </div>
 
@@ -523,7 +550,7 @@
           <input type="date" class="hrmis-input" name="frontend_eol_start"/>
         </div>
 
-        <div class="hrmis-field" style="grid-column: span 3;">
+        <div class="hrmis-field" id="frontend_eol_end_wrap" style="grid-column: span 3; display:none;">
           <label>Ending Date</label>
           <input type="date" class="hrmis-input" name="frontend_eol_end"/>
         </div>
@@ -722,15 +749,21 @@
         <input class="hrmis-input" type="number" min="1" max="22"/>
       </div>
 
+      <!-- Qualification -->
+      <div class="hrmis-field" style="grid-column: span 2;">
+        <label>Qualification</label>
+        <select class="hrmis-input" name="frontend_allowed_work_qualification">
+          <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Qualification</option>
+          <option value="mbbs">MBBS</option>
+          <option value="bds">BDS</option>
+          <option value="pharmd">Pharm-D</option>
+          <option value="dpt">DPT</option>
+        </select>
+      </div>
+
       <!-- Starting Date -->
       <div class="hrmis-field" style="grid-column: span 2;">
         <label>Allowed to Work Starting Date</label>
-        <input class="hrmis-input" type="month"/>
-      </div>
-
-      <!-- Ending Date -->
-      <div class="hrmis-field" style="grid-column: span 3;">
-        <label>Allowed to Work Ending Date</label>
         <input class="hrmis-input" type="month"/>
       </div>
 

@@ -3007,8 +3007,14 @@ function _initFrontendStatusToggle(formArg) {
   const suspensionReportingTo = form.querySelector(
     '[name="frontend_reporting_to"]',
   );
+  const suspensionDistrictWrap = document.getElementById(
+    "frontend_reporting_district_wrap",
+  );
   const suspensionFacilityWrap = document.getElementById(
     "frontend_reporting_facility_wrap",
+  );
+  const suspensionDistrictSel = form.querySelector(
+    '[name="frontend_reporting_district_id"]',
   );
   const suspensionFacilitySel = form.querySelector(
     '[name="frontend_reporting_facility_id"]',
@@ -3018,8 +3024,25 @@ function _initFrontendStatusToggle(formArg) {
     if (!suspensionReportingTo) return;
 
     const showFacility = (suspensionReportingTo.value || "") === "facility";
+    if (suspensionDistrictWrap)
+      suspensionDistrictWrap.style.display = showFacility ? "" : "none";
     if (suspensionFacilityWrap)
       suspensionFacilityWrap.style.display = showFacility ? "" : "none";
+
+    if (suspensionDistrictSel) {
+      remember(suspensionDistrictSel);
+      if (showFacility) {
+        suspensionDistrictSel.disabled =
+          suspensionDistrictSel.dataset.hrmisOrigDisabled === "1";
+        if (suspensionDistrictSel.dataset.hrmisOrigRequired === "1") {
+          suspensionDistrictSel.setAttribute("required", "required");
+        }
+      } else {
+        suspensionDistrictSel.value = "";
+        suspensionDistrictSel.disabled = true;
+        suspensionDistrictSel.removeAttribute("required");
+      }
+    }
 
     if (suspensionFacilitySel) {
       remember(suspensionFacilitySel);
@@ -3041,8 +3064,14 @@ function _initFrontendStatusToggle(formArg) {
   const onLeaveReportingTo = form.querySelector(
     '[name="frontend_onleave_reporting_to"]',
   );
+  const onLeaveDistrictWrap = document.getElementById(
+    "frontend_onleave_district_wrap",
+  );
   const onLeaveFacilityWrap = document.getElementById(
     "frontend_onleave_facility_wrap",
+  );
+  const onLeaveDistrictSel = form.querySelector(
+    '[name="frontend_onleave_district_id"]',
   );
   const onLeaveFacilitySel = form.querySelector(
     '[name="frontend_onleave_facility"]',
@@ -3052,8 +3081,25 @@ function _initFrontendStatusToggle(formArg) {
     if (!onLeaveReportingTo) return;
 
     const showFacility = (onLeaveReportingTo.value || "") === "facility";
+    if (onLeaveDistrictWrap)
+      onLeaveDistrictWrap.style.display = showFacility ? "" : "none";
     if (onLeaveFacilityWrap)
       onLeaveFacilityWrap.style.display = showFacility ? "" : "none";
+
+    if (onLeaveDistrictSel) {
+      remember(onLeaveDistrictSel);
+      if (showFacility) {
+        onLeaveDistrictSel.disabled =
+          onLeaveDistrictSel.dataset.hrmisOrigDisabled === "1";
+        if (onLeaveDistrictSel.dataset.hrmisOrigRequired === "1") {
+          onLeaveDistrictSel.setAttribute("required", "required");
+        }
+      } else {
+        onLeaveDistrictSel.value = "";
+        onLeaveDistrictSel.disabled = true;
+        onLeaveDistrictSel.removeAttribute("required");
+      }
+    }
 
     if (onLeaveFacilitySel) {
       remember(onLeaveFacilitySel);
@@ -3071,6 +3117,31 @@ function _initFrontendStatusToggle(formArg) {
     }
   }
 
+  // ---------- eol (pgship) end-date by status ----------
+  const eolStatusSel = form.querySelector('[name="frontend_eol_status"]');
+  const eolEndWrap = document.getElementById("frontend_eol_end_wrap");
+  const eolEndInp = form.querySelector('[name="frontend_eol_end"]');
+
+  function syncEolEndVisibility() {
+    if (!eolStatusSel || !eolEndWrap || !eolEndInp) return;
+    remember(eolStatusSel);
+    remember(eolEndInp);
+
+    const v = (eolStatusSel.value || "").trim();
+    const show = v === "completed";
+
+    eolEndWrap.style.display = show ? "" : "none";
+
+    if (!show) {
+      eolEndInp.value = "";
+      eolEndInp.disabled = true;
+      eolEndInp.removeAttribute("required");
+    } else {
+      eolEndInp.disabled = eolEndInp.dataset.hrmisOrigDisabled === "1";
+      eolEndInp.setAttribute("required", "required");
+    }
+  }
+
   // remember original attrs once
   boxes.forEach((box) =>
     box.querySelectorAll("input, select, textarea").forEach(remember),
@@ -3079,7 +3150,11 @@ function _initFrontendStatusToggle(formArg) {
   if (allowedBox)
     allowedBox.querySelectorAll("input, select, textarea").forEach(remember);
   if (suspensionFacilitySel) remember(suspensionFacilitySel);
+  if (suspensionDistrictSel) remember(suspensionDistrictSel);
   if (onLeaveFacilitySel) remember(onLeaveFacilitySel);
+  if (onLeaveDistrictSel) remember(onLeaveDistrictSel);
+  if (eolStatusSel) remember(eolStatusSel);
+  if (eolEndInp) remember(eolEndInp);
 
   // ---------- main sync ----------
   function sync() {
@@ -3094,6 +3169,13 @@ function _initFrontendStatusToggle(formArg) {
     if (active && active.dataset.status === "suspended") {
       syncSuspensionFacility();
     } else {
+      if (suspensionDistrictWrap)
+        suspensionDistrictWrap.style.display = "none";
+      if (suspensionDistrictSel) {
+        suspensionDistrictSel.value = "";
+        suspensionDistrictSel.disabled = true;
+        suspensionDistrictSel.removeAttribute("required");
+      }
       if (suspensionFacilityWrap) suspensionFacilityWrap.style.display = "none";
       if (suspensionFacilitySel) {
         suspensionFacilitySel.value = "";
@@ -3105,11 +3187,28 @@ function _initFrontendStatusToggle(formArg) {
     if (active && active.dataset.status === "on_leave") {
       syncOnLeaveFacility();
     } else {
+      if (onLeaveDistrictWrap) onLeaveDistrictWrap.style.display = "none";
+      if (onLeaveDistrictSel) {
+        onLeaveDistrictSel.value = "";
+        onLeaveDistrictSel.disabled = true;
+        onLeaveDistrictSel.removeAttribute("required");
+      }
       if (onLeaveFacilityWrap) onLeaveFacilityWrap.style.display = "none";
       if (onLeaveFacilitySel) {
         onLeaveFacilitySel.value = "";
         onLeaveFacilitySel.disabled = true;
         onLeaveFacilitySel.removeAttribute("required");
+      }
+    }
+
+    if (active && active.dataset.status === "eol_pgship") {
+      syncEolEndVisibility();
+    } else {
+      if (eolEndWrap) eolEndWrap.style.display = "none";
+      if (eolEndInp) {
+        eolEndInp.value = "";
+        eolEndInp.disabled = true;
+        eolEndInp.removeAttribute("required");
       }
     }
   }
@@ -3127,6 +3226,7 @@ function _initFrontendStatusToggle(formArg) {
     suspensionReportingTo.addEventListener("change", syncSuspensionFacility);
   if (onLeaveReportingTo)
     onLeaveReportingTo.addEventListener("change", syncOnLeaveFacility);
+  if (eolStatusSel) eolStatusSel.addEventListener("change", syncEolEndVisibility);
 
   sync(); // run once on load
 }

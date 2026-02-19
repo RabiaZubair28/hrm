@@ -201,6 +201,31 @@ function _appendFacilitiesToSelect(selectEl, facilities) {
   if (selectEl._hrmisRefreshCombobox) selectEl._hrmisRefreshCombobox();
 }
 
+function _resetFacilitySelectSimple(selectEl) {
+  if (!selectEl) return;
+
+  const placeholderText =
+    (selectEl.options &&
+      selectEl.options[0] &&
+      selectEl.options[0].textContent.trim()) ||
+    "Select Facility";
+
+  selectEl.innerHTML = "";
+
+  const ph = document.createElement("option");
+  ph.value = "";
+  ph.disabled = true;
+  ph.hidden = false;
+  ph.textContent = placeholderText;
+  ph.selected = true;
+  selectEl.appendChild(ph);
+
+  selectEl.selectedIndex = 0;
+  selectEl.value = "";
+
+  if (selectEl._hrmisRefreshCombobox) selectEl._hrmisRefreshCombobox();
+}
+
 async function _fetchFacilities(districtIdRaw) {
   const payload = {
     jsonrpc: "2.0",
@@ -461,6 +486,52 @@ function _initPrevPostingRowFilters() {
 }
 
 /* ----------------------------
+ * Suspension / On-leave: district -> facility (FETCH MODE)
+ * ---------------------------- */
+function _initDistrictFacilityFetchBySelectors(districtSel, facilitySel) {
+  if (!districtSel || !facilitySel) return;
+
+  // avoid double binding
+  const bindKey = `hrmisDfBound_${districtSel.name || districtSel.id || "district"}_${facilitySel.name || facilitySel.id || "facility"}`;
+  if (districtSel.dataset[bindKey] === "1") return;
+  districtSel.dataset[bindKey] = "1";
+
+  async function refresh() {
+    const selectedDistrictId = String(districtSel.value || "").trim();
+
+    facilitySel.disabled = true;
+    _resetFacilitySelectSimple(facilitySel);
+
+    if (_isEmpty(selectedDistrictId)) return;
+
+    const facilities = await _fetchFacilities(selectedDistrictId);
+    _appendFacilitiesToSelect(facilitySel, facilities);
+
+    facilitySel.disabled = false;
+    facilitySel.selectedIndex = 0;
+    facilitySel.value = "";
+    if (facilitySel.options?.[0]) facilitySel.options[0].selected = true;
+
+    if (facilitySel._hrmisRefreshCombobox) facilitySel._hrmisRefreshCombobox();
+  }
+
+  refresh();
+  districtSel.addEventListener("change", refresh);
+}
+
+function _initStatusBoxFacilityFilters() {
+  // Suspension (Reporting To = Facility)
+  const suspDistrict = _qs(document, "select.js-suspension-district");
+  const suspFacility = _qs(document, "select.js-suspension-facility");
+  _initDistrictFacilityFetchBySelectors(suspDistrict, suspFacility);
+
+  // On Leave (Reporting To = Facility)
+  const onLeaveDistrict = _qs(document, "select.js-onleave-district");
+  const onLeaveFacility = _qs(document, "select.js-onleave-facility");
+  _initDistrictFacilityFetchBySelectors(onLeaveDistrict, onLeaveFacility);
+}
+
+/* ----------------------------
  * Init
  * ---------------------------- */
 let __hrmis_init_done = false;
@@ -470,6 +541,7 @@ function _initFilters() {
   // (we still guard by __hrmis_init_done for first run)
   _initCurrentPostingFilters();
   _initPrevPostingRowFilters();
+  _initStatusBoxFacilityFilters();
 }
 
 function _initOnce() {
