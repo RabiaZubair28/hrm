@@ -433,6 +433,11 @@
           <label>Facility</label>
           <select class="hrmis-input js-suspension-facility" name="frontend_reporting_facility_id">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Facility</option>
+            <t t-foreach="facilities" t-as="f">
+              <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''">
+                <t t-esc="f.name"/>
+              </option>
+            </t>
           </select>
         </div>
       </div>
@@ -494,6 +499,11 @@
           <label>Facility</label>
           <select class="hrmis-input js-onleave-facility" name="frontend_onleave_facility">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Facility</option>
+            <t t-foreach="facilities" t-as="f">
+              <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''">
+                <t t-esc="f.name"/>
+              </option>
+            </t>
           </select>
         </div>
       </div>

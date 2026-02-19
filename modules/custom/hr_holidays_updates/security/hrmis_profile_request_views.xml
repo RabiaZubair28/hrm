@@ -466,6 +466,11 @@
           <option value="" selected="selected" disabled="disabled" hidden="hidden">
             Select Facility
           </option>
+          <t t-foreach="facilities" t-as="f">
+            <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''">
+              <t t-esc="f.name"/>
+            </option>
+          </t>
         </select>
       </div>
 
@@ -561,6 +566,11 @@
           <option value="" selected="selected" disabled="disabled" hidden="hidden">
             Select Facility
           </option>
+          <t t-foreach="facilities" t-as="f">
+            <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''">
+              <t t-esc="f.name"/>
+            </option>
+          </t>
         </select>
       </div>
 
