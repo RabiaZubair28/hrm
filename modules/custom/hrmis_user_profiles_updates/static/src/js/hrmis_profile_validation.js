@@ -277,12 +277,13 @@ function _qualSelectedDegrees(exceptRow = null) {
 }
 function _syncQualEndVisibility(row) {
   const statusSel = _qs(row, 'select[name="qualification_status[]"]');
+  const chk = _qs(row, ".js-qual-completed");
   const wrap = _qs(row, ".js-qual-end-wrap");
   const end = _qs(row, 'input[name="qualification_end[]"]');
-  if (!statusSel || !wrap || !end) return;
+  if ((!statusSel && !chk) || !wrap || !end) return;
 
-  const status = (statusSel.value || "").trim();
-  const isCompleted = status === "completed";
+  const status = (statusSel?.value || "").trim();
+  const isCompleted = statusSel ? status === "completed" : !!chk?.checked;
 
   if (isCompleted) {
     wrap.style.display = "";
@@ -353,17 +354,18 @@ function _validateQualificationRow(row) {
   const start = _qs(row, 'input[name="qualification_start[]"]');
   const end = _qs(row, 'input[name="qualification_end[]"]');
   const statusSel = _qs(row, 'select[name="qualification_status[]"]');
+  const chk = _qs(row, ".js-qual-completed");
 
   if (start) {
     if (!_validateQualStartNotFuture(row)) ok = false;
   }
 
-  if (!end || !statusSel) return ok;
+  if (!end || (!statusSel && !chk)) return ok;
 
   _clearError(end);
 
-  const status = (statusSel.value || "").trim();
-  const isCompleted = status === "completed";
+  const status = (statusSel?.value || "").trim();
+  const isCompleted = statusSel ? status === "completed" : !!chk?.checked;
   if (!isCompleted) return ok;
 
   const sv = (start?.value || "").trim();
