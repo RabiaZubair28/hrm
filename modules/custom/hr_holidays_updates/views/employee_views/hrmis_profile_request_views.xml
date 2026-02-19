@@ -328,7 +328,8 @@
                             <div class="hrmis-field" style="grid-column: span 2;">
                               <label>Status</label>
                               <select class="hrmis-input js-qual-status" name="qualification_status[]">
-                                <option value="ongoing" selected="selected">Ongoing</option>
+                                <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Status</option>
+                                <option value="ongoing">Ongoing</option>
                                 <option value="completed">Complete</option>
                               </select>
                             </div>
@@ -535,12 +536,13 @@
 
         <!-- Current Posting -->
         <div id="current_posting_box"
-     class="js-status-box hrmis-leave-row-wrap d-flex align-items-stretch "
-     data-status="currently_posted"
-     style="gap:10px; border: 2px solid black; margin-bottom: 12px; display:none;">
-
-          <div class="hrmis-card p-3"
-               style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
+             class="js-status-box"
+             data-status="currently_posted"
+             style="display:none;">
+          <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
+               style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
+            <div class="hrmis-card p-3"
+                 style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
             <div style="font-weight:800; font-size:18px; margin-bottom:3px; border-bottom: 1px solid black;">
               Substantive Posting
             </div>
@@ -669,16 +671,17 @@
             </div>
           </div>
         </div>
+        </div>
 
 
         <!-- Allowed To Work Box -->
 <div id="allowed_to_work_box"
      style="display:none; margin-top:15px;"
-     class="js-status-dependent hrmis-leave-row-wrap d-flex align-items-stretch"
+     class="js-status-dependent"
      data-statuses="currently_posted">
-
-  <div class="hrmis-card p-3"
-       style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
+  <div class="hrmis-leave-row-wrap d-flex align-items-stretch">
+    <div class="hrmis-card p-3"
+         style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
 
     <div style="font-weight:800; font-size:18px; margin-bottom:8px; border-bottom:1px solid black;">
       Allowed To Work Posting
@@ -732,6 +735,7 @@
       </div>
 
     </div>
+  </div>
   </div>
 </div>
 
