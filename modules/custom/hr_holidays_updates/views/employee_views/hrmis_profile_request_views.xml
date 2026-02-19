@@ -460,8 +460,12 @@
           <label>Leave Type</label>
           <select class="hrmis-input" name="frontend_onleave_type">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Leave Type</option>
-            <t t-foreach="leave_types" t-as="lt">
-              <option t-att-value="lt.id"><t t-esc="lt.name"/></option>
+            <t t-set="emp_gender" t-value="((req.gender or current_employee.gender or '') or '').lower()"/>
+            <t t-foreach="env['hr.leave.type'].sudo().search([], order='name')" t-as="lt">
+              <t t-set="lt_name" t-value="(lt.name or '').lower()"/>
+              <t t-if=" ('casual' not in lt_name) and ('compensatory' not in lt_name) and ('paid time off' not in lt_name) and ('sick time off' not in lt_name) and ('lpr' not in lt_name) and (lt_name.strip() != 'unpaid') and (emp_gender != 'male' or ('maternity' not in lt_name)) ">
+                <option t-att-value="lt.id"><t t-esc="lt.name"/></option>
+              </t>
             </t>
           </select>
         </div>
