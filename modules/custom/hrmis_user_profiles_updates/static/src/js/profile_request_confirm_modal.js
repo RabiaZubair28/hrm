@@ -182,18 +182,19 @@ if (cnicFrontName || cnicBackName) {
       const degSel = _qs(row, 'select[name="qualification_degree[]"]');
       const spec = _qs(row, 'input[name="qualification_specialization[]"]')?.value?.trim();
       const start = _qs(row, 'input[name="qualification_start[]"]')?.value?.trim();
-      const completedChk = _qs(row, 'input[name="qualification_completed[]"]');
+      const statusSel = _qs(row, 'select[name="qualification_status[]"]');
       const end = _qs(row, 'input[name="qualification_end[]"]')?.value?.trim();
 
       const degTxt = _getSelectedText(degSel) || "-";
       const specTxt = spec ? ` — ${spec}` : "";
-      const completedTxt = _fmtCheckbox(completedChk) === "Yes" ? "Completed" : "In progress";
-      const rangeTxt =
-        _fmtCheckbox(completedChk) === "Yes"
-          ? `${_fmtMonth(start)} → ${_fmtMonth(end)}`
-          : `${_fmtMonth(start)} → (ongoing)`;
+      const status = (statusSel?.value || "").trim() || "ongoing";
+      const isCompleted = status === "completed";
+      const statusTxt = isCompleted ? "Complete" : "Ongoing";
+      const rangeTxt = isCompleted
+        ? `${_fmtMonth(start)} → ${_fmtMonth(end)}`
+        : `${_fmtMonth(start)} → (ongoing)`;
 
-      return `<b>#${idx + 1}</b> ${degTxt}${specTxt} <span style="color:#666;">(${completedTxt}, ${rangeTxt})</span>`;
+      return `<b>#${idx + 1}</b> ${degTxt}${specTxt} <span style="color:#666;">(${statusTxt}, ${rangeTxt})</span>`;
     },
   );
   _addRow(tbody, "Qualification History", _ul(qualItems));

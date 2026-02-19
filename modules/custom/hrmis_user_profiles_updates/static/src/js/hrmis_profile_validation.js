@@ -276,12 +276,15 @@ function _qualSelectedDegrees(exceptRow = null) {
   return set;
 }
 function _syncQualEndVisibility(row) {
-  const chk = _qs(row, ".js-qual-completed");
+  const statusSel = _qs(row, 'select[name="qualification_status[]"]');
   const wrap = _qs(row, ".js-qual-end-wrap");
   const end = _qs(row, 'input[name="qualification_end[]"]');
-  if (!chk || !wrap || !end) return;
+  if (!statusSel || !wrap || !end) return;
 
-  if (chk.checked) {
+  const status = (statusSel.value || "").trim();
+  const isCompleted = status === "completed";
+
+  if (isCompleted) {
     wrap.style.display = "";
     end.setAttribute("required", "required");
   } else {
@@ -349,17 +352,19 @@ function _validateQualificationRow(row) {
 
   const start = _qs(row, 'input[name="qualification_start[]"]');
   const end = _qs(row, 'input[name="qualification_end[]"]');
-  const chk = _qs(row, ".js-qual-completed");
+  const statusSel = _qs(row, 'select[name="qualification_status[]"]');
 
   if (start) {
     if (!_validateQualStartNotFuture(row)) ok = false;
   }
 
-  if (!end || !chk) return ok;
+  if (!end || !statusSel) return ok;
 
   _clearError(end);
 
-  if (!chk.checked) return ok;
+  const status = (statusSel.value || "").trim();
+  const isCompleted = status === "completed";
+  if (!isCompleted) return ok;
 
   const sv = (start?.value || "").trim();
   const ev = (end.value || "").trim();
@@ -2119,9 +2124,8 @@ function _initRepeatables(form) {
 
     if (t.matches?.('[name="gender"]')) _syncLeaveTypeSelectsByGender(form);
 
-    const qualChk = t.closest?.(".js-qual-completed");
-    if (qualChk) {
-      const row = qualChk.closest(".hrmis-repeat-row");
+    if (t.matches?.('select[name="qualification_status[]"]')) {
+      const row = t.closest(".hrmis-repeat-row");
       if (row) {
         _syncQualEndVisibility(row);
         _syncQualEndMinMax(row);
@@ -2203,19 +2207,23 @@ function _validateRepeatables(form) {
     const start = _qs(row, 'input[name="qualification_start[]"]');
     const end = _qs(row, 'input[name="qualification_end[]"]');
     const spec = _qs(row, 'input[name="qualification_specialization[]"]');
-    const completed = _qs(row, ".js-qual-completed")?.checked;
+    const statusSel = _qs(row, 'select[name="qualification_status[]"]');
+    const status = (statusSel?.value || "").trim() || "ongoing";
+    const completed = status === "completed" || !!_qs(row, ".js-qual-completed")?.checked;
 
     const emptyRow =
       _isEmpty(degree?.value) &&
       _isEmpty(start?.value) &&
       _isEmpty(end?.value) &&
-      _isEmpty(spec?.value) &&
-      !completed;
+      _isEmpty(spec?.value);
 
     if (emptyRow) {
       [degree, start, end, spec].forEach(_clearError);
       return;
     }
+
+    // keep UI in sync in case something changed before submit
+    _syncQualEndVisibility(row);
 
     if (_isEmpty(degree?.value)) {
       _showError(degree, "Degree is required");
@@ -2236,7 +2244,7 @@ function _validateRepeatables(form) {
       if (_isEmpty(end?.value) || !_isValidMonth(end.value)) {
         _showError(
           end,
-          "End month is required when Completed is checked (YYYY-MM)",
+          "End month is required when Status is Complete (YYYY-MM)",
         );
         hasError = true;
       } else if (_isValidMonth(start?.value) && _isValidMonth(end?.value)) {
