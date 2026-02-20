@@ -461,6 +461,53 @@ function _initPrevPostingRowFilters() {
 }
 
 /* ----------------------------
+ * Suspension / On-leave: district -> facility (FETCH MODE)
+ * ---------------------------- */
+function _initStatusBoxFacilityFilters() {
+  function bind(districtSel, facilitySel, key) {
+    if (!districtSel || !facilitySel) return;
+
+    const bindKey = `hrmisStatusDfBound_${key}`;
+    if (districtSel.dataset[bindKey] === "1") return;
+    districtSel.dataset[bindKey] = "1";
+
+    function apply() {
+      const selectedDistrictId = String(districtSel.value || "").trim();
+
+      // match current-posting UX: no district => no facilities
+      if (_isEmpty(selectedDistrictId)) {
+        _toggleOptions(facilitySel, () => false);
+        return;
+      }
+
+      _toggleOptions(facilitySel, (opt) => {
+        const val = String(opt.value || "").trim();
+        if (!val) return false;
+        const optDistrict = _optDistrictId(opt);
+        return !_isEmpty(optDistrict) && optDistrict === selectedDistrictId;
+      });
+    }
+
+    apply();
+    districtSel.addEventListener("change", apply);
+  }
+
+  // Suspension (Reporting To = Facility)
+  bind(
+    _qs(document, "select.js-suspension-district"),
+    _qs(document, "select.js-suspension-facility"),
+    "suspension",
+  );
+
+  // On Leave (Reporting To = Facility)
+  bind(
+    _qs(document, "select.js-onleave-district"),
+    _qs(document, "select.js-onleave-facility"),
+    "onleave",
+  );
+}
+
+/* ----------------------------
  * Init
  * ---------------------------- */
 let __hrmis_init_done = false;
@@ -470,6 +517,7 @@ function _initFilters() {
   // (we still guard by __hrmis_init_done for first run)
   _initCurrentPostingFilters();
   _initPrevPostingRowFilters();
+  _initStatusBoxFacilityFilters();
 }
 
 function _initOnce() {

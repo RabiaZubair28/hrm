@@ -325,9 +325,13 @@
                               <input class="hrmis-input" type="month" name="qualification_start[]" required="required"/>
                             </div>
 
-                            <div class="hrmis-field" style="grid-column: span 1; display:flex; align-items:center; gap:8px; padding-top:28px;">
-                              <input type="checkbox" class="form-check-input js-qual-completed" name="qualification_completed[]"/>
-                              <label style="margin:0;">Completed</label>
+                            <div class="hrmis-field" style="grid-column: span 2;">
+                              <label>Status</label>
+                              <select class="hrmis-input js-qual-status" name="qualification_status[]">
+                                <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Status</option>
+                                <option value="ongoing">Ongoing</option>
+                                <option value="completed">Complete</option>
+                              </select>
                             </div>
 
                             <div class="hrmis-field js-qual-end-wrap" style="grid-column: span 2; display:none;">
@@ -378,7 +382,7 @@
   <option value="suspended">Suspended</option>
   <option value="on_leave">On Leave</option>
   <option value="eol_pgship">EOL (PGship)</option>
-  <option value="reported_to_health_department">Reported to Health Department</option>
+  <option value="reported_to_hd">Reported to Health Department</option>
 </select>
 
                             </div>
@@ -415,12 +419,24 @@
           </select>
         </div>
 
+        <div class="hrmis-field" id="frontend_reporting_district_wrap" style="grid-column: span 4; display:none;">
+          <label>District</label>
+          <select class="hrmis-input js-suspension-district" name="frontend_reporting_district_id">
+            <option value="" selected="selected" disabled="disabled" hidden="hidden">Select District</option>
+            <t t-foreach="districts" t-as="d">
+              <option t-att-value="d.id"><t t-esc="d.name"/></option>
+            </t>
+          </select>
+        </div>
+
         <div class="hrmis-field" id="frontend_reporting_facility_wrap" style="grid-column: span 4; display:none;">
           <label>Facility</label>
-          <select class="hrmis-input" name="frontend_reporting_facility_id">
+          <select class="hrmis-input js-suspension-facility" name="frontend_reporting_facility_id">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Facility</option>
             <t t-foreach="facilities" t-as="f">
-              <option t-att-value="f.id"><t t-esc="f.name"/></option>
+              <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''">
+                <t t-esc="f.name"/>
+              </option>
             </t>
           </select>
         </div>
@@ -444,8 +460,12 @@
           <label>Leave Type</label>
           <select class="hrmis-input" name="frontend_onleave_type">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Leave Type</option>
-            <t t-foreach="leave_types" t-as="lt">
-              <option t-att-value="lt.id"><t t-esc="lt.name"/></option>
+            <t t-set="emp_gender" t-value="((req.gender or current_employee.gender or '') or '').lower()"/>
+            <t t-foreach="env['hr.leave.type'].sudo().search([], order='name')" t-as="lt">
+              <t t-set="lt_name" t-value="(lt.name or '').lower()"/>
+              <t t-if=" ('casual' not in lt_name) and ('compensatory' not in lt_name) and ('paid time off' not in lt_name) and ('sick time off' not in lt_name) and ('lpr' not in lt_name) and (lt_name.strip() != 'unpaid') and (emp_gender != 'male' or ('maternity' not in lt_name)) ">
+                <option t-att-value="lt.id"><t t-esc="lt.name"/></option>
+              </t>
             </t>
           </select>
         </div>
@@ -469,12 +489,24 @@
           </select>
         </div>
 
+        <div class="hrmis-field" id="frontend_onleave_district_wrap" style="grid-column: span 3; display:none;">
+          <label>District</label>
+          <select class="hrmis-input js-onleave-district" name="frontend_onleave_district_id">
+            <option value="" selected="selected" disabled="disabled" hidden="hidden">Select District</option>
+            <t t-foreach="districts" t-as="d">
+              <option t-att-value="d.id"><t t-esc="d.name"/></option>
+            </t>
+          </select>
+        </div>
+
         <div class="hrmis-field" id="frontend_onleave_facility_wrap" style="grid-column: span 3; display:none;">
           <label>Facility</label>
-          <select class="hrmis-input" name="frontend_onleave_facility">
+          <select class="hrmis-input js-onleave-facility" name="frontend_onleave_facility">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Facility</option>
             <t t-foreach="facilities" t-as="f">
-              <option t-att-value="f.id"><t t-esc="f.name"/></option>
+              <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''">
+                <t t-esc="f.name"/>
+              </option>
             </t>
           </select>
         </div>
@@ -498,6 +530,8 @@
           <label>Training Institute</label>
           <select class="hrmis-input" name="frontend_eol_institute">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Institute</option>
+            <option value="example_inst_1">Example Institute 1</option>
+            <option value="example_inst_2">Example Institute 2</option>
             <t t-foreach="institutes" t-as="inst">
               <option t-att-value="inst.id"><t t-esc="inst.name"/></option>
             </t>
@@ -508,9 +542,20 @@
           <label>Specialization</label>
           <select class="hrmis-input" name="frontend_eol_specialization">
             <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Specialization</option>
+            <option value="example_spec_1">Example Specialization 1</option>
+            <option value="example_spec_2">Example Specialization 2</option>
             <t t-foreach="specializations" t-as="sp">
               <option t-att-value="sp.id"><t t-esc="sp.name"/></option>
             </t>
+          </select>
+        </div>
+
+        <div class="hrmis-field" style="grid-column: span 3;">
+          <label>Status</label>
+          <select class="hrmis-input" name="frontend_eol_status">
+            <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Status</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Complete</option>
           </select>
         </div>
 
@@ -519,9 +564,33 @@
           <input type="date" class="hrmis-input" name="frontend_eol_start"/>
         </div>
 
-        <div class="hrmis-field" style="grid-column: span 3;">
+        <div class="hrmis-field" id="frontend_eol_end_wrap" style="grid-column: span 3; display:none;">
           <label>Ending Date</label>
           <input type="date" class="hrmis-input" name="frontend_eol_end"/>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= REPORTED TO HEALTH DEPARTMENT BOX (HIDDEN BY DEFAULT) ================= -->
+<div id="reported_to_hd_box" class="js-status-box" data-status="reported_to_hd" style="display:none;">
+  <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
+       style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
+    <div class="hrmis-card p-3" style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
+      <div style="font-weight:800; font-size:18px; margin-bottom:3px; border-bottom: 1px solid black;">
+        Reported to Health Department Details
+      </div>
+
+      <div class="hrmis-form__grid pt-3 pb-2"
+           style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px; width: 100%">
+        <div class="hrmis-field" style="grid-column: span 4;">
+          <label>Reporting Date</label>
+          <input type="date" class="hrmis-input" name="frontend_reported_to_hd_date"/>
+        </div>
+        <div class="hrmis-field" style="grid-column: span 8;">
+          <label>Remarks</label>
+          <input type="text" class="hrmis-input" name="frontend_reported_to_hd_remarks" placeholder="Optional"/>
         </div>
       </div>
     </div>
@@ -532,12 +601,13 @@
 
         <!-- Current Posting -->
         <div id="current_posting_box"
-     class="js-status-box hrmis-leave-row-wrap d-flex align-items-stretch "
-     data-status="currently_posted"
-     style="gap:10px; border: 2px solid black; margin-bottom: 12px; display:none;">
-
-          <div class="hrmis-card p-3"
-               style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
+             class="js-status-box"
+             data-status="currently_posted"
+             style="display:none;">
+          <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
+               style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
+            <div class="hrmis-card p-3"
+                 style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
             <div style="font-weight:800; font-size:18px; margin-bottom:3px; border-bottom: 1px solid black;">
               Substantive Posting
             </div>
@@ -666,16 +736,17 @@
             </div>
           </div>
         </div>
+        </div>
 
 
         <!-- Allowed To Work Box -->
 <div id="allowed_to_work_box"
      style="display:none; margin-top:15px;"
-     class="js-status-dependent hrmis-leave-row-wrap d-flex align-items-stretch"
+     class="js-status-dependent"
      data-statuses="currently_posted">
-
-  <div class="hrmis-card p-3"
-       style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
+  <div class="hrmis-leave-row-wrap d-flex align-items-stretch">
+    <div class="hrmis-card p-3"
+         style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
 
     <div style="font-weight:800; font-size:18px; margin-bottom:8px; border-bottom:1px solid black;">
       Allowed To Work Posting
@@ -716,19 +787,26 @@
         <input class="hrmis-input" type="number" min="1" max="22"/>
       </div>
 
+      <!-- Qualification -->
+      <div class="hrmis-field" style="grid-column: span 2;">
+        <label>Qualification</label>
+        <select class="hrmis-input" name="frontend_allowed_work_qualification">
+          <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Qualification</option>
+          <option value="mbbs">MBBS</option>
+          <option value="bds">BDS</option>
+          <option value="pharmd">Pharm-D</option>
+          <option value="dpt">DPT</option>
+        </select>
+      </div>
+
       <!-- Starting Date -->
       <div class="hrmis-field" style="grid-column: span 2;">
         <label>Allowed to Work Starting Date</label>
         <input class="hrmis-input" type="month"/>
       </div>
 
-      <!-- Ending Date -->
-      <div class="hrmis-field" style="grid-column: span 3;">
-        <label>Allowed to Work Ending Date</label>
-        <input class="hrmis-input" type="month"/>
-      </div>
-
     </div>
+  </div>
   </div>
 </div>
 

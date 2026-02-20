@@ -32,8 +32,6 @@
         </field>
     </record>
 
-    </record>
-
     <!-- Action -->
     <record id="action_hr_leave_approval_flow" model="ir.actions.act_window">
         <field name="name">Approval Flows</field>
