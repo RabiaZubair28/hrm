@@ -2941,6 +2941,10 @@ function _initFrontendStatusToggle(formArg) {
   }
 
   function showOnly(statusValue) {
+    const normalized =
+      statusValue === "reported_to_health_department"
+        ? "reported_to_hd"
+        : statusValue;
     // hide + disable all
     boxes.forEach((b) => {
       b.style.display = "none";
@@ -2948,7 +2952,7 @@ function _initFrontendStatusToggle(formArg) {
     });
 
     // show + enable selected
-    const active = boxes.find((b) => (b.dataset.status || "") === statusValue);
+    const active = boxes.find((b) => (b.dataset.status || "") === normalized);
     if (active) {
       active.style.display = "";
       setBoxEnabled(active, true);

@@ -394,7 +394,7 @@
           <option value="suspended">Suspended</option>
           <option value="on_leave">On Leave</option>
           <option value="eol_pgship">EOL (PGship)</option>
-          <option value="reported_to_health_department">Reported to Health Department</option>
+          <option value="reported_to_hd">Reported to Health Department</option>
         </select>
       </div>
 
@@ -663,6 +663,34 @@
                name="frontend_eol_end"/>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- ================= REPORTED TO HEALTH DEPARTMENT BOX (HIDDEN BY DEFAULT) ================= -->
+<div id="reported_to_hd_box"
+     class="js-status-box"
+     data-status="reported_to_hd"
+     style="display:none;">
+  <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
+       style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
+    <div class="hrmis-card p-3"
+         style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
+      <div style="font-weight:800; font-size:18px; margin-bottom:3px; border-bottom: 1px solid black;">
+        Reported to Health Department Details
+      </div>
+
+      <div class="hrmis-form__grid pt-3 pb-2"
+           style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px; width: 100%">
+        <div class="hrmis-field" style="grid-column: span 4;">
+          <label>Reporting Date</label>
+          <input type="date" class="hrmis-input" name="frontend_reported_to_hd_date"/>
+        </div>
+        <div class="hrmis-field" style="grid-column: span 8;">
+          <label>Remarks</label>
+          <input type="text" class="hrmis-input" name="frontend_reported_to_hd_remarks" placeholder="Optional"/>
+        </div>
+      </div>
     </div>
   </div>
 </div>
