@@ -39,7 +39,41 @@
     </record>
 
     <record id="district_karachi" model="hrmis.district.master">
-        <field name="name">Karachi</field>
+        <field name="name">Karachi </field>
+        <field name="active">True</field>
+    </record>
+    <record id="district_karachi_central" model="hrmis.district.master">
+        <field name="name">Karachi Central</field>
+        <field name="active">True</field>
+    </record>
+    
+    <record id="district_karachi_east" model="hrmis.district.master">
+        <field name="name">Karachi East</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="district_karachi_kemari" model="hrmis.district.master">
+        <field name="name">Karachi Kemari</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="district_karachi_korangi" model="hrmis.district.master">
+        <field name="name">Karachi Korangi</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="district_karachi_malir" model="hrmis.district.master">
+        <field name="name">Karachi Malir</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="district_karachi_south" model="hrmis.district.master">
+        <field name="name">Karachi South</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="district_karachi_west" model="hrmis.district.master">
+        <field name="name">Karachi West</field>
         <field name="active">True</field>
     </record>
 
@@ -88,6 +122,12 @@
         <field name="active">True</field>
     </record>
 
+    <record id="district_shaheed_benazirabad" model="hrmis.district.master">
+        <field name="name">Shaheed Benazirabad</field>
+        <field name="active">True</field>
+    </record>
+
+
     <record id="district_shikarpur" model="hrmis.district.master">
         <field name="name">Shikarpur</field>
         <field name="active">True</field>
@@ -110,6 +150,11 @@
 
     <record id="district_tando_m_khan" model="hrmis.district.master">
         <field name="name">Tando M.Khan</field>
+        <field name="active">True</field>
+    </record>
+    
+     <record id="district_tharparkar" model="hrmis.district.master">
+        <field name="name">Tharparkar</field>
         <field name="active">True</field>
     </record>
 

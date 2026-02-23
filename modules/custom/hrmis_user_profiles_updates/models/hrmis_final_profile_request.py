@@ -113,7 +113,10 @@ class EmployeeProfileRequest(models.Model):
     )   
     
     hrmis_contact_info = fields.Char(string="Contact Info")
-    
+    current_posting_start = fields.Char(string="Current Posting Start (YYYY-MM)")
+    facility_other_name = fields.Char(string="Other Facility Name")
+
+
     # ---------------- QUALIFICATION / PROMOTION ---------------- #
 
     hrmis_domicile = fields.Char(string="Domicile")
@@ -137,6 +140,46 @@ class EmployeeProfileRequest(models.Model):
         string="Year of Qualification",
         help="Date of last qualification received"
     )
+    current_posting_start = fields.Char(string="Current Posting Start (YYYY-MM)")
+    facility_other_name = fields.Char(string="Other Facility Name")  
+    qualification_line_ids = fields.One2many(
+        "hrmis.qualification.history",
+        "request_id",
+        string="Qualification History",
+    )
+
+    posting_line_ids = fields.One2many(
+        # "hrmis.employee.profile.request.posting.line",
+        "hrmis.posting.history",
+        "request_id",
+        string="Previous Posting History",
+    )
+
+    leave_line_ids = fields.One2many(
+        "hrmis.leave.history",
+        "request_id",
+        string="Leave History",
+    )
+
+    promotion_line_ids = fields.One2many(
+        "hrmis.promotion.history",
+        "request_id",
+        string="Promotion History",
+    )
+
+    hrmis_current_status_frontend = fields.Selection([
+        ("currently_posted", "Currently Posted"),
+        ("suspended", "Suspended"),
+        ("on_leave", "On Leave"),
+        ("eol_pgship", "EOL (PGship)"),
+        ("reported_to_health_department", "Reported to Health Department"),
+    ], default="currently_posted")
+    posting_status_id = fields.One2many(
+    "hrmis.profile.posting.status",
+    "request_id",
+    string="Posting Status Detail",
+)
+
 
     @api.model
     def default_get(self, fields_list):

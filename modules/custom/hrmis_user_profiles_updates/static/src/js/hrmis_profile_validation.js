@@ -276,12 +276,16 @@ function _qualSelectedDegrees(exceptRow = null) {
   return set;
 }
 function _syncQualEndVisibility(row) {
+  const statusSel = _qs(row, 'select[name="qualification_status[]"]');
   const chk = _qs(row, ".js-qual-completed");
   const wrap = _qs(row, ".js-qual-end-wrap");
   const end = _qs(row, 'input[name="qualification_end[]"]');
-  if (!chk || !wrap || !end) return;
+  if ((!statusSel && !chk) || !wrap || !end) return;
 
-  if (chk.checked) {
+  const status = (statusSel?.value || "").trim();
+  const isCompleted = statusSel ? status === "completed" : !!chk?.checked;
+
+  if (isCompleted) {
     wrap.style.display = "";
     end.setAttribute("required", "required");
   } else {
@@ -291,6 +295,7 @@ function _syncQualEndVisibility(row) {
     _clearError(end);
   }
 }
+
 function _syncQualStartMax(row) {
   const start = _qs(row, 'input[name="qualification_start[]"]');
   if (!start) return;
@@ -314,20 +319,15 @@ function _syncQualDegreeOptions() {
     const sel = _qs(row, 'select[name="qualification_degree[]"]');
     if (!sel) return;
 
-    const pickedElsewhere = _qualSelectedDegrees(row);
-    const currentVal = (sel.value || "").trim();
-
     Array.from(sel.options || []).forEach((opt) => {
-      if (!opt.value) {
-        opt.hidden = false;
-        return;
-      }
-      opt.hidden = pickedElsewhere.has(opt.value) && opt.value !== currentVal;
+      if (!opt) return;
+      opt.hidden = false;
     });
 
     if (sel._hrmisRefreshCombobox) sel._hrmisRefreshCombobox();
   });
 }
+
 function _validateQualStartNotFuture(row) {
   const start = _qs(row, 'input[name="qualification_start[]"]');
   if (!start) return true;
@@ -349,17 +349,20 @@ function _validateQualificationRow(row) {
 
   const start = _qs(row, 'input[name="qualification_start[]"]');
   const end = _qs(row, 'input[name="qualification_end[]"]');
+  const statusSel = _qs(row, 'select[name="qualification_status[]"]');
   const chk = _qs(row, ".js-qual-completed");
 
   if (start) {
     if (!_validateQualStartNotFuture(row)) ok = false;
   }
 
-  if (!end || !chk) return ok;
+  if (!end || (!statusSel && !chk)) return ok;
 
   _clearError(end);
 
-  if (!chk.checked) return ok;
+  const status = (statusSel?.value || "").trim();
+  const isCompleted = statusSel ? status === "completed" : !!chk?.checked;
+  if (!isCompleted) return ok;
 
   const sv = (start?.value || "").trim();
   const ev = (end.value || "").trim();
@@ -1504,7 +1507,93 @@ function _recalcLeavesTaken(form) {
 
   out.value = String(total || 0);
 }
+/** @odoo-module **/
 
+import publicWidget from "@web/legacy/js/public/public_widget";
+
+function _qs(root, sel) {
+  return root ? root.querySelector(sel) : null;
+}
+function _qsa(root, sel) {
+  return root ? Array.from(root.querySelectorAll(sel)) : [];
+}
+
+function _setContainerEnabled(container, enabled) {
+  const els = _qsa(container, "input, select, textarea");
+
+  els.forEach((el) => {
+    // Save original required once
+    if (!el.dataset.origRequired) {
+      el.dataset.origRequired = el.required ? "1" : "0";
+    }
+
+    // Disable/enable
+    el.disabled = !enabled;
+
+    // Required only when enabled AND originally required
+    el.required = enabled && el.dataset.origRequired === "1";
+  });
+}
+
+function _toggleStatusBoxes(form) {
+  const statusSel = _qs(form, 'select[name="hrmis_current_status_frontend"]');
+  if (!statusSel) return;
+
+  const status = statusSel.value || "";
+  console.warn("[POSTING_STATUS] status=", status);
+
+  const boxes = _qsa(form, ".js-status-box");
+  boxes.forEach((box) => {
+    const boxStatus = box.getAttribute("data-status") || "";
+    const active = boxStatus === status;
+
+    box.style.display = active ? "" : "none";
+    _setContainerEnabled(box, active);
+
+    console.warn("[POSTING_STATUS] box", boxStatus, "active=", active);
+  });
+
+  // Also handle allowed-to-work dependent blocks (optional)
+  _qsa(form, ".js-status-dependent").forEach((wrap) => {
+    const statuses = (wrap.getAttribute("data-statuses") || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const shouldShow = statuses.includes(status);
+    wrap.style.display = shouldShow ? "" : "none";
+    _setContainerEnabled(wrap, shouldShow);
+  });
+}
+
+publicWidget.registry.HrmisPostingStatusToggle = publicWidget.Widget.extend({
+  selector: "#profile_update_form",
+
+  events: {
+    'change select[name="hrmis_current_status_frontend"]': "_onStatusChange",
+  },
+
+  start() {
+    console.warn("[POSTING_STATUS] init");
+    _toggleStatusBoxes(this.el);
+
+    // Helpful debug: show which field blocks submission
+    this.el.addEventListener("submit", (ev) => {
+      const ok = this.el.checkValidity();
+      console.warn("[POSTING_STATUS] submit checkValidity=", ok);
+      if (!ok) {
+        ev.preventDefault();
+        this.el.reportValidity();
+      }
+    });
+
+    return this._super(...arguments);
+  },
+
+  _onStatusChange() {
+    _toggleStatusBoxes(this.el);
+  },
+});
 /* ---------------------------------------------------------
  * Dates (basic max=today)
  * --------------------------------------------------------- */
@@ -1571,211 +1660,38 @@ function _validatePostingBpsAgainstCurrent(form, row) {
 }
 
 function _initPostingPrevChain(form) {
-  const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date YYYY-MM-DD
-  const currentStart = _qs(form, '[name="current_posting_start"]'); // YYYY-MM
+  // NOTE: Previous Posting History is always available now (like Qualifications)
+  // and is NOT dependent on Current Posting Start vs Joining Month.
   const wrap = _qs(document, ".js-prev-posting-wrap");
   const container = _qs(document, "#prev_post_rows");
-
-  if (!joining || !currentStart || !wrap || !container) return;
+  if (!wrap || !container) return;
 
   // prevent double-binding if init is called again
   if (wrap.dataset.hrmisPrevPostingInited === "1") return;
   wrap.dataset.hrmisPrevPostingInited = "1";
 
-  let msgBox = _qs(wrap, ".js-prev-posting-msg");
-  if (!msgBox) {
-    msgBox = document.createElement("div");
-    msgBox.className = "js-prev-posting-msg";
-    msgBox.style.margin = "10px 0";
-    msgBox.style.padding = "10px 12px";
-    msgBox.style.border = "1px solid #fde68a";
-    msgBox.style.background = "#fffbeb";
-    msgBox.style.borderRadius = "12px";
-    msgBox.style.color = "#92400e";
-    msgBox.style.fontSize = "14px";
-    msgBox.style.display = "none";
-    msgBox.textContent = "Please fill Previous Posting History, if any.";
-    wrap.prepend(msgBox);
-  }
+  // ensure visible (server may still prefill rows)
+  wrap.style.display = "";
 
-  const joiningMonth = () => {
-    const v = (joining.value || "").trim();
-    return v ? v.slice(0, 7) : "";
-  };
-  const currentMonth = () => (currentStart.value || "").trim();
-
-  const clearAll = () => {
-    container.innerHTML = "";
-  };
-
-  const ensureFirstRow = (jm) => {
-    const rows = _qsa(container, ".hrmis-repeat-row");
-    if (rows.length) return rows[0];
-
-    const row = _cloneFromTemplate("#tpl_prev_post_row", "#prev_post_rows");
-    if (!row) return null;
-
-    // helpful UX: set first start = joining month, keep end manual
-    // const s = _qs(row, 'input[name="posting_start[]"]');
-    // if (s) _writeMonthValueToInput(s, jm);
-
-    _applyPostingBpsMaxFromCurrent(form, row);
-    _syncPostingRowDateConstraints(form, row);
-    return row;
-  };
-
-  const rebuild = () => {
-    const jm = joiningMonth();
-    const cm = currentMonth();
-
-    // default hidden until both valid
-    wrap.style.display = "none";
-    msgBox.style.display = "none";
-
-    if (!_isValidMonth(jm) || !_isValidMonth(cm)) {
-      clearAll();
-      return;
-    }
-
-    // enforce cm >= jm
-    if (_monthToIndex(cm) < _monthToIndex(jm)) {
-      _showError(
-        currentStart,
-        "Current Posting Start cannot be before Joining Month",
-      );
-      clearAll();
-      return;
-    } else {
-      _clearError(currentStart);
-    }
-
-    // jm == cm => no previous posting section needed
-    if (jm === cm) {
-      clearAll();
-      return;
-    }
-
-    // jm != cm => show and keep rows
-    wrap.style.display = "";
-    msgBox.style.display = "";
-
-    // optional UX: add first row if none
-    ensureFirstRow(jm);
-
-    // always resync constraints for existing rows
+  const resync = () => {
     _qsa(container, ".hrmis-repeat-row").forEach((r) => {
       _applyPostingBpsMaxFromCurrent(form, r);
       _syncPostingRowDateConstraints(form, r);
     });
   };
 
-  joining.addEventListener("change", rebuild);
-  currentStart.addEventListener("change", rebuild);
+  // resync bounds whenever relevant inputs change
+  const joining = _qs(form, '[name="hrmis_joining_date"]');
+  const currentStart = _qs(form, '[name="current_posting_start"]');
+  const bps = _qs(form, '[name="hrmis_bps"]');
 
-  rebuild();
+  joining?.addEventListener("change", resync);
+  currentStart?.addEventListener("change", resync);
+  bps?.addEventListener("input", resync);
+  bps?.addEventListener("change", resync);
+
+  resync();
 }
-
-// function _initPostingPrevChain(form) {
-//   const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date YYYY-MM-DD
-//   const currentStart = _qs(form, '[name="current_posting_start"]'); // YYYY-MM
-//   const wrap = _qs(document, ".js-prev-posting-wrap");
-//   const container = _qs(document, "#prev_post_rows");
-
-//   if (!joining || !currentStart || !wrap || !container) return;
-
-//   let msgBox = _qs(wrap, ".js-prev-posting-msg");
-//   if (!msgBox) {
-//     msgBox = document.createElement("div");
-//     msgBox.className = "js-prev-posting-msg";
-//     msgBox.style.margin = "10px 0";
-//     msgBox.style.padding = "10px 12px";
-//     msgBox.style.border = "1px solid #fde68a";
-//     msgBox.style.background = "#fffbeb";
-//     msgBox.style.borderRadius = "12px";
-//     msgBox.style.color = "#92400e";
-//     msgBox.style.fontSize = "14px";
-//     msgBox.style.display = "none";
-//     msgBox.textContent =
-//       "Please fill Previous Posting History, if any.";
-//     wrap.prepend(msgBox);
-//   }
-
-//   function joiningMonth() {
-//     const v = (joining.value || "").trim();
-//     return v ? v.slice(0, 7) : "";
-//   }
-//   function currentMonth() {
-//     return (currentStart.value || "").trim();
-//   }
-//   function clearAll() {
-//     container.innerHTML = "";
-//   }
-
-//   function rebuild() {
-//     const jm = joiningMonth();
-//     const cm = currentMonth();
-
-//     wrap.style.display = "none";
-//     msgBox.style.display = "none";
-
-//     if (!_isValidMonth(jm) || !_isValidMonth(cm)) {
-//       clearAll();
-//       return;
-//     }
-
-//     if (_monthToIndex(cm) < _monthToIndex(jm)) {
-//       _showError(currentStart, "Current Posting Start cannot be before Joining Month");
-//       clearAll();
-//       return;
-//     } else {
-//       _clearError(currentStart);
-//     }
-
-//     if (jm !== cm) {
-//       wrap.style.display = "";
-//       msgBox.style.display = "";
-//       // user adds rows manually
-//     } else {
-//       clearAll();
-//     }
-//   }
-
-//   container.addEventListener("change", (e) => {
-//     const endInput = e.target?.closest?.('input[name="posting_end[]"]');
-//     if (!endInput) return;
-
-//     const rows = _qsa(container, ".hrmis-repeat-row");
-//     const row = endInput.closest(".hrmis-repeat-row");
-//     const idx = rows.indexOf(row);
-//     if (idx < 0) return;
-
-//     const cm = currentMonth();
-//     const startYM = _readMonthValueFromInput(
-//       _qs(row, 'input[name="posting_start[]"]'),
-//     );
-//     const endYM = _readMonthValueFromInput(endInput);
-
-//     const ok = validateEnd(row, startYM, endYM, cm);
-
-//     rows.slice(idx + 1).forEach((r) => r.remove());
-//     if (!ok) return;
-
-//     if (_nextMonth(endYM) === cm) return;
-
-//     const nextStartYM = _nextMonth(endYM);
-//     const next = ensureRow(idx + 1);
-//     if (!next) return;
-
-//     setRowStart(next, nextStartYM);
-//     setRowEnd(next, "");
-//   });
-
-//   joining.addEventListener("change", rebuild);
-//   currentStart.addEventListener("change", rebuild);
-
-//   rebuild();
-// }
-
 /* =========================================================
  * PROMOTION CHAIN (strict chain) — unchanged
  * ========================================================= */
@@ -2119,9 +2035,8 @@ function _initRepeatables(form) {
 
     if (t.matches?.('[name="gender"]')) _syncLeaveTypeSelectsByGender(form);
 
-    const qualChk = t.closest?.(".js-qual-completed");
-    if (qualChk) {
-      const row = qualChk.closest(".hrmis-repeat-row");
+    if (t.matches?.('select[name="qualification_status[]"]')) {
+      const row = t.closest(".hrmis-repeat-row");
       if (row) {
         _syncQualEndVisibility(row);
         _syncQualEndMinMax(row);
@@ -2203,19 +2118,24 @@ function _validateRepeatables(form) {
     const start = _qs(row, 'input[name="qualification_start[]"]');
     const end = _qs(row, 'input[name="qualification_end[]"]');
     const spec = _qs(row, 'input[name="qualification_specialization[]"]');
-    const completed = _qs(row, ".js-qual-completed")?.checked;
+    const statusSel = _qs(row, 'select[name="qualification_status[]"]');
+    const status = (statusSel?.value || "").trim() || "ongoing";
+    const completed =
+      status === "completed" || !!_qs(row, ".js-qual-completed")?.checked;
 
     const emptyRow =
       _isEmpty(degree?.value) &&
       _isEmpty(start?.value) &&
       _isEmpty(end?.value) &&
-      _isEmpty(spec?.value) &&
-      !completed;
+      _isEmpty(spec?.value);
 
     if (emptyRow) {
       [degree, start, end, spec].forEach(_clearError);
       return;
     }
+
+    // keep UI in sync in case something changed before submit
+    _syncQualEndVisibility(row);
 
     if (_isEmpty(degree?.value)) {
       _showError(degree, "Degree is required");
@@ -2236,7 +2156,7 @@ function _validateRepeatables(form) {
       if (_isEmpty(end?.value) || !_isValidMonth(end.value)) {
         _showError(
           end,
-          "End month is required when Completed is checked (YYYY-MM)",
+          "End month is required when Status is Complete (YYYY-MM)",
         );
         hasError = true;
       } else if (_isValidMonth(start?.value) && _isValidMonth(end?.value)) {
@@ -2632,7 +2552,132 @@ function _initAllowedToWorkToggle() {
   // Run once on load
   syncAllowedUI();
 }
+function _readPrefillJSON() {
+  const el = document.getElementById("hrmis_profile_prefill_json");
+  if (!el) return null;
+  try {
+    const raw = (el.textContent || "").trim();
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn("[HRMIS] Invalid prefill JSON", e);
+    return null;
+  }
+}
 
+function _setSelectValue(selectEl, value) {
+  if (!selectEl) return;
+  const v = String(value || "");
+  selectEl.value = v;
+  // if option not found, keep empty
+  if (selectEl.value !== v) selectEl.value = "";
+}
+
+function _seedQualificationRows(form, items) {
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) return;
+
+  list.forEach((it) => {
+    const row = _cloneFromTemplate("#tpl_qual_row", "#qual_rows");
+    if (!row) return;
+
+    _setSelectValue(
+      _qs(row, 'select[name="qualification_degree[]"]'),
+      it.degree,
+    );
+    const spec = _qs(row, 'input[name="qualification_specialization[]"]');
+    if (spec) spec.value = it.specialization || "";
+
+    const start = _qs(row, 'input[name="qualification_start[]"]');
+    if (start) start.value = it.start_month || "";
+
+    const end = _qs(row, 'input[name="qualification_end[]"]');
+    if (end) end.value = it.end_month || "";
+
+    const chk = _qs(row, ".js-qual-completed");
+    if (chk) chk.checked = !!(it.completed || it.end_month);
+
+    _syncQualificationRow(row);
+  });
+
+  setTimeout(() => _syncQualDegreeOptions(), 0);
+}
+
+function _seedPrevPostingRows(form, items) {
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) return;
+
+  // show the section
+  const wrap = _qs(document, ".js-prev-posting-wrap");
+  if (wrap) wrap.style.display = "";
+
+  list.forEach((it) => {
+    const row = _cloneFromTemplate("#tpl_prev_post_row", "#prev_post_rows");
+    if (!row) return;
+
+    _setSelectValue(
+      _qs(row, 'select[name="posting_district_id[]"]'),
+      it.district_id || 0,
+    );
+    _setSelectValue(
+      _qs(row, 'select[name="posting_facility_id[]"]'),
+      it.facility_id || 0,
+    );
+    _setSelectValue(
+      _qs(row, 'select[name="posting_designation_id[]"]'),
+      it.designation_id || 0,
+    );
+
+    const bps = _qs(row, 'input[name="posting_bps[]"]');
+    if (bps) bps.value = it.bps != null ? String(it.bps) : "";
+
+    const s = _qs(row, 'input[name="posting_start[]"]');
+    if (s) s.value = it.start_month || "";
+
+    const e = _qs(row, 'input[name="posting_end[]"]');
+    if (e) e.value = it.end_month || "";
+
+    _applyPostingBpsMaxFromCurrent(form, row);
+  });
+}
+
+function _seedLeaveRows(form, items) {
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) return;
+
+  list.forEach((it) => {
+    const row = _cloneFromTemplate("#tpl_leave_row", "#leave_rows");
+    if (!row) return;
+
+    _setSelectValue(
+      _qs(row, 'select[name="leave_type_id[]"]'),
+      it.leave_type_id || 0,
+    );
+
+    const s = _qs(row, 'input[name="leave_start[]"]');
+    if (s) s.value = it.start_date || "";
+
+    const e = _qs(row, 'input[name="leave_end[]"]');
+    if (e) e.value = it.end_date || "";
+
+    _syncLeaveRowDateConstraints(row);
+  });
+
+  _syncLeaveTypeSelectsByGender(form);
+  _recalcLeavesTaken(form);
+}
+
+function _applyPrefillRepeatables(form) {
+  const data = _readPrefillJSON();
+  if (!data) return;
+
+  _seedQualificationRows(form, data.qual);
+  _seedPrevPostingRows(form, data.post);
+  _seedLeaveRows(form, data.leave);
+
+  // if later you add promo:
+  // _seedPromoRows(form, data.promo);
+}
 /* ---------------------------------------------------------
  * Main init (guarded)
  * --------------------------------------------------------- */
@@ -2762,6 +2807,7 @@ function _initHRMISValidations() {
     syncMinMax();
   }
 
+  _applyPrefillRepeatables(form);
   _initRepeatables(form);
   _initPromotionChain(form);
 
@@ -2800,7 +2846,20 @@ function _initHRMISValidations() {
 
     requiredFields.forEach((name) => {
       const input = _qs(form, `[name="${name}"]`);
-      if (input && _isEmpty(input.value)) {
+      if (!input) return;
+
+      // ✅ Skip fields that are disabled (status toggle intentionally disables them)
+      if (input.disabled) return;
+
+      // ✅ Skip fields inside hidden status boxes
+      const box = input.closest(".js-status-box");
+      if (box && (box.style.display === "none" || box.hidden)) return;
+
+      // ✅ Skip fields inside hidden wrappers
+      const wrap = input.closest("[style*='display: none'], .d-none");
+      if (wrap) return;
+
+      if (_isEmpty(input.value)) {
         if (name === "hrmis_joining_date" && joiningInput?._hrmisMonthProxy) {
           _showError(joiningInput._hrmisMonthProxy, "This field is required");
         } else if (
@@ -2931,6 +2990,10 @@ function _initFrontendStatusToggle(formArg) {
   }
 
   function showOnly(statusValue) {
+    const normalized =
+      statusValue === "reported_to_health_department"
+        ? "reported_to_hd"
+        : statusValue;
     // hide + disable all
     boxes.forEach((b) => {
       b.style.display = "none";
@@ -2938,7 +3001,7 @@ function _initFrontendStatusToggle(formArg) {
     });
 
     // show + enable selected
-    const active = boxes.find((b) => (b.dataset.status || "") === statusValue);
+    const active = boxes.find((b) => (b.dataset.status || "") === normalized);
     if (active) {
       active.style.display = "";
       setBoxEnabled(active, true);
@@ -2997,8 +3060,14 @@ function _initFrontendStatusToggle(formArg) {
   const suspensionReportingTo = form.querySelector(
     '[name="frontend_reporting_to"]',
   );
+  const suspensionDistrictWrap = document.getElementById(
+    "frontend_reporting_district_wrap",
+  );
   const suspensionFacilityWrap = document.getElementById(
     "frontend_reporting_facility_wrap",
+  );
+  const suspensionDistrictSel = form.querySelector(
+    '[name="frontend_reporting_district_id"]',
   );
   const suspensionFacilitySel = form.querySelector(
     '[name="frontend_reporting_facility_id"]',
@@ -3008,8 +3077,25 @@ function _initFrontendStatusToggle(formArg) {
     if (!suspensionReportingTo) return;
 
     const showFacility = (suspensionReportingTo.value || "") === "facility";
+    if (suspensionDistrictWrap)
+      suspensionDistrictWrap.style.display = showFacility ? "" : "none";
     if (suspensionFacilityWrap)
       suspensionFacilityWrap.style.display = showFacility ? "" : "none";
+
+    if (suspensionDistrictSel) {
+      remember(suspensionDistrictSel);
+      if (showFacility) {
+        suspensionDistrictSel.disabled =
+          suspensionDistrictSel.dataset.hrmisOrigDisabled === "1";
+        if (suspensionDistrictSel.dataset.hrmisOrigRequired === "1") {
+          suspensionDistrictSel.setAttribute("required", "required");
+        }
+      } else {
+        suspensionDistrictSel.value = "";
+        suspensionDistrictSel.disabled = true;
+        suspensionDistrictSel.removeAttribute("required");
+      }
+    }
 
     if (suspensionFacilitySel) {
       remember(suspensionFacilitySel);
@@ -3031,8 +3117,14 @@ function _initFrontendStatusToggle(formArg) {
   const onLeaveReportingTo = form.querySelector(
     '[name="frontend_onleave_reporting_to"]',
   );
+  const onLeaveDistrictWrap = document.getElementById(
+    "frontend_onleave_district_wrap",
+  );
   const onLeaveFacilityWrap = document.getElementById(
     "frontend_onleave_facility_wrap",
+  );
+  const onLeaveDistrictSel = form.querySelector(
+    '[name="frontend_onleave_district_id"]',
   );
   const onLeaveFacilitySel = form.querySelector(
     '[name="frontend_onleave_facility"]',
@@ -3042,8 +3134,25 @@ function _initFrontendStatusToggle(formArg) {
     if (!onLeaveReportingTo) return;
 
     const showFacility = (onLeaveReportingTo.value || "") === "facility";
+    if (onLeaveDistrictWrap)
+      onLeaveDistrictWrap.style.display = showFacility ? "" : "none";
     if (onLeaveFacilityWrap)
       onLeaveFacilityWrap.style.display = showFacility ? "" : "none";
+
+    if (onLeaveDistrictSel) {
+      remember(onLeaveDistrictSel);
+      if (showFacility) {
+        onLeaveDistrictSel.disabled =
+          onLeaveDistrictSel.dataset.hrmisOrigDisabled === "1";
+        if (onLeaveDistrictSel.dataset.hrmisOrigRequired === "1") {
+          onLeaveDistrictSel.setAttribute("required", "required");
+        }
+      } else {
+        onLeaveDistrictSel.value = "";
+        onLeaveDistrictSel.disabled = true;
+        onLeaveDistrictSel.removeAttribute("required");
+      }
+    }
 
     if (onLeaveFacilitySel) {
       remember(onLeaveFacilitySel);
@@ -3061,6 +3170,31 @@ function _initFrontendStatusToggle(formArg) {
     }
   }
 
+  // ---------- eol (pgship) end-date by status ----------
+  const eolStatusSel = form.querySelector('[name="frontend_eol_status"]');
+  const eolEndWrap = document.getElementById("frontend_eol_end_wrap");
+  const eolEndInp = form.querySelector('[name="frontend_eol_end"]');
+
+  function syncEolEndVisibility() {
+    if (!eolStatusSel || !eolEndWrap || !eolEndInp) return;
+    remember(eolStatusSel);
+    remember(eolEndInp);
+
+    const v = (eolStatusSel.value || "").trim();
+    const show = v === "completed";
+
+    eolEndWrap.style.display = show ? "" : "none";
+
+    if (!show) {
+      eolEndInp.value = "";
+      eolEndInp.disabled = true;
+      eolEndInp.removeAttribute("required");
+    } else {
+      eolEndInp.disabled = eolEndInp.dataset.hrmisOrigDisabled === "1";
+      eolEndInp.setAttribute("required", "required");
+    }
+  }
+
   // remember original attrs once
   boxes.forEach((box) =>
     box.querySelectorAll("input, select, textarea").forEach(remember),
@@ -3069,7 +3203,11 @@ function _initFrontendStatusToggle(formArg) {
   if (allowedBox)
     allowedBox.querySelectorAll("input, select, textarea").forEach(remember);
   if (suspensionFacilitySel) remember(suspensionFacilitySel);
+  if (suspensionDistrictSel) remember(suspensionDistrictSel);
   if (onLeaveFacilitySel) remember(onLeaveFacilitySel);
+  if (onLeaveDistrictSel) remember(onLeaveDistrictSel);
+  if (eolStatusSel) remember(eolStatusSel);
+  if (eolEndInp) remember(eolEndInp);
 
   // ---------- main sync ----------
   function sync() {
@@ -3084,6 +3222,12 @@ function _initFrontendStatusToggle(formArg) {
     if (active && active.dataset.status === "suspended") {
       syncSuspensionFacility();
     } else {
+      if (suspensionDistrictWrap) suspensionDistrictWrap.style.display = "none";
+      if (suspensionDistrictSel) {
+        suspensionDistrictSel.value = "";
+        suspensionDistrictSel.disabled = true;
+        suspensionDistrictSel.removeAttribute("required");
+      }
       if (suspensionFacilityWrap) suspensionFacilityWrap.style.display = "none";
       if (suspensionFacilitySel) {
         suspensionFacilitySel.value = "";
@@ -3095,11 +3239,28 @@ function _initFrontendStatusToggle(formArg) {
     if (active && active.dataset.status === "on_leave") {
       syncOnLeaveFacility();
     } else {
+      if (onLeaveDistrictWrap) onLeaveDistrictWrap.style.display = "none";
+      if (onLeaveDistrictSel) {
+        onLeaveDistrictSel.value = "";
+        onLeaveDistrictSel.disabled = true;
+        onLeaveDistrictSel.removeAttribute("required");
+      }
       if (onLeaveFacilityWrap) onLeaveFacilityWrap.style.display = "none";
       if (onLeaveFacilitySel) {
         onLeaveFacilitySel.value = "";
         onLeaveFacilitySel.disabled = true;
         onLeaveFacilitySel.removeAttribute("required");
+      }
+    }
+
+    if (active && active.dataset.status === "eol_pgship") {
+      syncEolEndVisibility();
+    } else {
+      if (eolEndWrap) eolEndWrap.style.display = "none";
+      if (eolEndInp) {
+        eolEndInp.value = "";
+        eolEndInp.disabled = true;
+        eolEndInp.removeAttribute("required");
       }
     }
   }
@@ -3117,11 +3278,35 @@ function _initFrontendStatusToggle(formArg) {
     suspensionReportingTo.addEventListener("change", syncSuspensionFacility);
   if (onLeaveReportingTo)
     onLeaveReportingTo.addEventListener("change", syncOnLeaveFacility);
+  if (eolStatusSel)
+    eolStatusSel.addEventListener("change", syncEolEndVisibility);
 
   sync(); // run once on load
 }
 
 function _initHRMIS() {
+  const form = document.getElementById("profile_update_form");
+  if (!form) return;
+
+  const isSubmittedView = form.classList.contains("is-submitted");
+  if (isSubmittedView) {
+    // Hide delete icons
+    document.querySelectorAll(".btn_remove_row").forEach((el) => {
+      el.style.display = "none";
+    });
+
+    const btnQual = document.getElementById("btn_add_qual_row");
+    const btnPromo = document.getElementById("btn_add_promo_row");
+    const btnLeave = document.getElementById("btn_add_leave_row");
+
+    if (btnQual) btnQual.style.display = "none";
+    if (btnPromo) btnPromo.style.display = "none";
+    if (btnLeave) btnLeave.style.display = "none";
+
+    console.log("[HRMIS] Skipping JS init — form is submitted view");
+    return;
+  }
+
   _initHRMISValidations();
 }
 

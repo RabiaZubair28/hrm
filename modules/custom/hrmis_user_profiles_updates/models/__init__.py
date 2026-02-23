@@ -16,3 +16,4 @@ from . import posting_history
 from . import promotion_history
 from . import leave_history
 from . import employee_export
+from . import hrmis_profile_posting_status

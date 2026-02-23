@@ -44,3 +44,4 @@ class HrmisDesignation(models.Model):
         "designation_id",
         string="Facility Allocations"
     )
+    is_temp = fields.Boolean(default=False)

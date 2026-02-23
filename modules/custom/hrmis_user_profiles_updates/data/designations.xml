@@ -41266,6 +41266,98 @@
         <field name="facility_id" ref="hrmis_user_profiles_updates.facility_umerkot_ut0067"/>
         <field name="active">True</field>
     </record>
+    <!-- primary unique  -->
+
+    <record id="designation_senior_technician_19_ut0067" model="hrmis.designation">
+        <field name="name">SENIOR TECHNICIAN</field>
+        <field name="code">ST</field>
+        <field name="designation_group_id" ref="hrmis_user_profiles_updates.designation_group_specialist"/>
+        <field name="post_BPS">19</field>
+        <field name="total_sanctioned_posts">1</field>
+        <field name="facility_id" ref="hrmis_user_profiles_updates.facility_umerkot_ut0067"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_deputy_dho_18_ut0067" model="hrmis.designation">
+        <field name="name">DEPUTY DHO</field>
+        <field name="code">DDHO</field>
+        <field name="designation_group_id" ref="hrmis_user_profiles_updates.designation_group_specialist"/>
+        <field name="post_BPS">18</field>
+        <field name="total_sanctioned_posts">1</field>
+        <field name="facility_id" ref="hrmis_user_profiles_updates.facility_umerkot_ut0067"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_deputy_tho_18_ut0067" model="hrmis.designation">
+        <field name="name">DEPUTY THO</field>
+        <field name="code">DTHO</field>
+        <field name="designation_group_id" ref="hrmis_user_profiles_updates.designation_group_specialist"/>
+        <field name="post_BPS">18</field>
+        <field name="total_sanctioned_posts">1</field>
+        <field name="facility_id" ref="hrmis_user_profiles_updates.facility_umerkot_ut0067"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_casualty_medical_officer_18_ut0067" model="hrmis.designation">
+        <field name="name">CASUALTY MEDICAL OFFICER</field>
+        <field name="code">CMO</field>
+        <field name="designation_group_id" ref="hrmis_user_profiles_updates.designation_group_specialist"/>
+        <field name="post_BPS">18</field>
+        <field name="total_sanctioned_posts">1</field>
+        <field name="facility_id" ref="hrmis_user_profiles_updates.facility_umerkot_ut0067"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_chief_medical_officer_18_ut0067" model="hrmis.designation">
+        <field name="name">CHIEF MEDICAL OFFICER</field>
+        <field name="code">CMO_CHIEF</field>
+        <field name="designation_group_id" ref="hrmis_user_profiles_updates.designation_group_specialist"/>
+        <field name="post_BPS">18</field>
+        <field name="total_sanctioned_posts">1</field>
+        <field name="facility_id" ref="hrmis_user_profiles_updates.facility_umerkot_ut0067"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_medical_officer_wmo_17_ut0067" model="hrmis.designation">
+        <field name="name">MEDICAL OFFICER / WMOS</field>
+        <field name="code">MO_WMO</field>
+        <field name="designation_group_id" ref="hrmis_user_profiles_updates.designation_group_specialist"/>
+        <field name="post_BPS">17</field>
+        <field name="total_sanctioned_posts">1</field>
+        <field name="facility_id" ref="hrmis_user_profiles_updates.facility_umerkot_ut0067"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_senior_staff_nurse_17_ut0067" model="hrmis.designation">
+        <field name="name">SENIOR STAFF NURSE</field>
+        <field name="code">SSN</field>
+        <field name="designation_group_id" ref="hrmis_user_profiles_updates.designation_group_specialist"/>
+        <field name="post_BPS">17</field>
+        <field name="total_sanctioned_posts">1</field>
+        <field name="facility_id" ref="hrmis_user_profiles_updates.facility_umerkot_ut0067"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_physician_17_ut0067" model="hrmis.designation">
+        <field name="name">PHYSICIAN</field>
+        <field name="code">PHY</field>
+        <field name="designation_group_id" ref="hrmis_user_profiles_updates.designation_group_specialist"/>
+        <field name="post_BPS">17</field>
+        <field name="total_sanctioned_posts">1</field>
+        <field name="facility_id" ref="hrmis_user_profiles_updates.facility_umerkot_ut0067"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="designation_sister_nurse_16_ut0067" model="hrmis.designation">
+        <field name="name">SISTER NURSE</field>
+        <field name="code">SN</field>
+        <field name="designation_group_id" ref="hrmis_user_profiles_updates.designation_group_specialist"/>
+        <field name="post_BPS">16</field>
+        <field name="total_sanctioned_posts">1</field>
+        <field name="facility_id" ref="hrmis_user_profiles_updates.facility_umerkot_ut0067"/>
+        <field name="active">True</field>
+    </record>
+
 
   </data>
 </odoo>

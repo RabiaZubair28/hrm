@@ -79,7 +79,10 @@ function _getOtherIfSelected(selectEl, otherInputEl, otherToken) {
   const v = (selectEl && selectEl.value) || "";
   if (!v) return "";
   if (String(v) === String(otherToken)) {
-    return (otherInputEl && (otherInputEl.value || "").trim()) || "Other (not specified)";
+    return (
+      (otherInputEl && (otherInputEl.value || "").trim()) ||
+      "Other (not specified)"
+    );
   }
   return "";
 }
@@ -99,20 +102,28 @@ function _collectRows(root, rowSelector, buildLineFn) {
   return out;
 }
 
-
 function _buildSummary(form, tbody) {
   tbody.innerHTML = "";
 
   // ============ Employee Information ============
-  const employeeId = _qs(form, 'input[name="hrmis_employee_id"]')?.value?.trim();
+  const employeeId = _qs(
+    form,
+    'input[name="hrmis_employee_id"]',
+  )?.value?.trim();
   const cnic = _qs(form, 'input[name="hrmis_cnic"]')?.value?.trim();
   const father = _qs(form, 'input[name="hrmis_father_name"]')?.value?.trim();
   const birthday = _qs(form, 'input[name="birthday"]')?.value?.trim();
-  const commission = _qs(form, 'input[name="hrmis_commission_date"]')?.value?.trim();
+  const commission = _qs(
+    form,
+    'input[name="hrmis_commission_date"]',
+  )?.value?.trim();
   const merit = _qs(form, 'input[name="hrmis_merit_number"]')?.value?.trim();
   const joining = _qs(form, 'input[name="hrmis_joining_date"]')?.value?.trim();
   const bps = _qs(form, 'input[name="hrmis_bps"]')?.value?.trim();
-  const leavesTaken = _qs(form, 'input[name="hrmis_leaves_taken"]')?.value?.trim();
+  const leavesTaken = _qs(
+    form,
+    'input[name="hrmis_leaves_taken"]',
+  )?.value?.trim();
   const contact = _qs(form, 'input[name="hrmis_contact_info"]')?.value?.trim();
 
   const genderSel = _qs(form, 'select[name="gender"]');
@@ -139,39 +150,51 @@ function _buildSummary(form, tbody) {
   _addRow(tbody, "Contact Number", contact);
 
   // Show file names + previews if selected
-if (cnicFrontName || cnicBackName) {
-  _addRow(
-    tbody,
-    "CNIC Front Preview",
-    _imgPreviewHtml(cnicFrontInput) || "-",
-  );
+  if (cnicFrontName || cnicBackName) {
+    _addRow(
+      tbody,
+      "CNIC Front Preview",
+      _imgPreviewHtml(cnicFrontInput) || "-",
+    );
 
-  _addRow(
-    tbody,
-    "CNIC Back Preview",
-    _imgPreviewHtml(cnicBackInput) || "-",
-  );
-}
-
+    _addRow(tbody, "CNIC Back Preview", _imgPreviewHtml(cnicBackInput) || "-");
+  }
 
   // ============ Current Posting ============
   const districtSel = _qs(form, 'select[name="district_id"]');
   const facilitySel = _qs(form, 'select[name="facility_id"]');
   const facilityOtherInput = _qs(form, 'input[name="facility_other_name"]');
   const designationSel = _qs(form, 'select[name="hrmis_designation"]');
-  const currentPostingStart = _qs(form, 'input[name="current_posting_start"]')?.value?.trim();
+  const currentPostingStart = _qs(
+    form,
+    'input[name="current_posting_start"]',
+  )?.value?.trim();
 
-  const facilityOtherVal = _getOtherIfSelected(facilitySel, facilityOtherInput, "__other__");
+  const facilityOtherVal = _getOtherIfSelected(
+    facilitySel,
+    facilityOtherInput,
+    "__other__",
+  );
 
   _addRow(tbody, "Current Posting — District", _getSelectedText(districtSel));
   _addRow(
     tbody,
     "Current Posting — Facility",
-    facilityOtherVal ? `Other: ${facilityOtherVal}` : _getSelectedText(facilitySel),
+    facilityOtherVal
+      ? `Other: ${facilityOtherVal}`
+      : _getSelectedText(facilitySel),
   );
   _addRow(tbody, "Current Posting — BPS", bps);
-  _addRow(tbody, "Current Posting — Designation", _getSelectedText(designationSel));
-  _addRow(tbody, "Current Posting — Start (MM-YYYY)", _fmtMonth(currentPostingStart));
+  _addRow(
+    tbody,
+    "Current Posting — Designation",
+    _getSelectedText(designationSel),
+  );
+  _addRow(
+    tbody,
+    "Current Posting — Start (MM-YYYY)",
+    _fmtMonth(currentPostingStart),
+  );
 
   // ============ Qualification History (multiple) ============
   const qualWrap = _qs(document, "#qual_rows");
@@ -180,20 +203,27 @@ if (cnicFrontName || cnicBackName) {
     '.hrmis-repeat-row[data-row="qual"]',
     (row, idx) => {
       const degSel = _qs(row, 'select[name="qualification_degree[]"]');
-      const spec = _qs(row, 'input[name="qualification_specialization[]"]')?.value?.trim();
-      const start = _qs(row, 'input[name="qualification_start[]"]')?.value?.trim();
-      const completedChk = _qs(row, 'input[name="qualification_completed[]"]');
+      const spec = _qs(
+        row,
+        'input[name="qualification_specialization[]"]',
+      )?.value?.trim();
+      const start = _qs(
+        row,
+        'input[name="qualification_start[]"]',
+      )?.value?.trim();
+      const statusSel = _qs(row, 'select[name="qualification_status[]"]');
       const end = _qs(row, 'input[name="qualification_end[]"]')?.value?.trim();
 
       const degTxt = _getSelectedText(degSel) || "-";
       const specTxt = spec ? ` — ${spec}` : "";
-      const completedTxt = _fmtCheckbox(completedChk) === "Yes" ? "Completed" : "In progress";
-      const rangeTxt =
-        _fmtCheckbox(completedChk) === "Yes"
-          ? `${_fmtMonth(start)} → ${_fmtMonth(end)}`
-          : `${_fmtMonth(start)} → (ongoing)`;
+      const status = (statusSel?.value || "").trim() || "ongoing";
+      const isCompleted = status === "completed";
+      const statusTxt = isCompleted ? "Complete" : "Ongoing";
+      const rangeTxt = isCompleted
+        ? `${_fmtMonth(start)} → ${_fmtMonth(end)}`
+        : `${_fmtMonth(start)} → (ongoing)`;
 
-      return `<b>#${idx + 1}</b> ${degTxt}${specTxt} <span style="color:#666;">(${completedTxt}, ${rangeTxt})</span>`;
+      return `<b>#${idx + 1}</b> ${degTxt}${specTxt} <span style="color:#666;">(${statusTxt}, ${rangeTxt})</span>`;
     },
   );
   _addRow(tbody, "Qualification History", _ul(qualItems));
@@ -235,7 +265,10 @@ if (cnicFrontName || cnicBackName) {
     promoWrap,
     '.hrmis-repeat-row[data-row="promo"]',
     (row, idx) => {
-      const from = _qs(row, 'input[name="promotion_bps_from[]"]')?.value?.trim();
+      const from = _qs(
+        row,
+        'input[name="promotion_bps_from[]"]',
+      )?.value?.trim();
       const to = _qs(row, 'input[name="promotion_bps_to[]"]')?.value?.trim();
       const dt = _qs(row, 'input[name="promotion_date[]"]')?.value?.trim();
 
@@ -264,7 +297,6 @@ if (cnicFrontName || cnicBackName) {
   _addRow(tbody, "Total Leaves Taken Since Joining (Days)", leavesTaken);
 }
 
-
 function _showModal(modalEl) {
   // Create backdrop
   let backdrop = document.createElement("div");
@@ -279,7 +311,6 @@ function _showModal(modalEl) {
   modalEl.setAttribute("role", "dialog");
   document.body.classList.add("modal-open");
   document.body.appendChild(backdrop);
-
 }
 
 function _hideModal(modalEl) {
@@ -295,11 +326,9 @@ function _hideModal(modalEl) {
     'div.modal-backdrop[data-hrmis-backdrop], div.modal-backdrop[data-hrmisBackdrop="1"]',
   );
   if (backdrop) backdrop.remove();
-
 }
 
 function _initConfirmModal() {
-
   // IMPORTANT: don’t run on other pages (like login)
   const panel = _qs(document, ".hrmis-panel");
   if (!panel) {
@@ -314,7 +343,6 @@ function _initConfirmModal() {
   const confirmBtn = _qs(document, "#btn_confirm_submit");
   const modalEl = _qs(document, "#confirmSubmitModal");
   const tbody = _qs(document, "#confirm_table_body");
-
 
   if (!form || !openBtn || !confirmBtn || !modalEl || !tbody) {
     console.warn(
@@ -362,7 +390,6 @@ function _initConfirmModal() {
     confirmBtn.disabled = true;
     form.submit();
   });
-
 }
 
 if (document.readyState === "loading") {

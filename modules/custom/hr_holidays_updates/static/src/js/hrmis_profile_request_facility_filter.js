@@ -1,8 +1,14 @@
 /** @odoo-module **/
 
-function _qs(root, sel) { return root ? root.querySelector(sel) : null; }
-function _qsa(root, sel) { return root ? Array.from(root.querySelectorAll(sel)) : []; }
-function _isEmpty(v) { return v === null || v === undefined || String(v).trim() === ""; }
+function _qs(root, sel) {
+  return root ? root.querySelector(sel) : null;
+}
+function _qsa(root, sel) {
+  return root ? Array.from(root.querySelectorAll(sel)) : [];
+}
+function _isEmpty(v) {
+  return v === null || v === undefined || String(v).trim() === "";
+}
 
 /** Extract numeric BPS like "17", "BPS-17", "17.0" -> "17" */
 function _normBps(val) {
@@ -28,10 +34,10 @@ function _optDistrictId(opt) {
   if (!opt) return "";
   return String(
     opt.getAttribute("data-district-id") ||
-    opt.getAttribute("data-district") ||
-    opt.getAttribute("data-district_id") ||
-    opt.getAttribute("data-districtid") ||
-    ""
+      opt.getAttribute("data-district") ||
+      opt.getAttribute("data-district_id") ||
+      opt.getAttribute("data-districtid") ||
+      "",
   ).trim();
 }
 
@@ -40,10 +46,10 @@ function _optFacilityId(opt) {
   if (!opt) return "";
   return String(
     opt.getAttribute("data-facility-id") ||
-    opt.getAttribute("data-facility") ||
-    opt.getAttribute("data-facility_id") ||
-    opt.getAttribute("data-facilityid") ||
-    ""
+      opt.getAttribute("data-facility") ||
+      opt.getAttribute("data-facility_id") ||
+      opt.getAttribute("data-facilityid") ||
+      "",
   ).trim();
 }
 
@@ -155,7 +161,9 @@ function _resetFacilitySelect(selectEl) {
   if (!selectEl) return;
 
   const placeholderText =
-    (selectEl.options && selectEl.options[0] && selectEl.options[0].textContent.trim()) ||
+    (selectEl.options &&
+      selectEl.options[0] &&
+      selectEl.options[0].textContent.trim()) ||
     "Select Facility";
 
   selectEl.innerHTML = "";
@@ -184,8 +192,10 @@ function _appendFacilitiesToSelect(selectEl, facilities) {
   if (!selectEl) return;
   if (!Array.isArray(facilities)) facilities = [];
 
-  const otherOpt = Array.from(selectEl.options || [])
-    .find((o) => String(o.value || "").trim() === "__other__") || null;
+  const otherOpt =
+    Array.from(selectEl.options || []).find(
+      (o) => String(o.value || "").trim() === "__other__",
+    ) || null;
 
   for (const f of facilities) {
     if (!f || f.id === undefined || f.id === null) continue;
@@ -248,8 +258,12 @@ function _initCurrentPostingFilters() {
   // Ensure "Other facility" starts hidden + disabled based on current selection
   _toggleOtherFacilityInScope(document, facilitySelect);
 
-  function getBps() { return _normBps(bpsInput ? bpsInput.value : ""); }
-  function getFacility() { return String(facilitySelect.value || "").trim(); }
+  function getBps() {
+    return _normBps(bpsInput ? bpsInput.value : "");
+  }
+  function getFacility() {
+    return String(facilitySelect.value || "").trim();
+  }
 
   function filterDesignations() {
     if (!designationSelect) return;
@@ -275,7 +289,7 @@ function _initCurrentPostingFilters() {
       // fallback: if no bps tag, allow
       if (_isEmpty(optBps)) return true;
 
-      const bpsOk = (optBps === bps);
+      const bpsOk = optBps === bps;
       if (!bpsOk) return false;
 
       // no facility selected yet => BPS only
@@ -311,7 +325,8 @@ function _initCurrentPostingFilters() {
     facilitySelect.value = "";
     if (facilitySelect.options?.[0]) facilitySelect.options[0].selected = true;
 
-    if (facilitySelect._hrmisRefreshCombobox) facilitySelect._hrmisRefreshCombobox();
+    if (facilitySelect._hrmisRefreshCombobox)
+      facilitySelect._hrmisRefreshCombobox();
 
     _toggleOtherFacilityInScope(document, facilitySelect);
     filterDesignations();
@@ -393,12 +408,13 @@ function _initPrevPostingRowFilters() {
 
       if (_isEmpty(optBps)) return true;
 
-      const bpsOk = (optBps === bpsVal);
+      const bpsOk = optBps === bpsVal;
       if (!bpsOk) return false;
 
       if (_isOtherFacilityValue(facilityId)) return true;
 
-      if (!_isEmpty(facilityId) && !_isEmpty(optFacilityId)) return optFacilityId === facilityId;
+      if (!_isEmpty(facilityId) && !_isEmpty(optFacilityId))
+        return optFacilityId === facilityId;
 
       return true;
     });
@@ -461,6 +477,53 @@ function _initPrevPostingRowFilters() {
 }
 
 /* ----------------------------
+ * Suspension / On-leave: district -> facility (FETCH MODE)
+ * ---------------------------- */
+function _initStatusBoxFacilityFilters() {
+  function bind(districtSel, facilitySel, key) {
+    if (!districtSel || !facilitySel) return;
+
+    const bindKey = `hrmisStatusDfBound_${key}`;
+    if (districtSel.dataset[bindKey] === "1") return;
+    districtSel.dataset[bindKey] = "1";
+
+    function apply() {
+      const selectedDistrictId = String(districtSel.value || "").trim();
+
+      // match current-posting UX: no district => no facilities
+      if (_isEmpty(selectedDistrictId)) {
+        _toggleOptions(facilitySel, () => false);
+        return;
+      }
+
+      _toggleOptions(facilitySel, (opt) => {
+        const val = String(opt.value || "").trim();
+        if (!val) return false;
+        const optDistrict = _optDistrictId(opt);
+        return !_isEmpty(optDistrict) && optDistrict === selectedDistrictId;
+      });
+    }
+
+    apply();
+    districtSel.addEventListener("change", apply);
+  }
+
+  // Suspension (Reporting To = Facility)
+  bind(
+    _qs(document, "select.js-suspension-district"),
+    _qs(document, "select.js-suspension-facility"),
+    "suspension",
+  );
+
+  // On Leave (Reporting To = Facility)
+  bind(
+    _qs(document, "select.js-onleave-district"),
+    _qs(document, "select.js-onleave-facility"),
+    "onleave",
+  );
+}
+
+/* ----------------------------
  * Init
  * ---------------------------- */
 let __hrmis_init_done = false;
@@ -470,6 +533,7 @@ function _initFilters() {
   // (we still guard by __hrmis_init_done for first run)
   _initCurrentPostingFilters();
   _initPrevPostingRowFilters();
+  _initStatusBoxFacilityFilters();
 }
 
 function _initOnce() {

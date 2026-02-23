@@ -15,3 +15,4 @@ class FacilityType(models.Model):
         string="Category"
     )
     hcu_id = fields.Many2one("hrmis.healthcare.unit", string="Health Care Unit", required=True)
+    is_temp = fields.Boolean(default=False)

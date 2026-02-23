@@ -14,6 +14,7 @@
         'data/hrmis_healthcare_unit_data.xml',
         'data/districts.xml',
         'data/facilities.xml',
+        'data/facilities_primary.xml',
         'data/hrmis_cadre.xml',
         'data/designation_groups.xml',
         'data/designations.xml',

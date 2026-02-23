@@ -68,12 +68,12 @@ class HREmployee(models.Model):
         string="Total Leaves Taken Since Joining (Days)"
     )
 
-    service_postings_district_id = fields.Many2one(related="hrmis_service_history_ids.district_id", readonly=True)
-    service_postings_facility_id = fields.Many2one(related="hrmis_service_history_ids.facility_id", readonly=True)
+    # service_postings_district_id = fields.Many2one(related="hrmis_service_history_ids.district_id", readonly=True)
+    # service_postings_facility_id = fields.Many2one(related="hrmis_service_history_ids.facility_id", readonly=True)
 
-    service_postings_from_date = fields.Date(related="hrmis_service_history_ids.from_date", readonly=True)
-    service_postings_end_date = fields.Date(related="hrmis_service_history_ids.end_date", readonly=True)
-    service_postings_commission_date = fields.Date(related="hrmis_service_history_ids.commission_date", readonly=True)
+    # service_postings_from_date = fields.Date(related="hrmis_service_history_ids.from_date", readonly=True)
+    # service_postings_end_date = fields.Date(related="hrmis_service_history_ids.end_date", readonly=True)
+    # service_postings_commission_date = fields.Date(related="hrmis_service_history_ids.commission_date", readonly=True)
 
     hrmis_cnic_front = fields.Binary(
         string="CNIC Front Scan",
@@ -116,30 +116,71 @@ class HREmployee(models.Model):
         help="Date of last qualification received",
         required=True
     )
-    qualification_history_ids = fields.One2many(
-        "hrmis.qualification.history",
-        "employee_id",
-        string="Qualification History",
+    # qualification_history_ids = fields.One2many(
+    #     "hrmis.qualification.history",
+    #     "employee_id",
+    #     string="Qualification History",
+    # )
+
+    # posting_history_ids = fields.One2many(
+    #     "hrmis.posting.history",
+    #     "employee_id",
+    #     string="Posting History",
+    # )
+
+    # promotion_history_ids = fields.One2many(
+    #     "hrmis.promotion.history",
+    #     "employee_id",
+    #     string="Promotion History",
+    # )
+
+    # leave_history_ids = fields.One2many(
+    #     "hrmis.leave.history",
+    #     "employee_id",
+    #     string="Leave History",
+    # )
+    # hrmis_service_history_ids = fields.One2many(
+    #     "hrmis.service.history",
+    #     "employee_id",
+    #     string="Service History",
+    # )
+
+    hrmis_current_service_history_id = fields.Many2one(
+        "hrmis.service.history",
+        compute="_compute_current_service_history",
+        store=False,  # can be store=True if you want
     )
 
-    posting_history_ids = fields.One2many(
-        "hrmis.posting.history",
-        "employee_id",
-        string="Posting History",
+    service_postings_district_id = fields.Many2one(
+        "hrmis.district.master",
+        related="hrmis_current_service_history_id.district_id",
+        readonly=True,
+    )
+    service_postings_facility_id = fields.Many2one(
+        "hrmis.facility.type",
+        related="hrmis_current_service_history_id.facility_id",
+        readonly=True,
+    )
+    service_postings_from_date = fields.Date(
+        related="hrmis_current_service_history_id.from_date",
+        readonly=True,
+    )
+    service_postings_end_date = fields.Date(
+        related="hrmis_current_service_history_id.end_date",
+        readonly=True,
+    )
+    service_postings_commission_date = fields.Date(
+        related="hrmis_current_service_history_id.commission_date",
+        readonly=True,
     )
 
-    promotion_history_ids = fields.One2many(
-        "hrmis.promotion.history",
-        "employee_id",
-        string="Promotion History",
-    )
-
-    leave_history_ids = fields.One2many(
-        "hrmis.leave.history",
-        "employee_id",
-        string="Leave History",
-    )
-
+    @api.depends("hrmis_service_history_ids.from_date", "hrmis_service_history_ids.end_date")
+    def _compute_current_service_history(self):
+        for emp in self:
+            # pick the “latest” record by from_date (adjust if you use another rule)
+            emp.hrmis_current_service_history_id = emp.hrmis_service_history_ids.sorted(
+                key=lambda r: (r.from_date or fields.Date.from_string("1900-01-01"), r.id)
+            )[-1:]  # recordset slice returns 0/1 record
     def action_request_profile_update(self):
         self.ensure_one()
         return {
@@ -152,3 +193,4 @@ class HREmployee(models.Model):
                 'default_employee_id': self.id
             }
         }
+        
