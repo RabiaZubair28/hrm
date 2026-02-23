@@ -64,6 +64,12 @@ class HREmployee(models.Model):
 
 
     hrmis_contact_info = fields.Char(string="Contact Info")
+    hrmis_pmdc_no = fields.Char(string="PMDC No.")
+    hrmis_pmdc_issue_date = fields.Date(string="PMDC Issue Date")
+    hrmis_pmdc_expiry_date = fields.Date(string="PMDC Expiry Date")
+    hrmis_email = fields.Char(string="Email")
+    hrmis_address = fields.Char(string="Address")
+    hrmis_postal_code = fields.Char(string="Postal Code")
     hrmis_leaves_taken = fields.Float(
         string="Total Leaves Taken Since Joining (Days)"
     )

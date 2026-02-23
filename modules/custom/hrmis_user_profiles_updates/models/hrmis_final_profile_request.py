@@ -113,6 +113,12 @@ class EmployeeProfileRequest(models.Model):
     )   
     
     hrmis_contact_info = fields.Char(string="Contact Info")
+    hrmis_pmdc_no = fields.Char(string="PMDC No.")
+    hrmis_pmdc_issue_date = fields.Date(string="PMDC Issue Date")
+    hrmis_pmdc_expiry_date = fields.Date(string="PMDC Expiry Date")
+    hrmis_email = fields.Char(string="Email")
+    hrmis_address = fields.Char(string="Address")
+    hrmis_postal_code = fields.Char(string="Postal Code")
     current_posting_start = fields.Char(string="Current Posting Start (YYYY-MM)")
     facility_other_name = fields.Char(string="Other Facility Name")
 
@@ -202,6 +208,12 @@ class EmployeeProfileRequest(models.Model):
             'district_id': employee.district_id.id,
             'facility_id': employee.facility_id.id,
             'hrmis_contact_info': employee.hrmis_contact_info,
+            'hrmis_pmdc_no': employee.hrmis_pmdc_no,
+            'hrmis_pmdc_issue_date': employee.hrmis_pmdc_issue_date,
+            'hrmis_pmdc_expiry_date': employee.hrmis_pmdc_expiry_date,
+            'hrmis_email': employee.hrmis_email,
+            'hrmis_address': employee.hrmis_address,
+            'hrmis_postal_code': employee.hrmis_postal_code,
             "hrmis_leaves_taken": employee.hrmis_leaves_taken,
 
             # NEW
@@ -324,6 +336,12 @@ class EmployeeProfileRequest(models.Model):
             'district_id': self.district_id.id if self.district_id else False,
             'facility_id': self.facility_id.id if self.facility_id else False,
             'hrmis_contact_info': self.hrmis_contact_info,
+            'hrmis_pmdc_no': self.hrmis_pmdc_no,
+            'hrmis_pmdc_issue_date': self.hrmis_pmdc_issue_date,
+            'hrmis_pmdc_expiry_date': self.hrmis_pmdc_expiry_date,
+            'hrmis_email': self.hrmis_email,
+            'hrmis_address': self.hrmis_address,
+            'hrmis_postal_code': self.hrmis_postal_code,
             'hrmis_leaves_taken': self.hrmis_leaves_taken,
 
             # NEW

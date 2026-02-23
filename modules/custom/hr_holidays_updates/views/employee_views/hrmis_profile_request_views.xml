@@ -191,6 +191,43 @@
                             t-att-readonly="'readonly' if not is_draft else None" />
                         </div>
                         <div class="hrmis-field">
+                          <label> PMDC No.</label>
+                          <input class="hrmis-input" type="text" name="hrmis_pmdc_no"
+                            t-att-value="req.hrmis_pmdc_no or current_employee.hrmis_pmdc_no or ''"
+                            t-att-readonly="'readonly' if not is_draft else None" />
+                        </div>
+                        <div class="hrmis-field">
+                          <label> PMDC Issue Date</label>
+                          <input class="hrmis-input" type="date" name="hrmis_pmdc_issue_date"
+                            t-att-max="max_today_str"
+                            t-att-value="req.hrmis_pmdc_issue_date or current_employee.hrmis_pmdc_issue_date or ''"
+                            t-att-readonly="'readonly' if not is_draft else None" />
+                        </div>
+                        <div class="hrmis-field">
+                          <label> PMDC Expiry Date</label>
+                          <input class="hrmis-input" type="date" name="hrmis_pmdc_expiry_date"
+                            t-att-value="req.hrmis_pmdc_expiry_date or current_employee.hrmis_pmdc_expiry_date or ''"
+                            t-att-readonly="'readonly' if not is_draft else None" />
+                        </div>
+                        <div class="hrmis-field">
+                          <label> Email</label>
+                          <input class="hrmis-input" type="email" name="hrmis_email"
+                            t-att-value="req.hrmis_email or current_employee.hrmis_email or ''"
+                            t-att-readonly="'readonly' if not is_draft else None" />
+                        </div>
+                        <div class="hrmis-field">
+                          <label> Address</label>
+                          <input class="hrmis-input" type="text" name="hrmis_address"
+                            t-att-value="req.hrmis_address or current_employee.hrmis_address or ''"
+                            t-att-readonly="'readonly' if not is_draft else None" />
+                        </div>
+                        <div class="hrmis-field">
+                          <label> Postal Code</label>
+                          <input class="hrmis-input" type="text" name="hrmis_postal_code"
+                            t-att-value="req.hrmis_postal_code or current_employee.hrmis_postal_code or ''"
+                            t-att-readonly="'readonly' if not is_draft else None" />
+                        </div>
+                        <div class="hrmis-field">
                           <label> BPS
                             <span class="req">*</span>
                           </label>
