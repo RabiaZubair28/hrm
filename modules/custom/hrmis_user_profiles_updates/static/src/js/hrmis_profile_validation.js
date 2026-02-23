@@ -1542,13 +1542,10 @@ function _toggleStatusBoxes(form) {
   const status = statusSel.value || "";
   console.warn("[POSTING_STATUS] status=", status);
 
-  const extraStatuses = status === "eol_pgship" ? ["currently_posted"] : [];
-  const activeStatuses = new Set([status, ...extraStatuses].filter(Boolean));
-
   const boxes = _qsa(form, ".js-status-box");
   boxes.forEach((box) => {
     const boxStatus = box.getAttribute("data-status") || "";
-    const active = activeStatuses.has(boxStatus);
+    const active = boxStatus === status;
 
     box.style.display = active ? "" : "none";
     _setContainerEnabled(box, active);
@@ -2993,19 +2990,18 @@ function _initFrontendStatusToggle(formArg) {
   }
 
   function showOnly(statusValue) {
-    const status = (statusValue || "").trim();
-    const extra = status === "eol_pgship" ? ["currently_posted"] : [];
-    const showSet = new Set([status, ...extra].filter(Boolean));
-
+    const normalized = (statusValue || "").trim();
     boxes.forEach((b) => {
-      const st = (b.dataset.status || "").trim();
-      const on = showSet.has(st);
-      b.style.display = on ? "" : "none";
-      setBoxEnabled(b, on);
+      b.style.display = "none";
+      setBoxEnabled(b, false);
     });
 
-    // return primary (for sub-toggle logic)
-    return boxes.find((b) => (b.dataset.status || "").trim() === status) || null;
+    const active = boxes.find((b) => (b.dataset.status || "").trim() === normalized);
+    if (active) {
+      active.style.display = "";
+      setBoxEnabled(active, true);
+    }
+    return active || null;
   }
 
   // ---------- Allowed-to-work toggle ----------
