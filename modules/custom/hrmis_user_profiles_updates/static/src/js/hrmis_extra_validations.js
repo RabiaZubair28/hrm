@@ -10,6 +10,9 @@
 //   - Start disabled until Joining Date set (shows red warning + translucent)
 //   - Start cannot be in future (max current month)
 //   - End disabled until Start set (shows warning), End >= Start, End <= current month
+// - Current Status boxes (Suspended / On Leave / EOL):
+//   - Start date: not in future, not before Posting Start (current_posting_start or joining date)
+//   - End date: disabled until start picked, min=start, can be future
 
 function _qs(root, sel) {
   return root ? root.querySelector(sel) : null;
@@ -32,6 +35,10 @@ function _todayMonth() {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   return `${y}-${m}`;
+}
+
+function _isValidMonth(v) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(v || "").trim());
 }
 
 function _isEmpty(v) {
@@ -73,6 +80,22 @@ function _setTranslucent(el, on) {
   el.style.background = on ? "#f3f4f6" : "";
   el.style.opacity = on ? "0.75" : "";
   el.style.cursor = on ? "not-allowed" : "";
+}
+
+function _monthToYmdFirst(ym) {
+  const v = String(ym || "").trim();
+  return _isValidMonth(v) ? `${v}-01` : "";
+}
+
+function _postingBaselineYmd(form) {
+  // Prefer posting start (month) if present, else joining date
+  const cps = _qs(form, 'input[name="current_posting_start"]');
+  const cpsV = _monthToYmdFirst(cps?.value);
+  if (cpsV) return cpsV;
+
+  const joining = _qs(form, 'input[name="hrmis_joining_date"]');
+  const jv = (joining?.value || "").trim(); // YYYY-MM-DD
+  return jv || "";
 }
 
 // -----------------------
@@ -295,6 +318,121 @@ function _syncAllPrevPosting(form) {
   );
 }
 
+// -----------------------
+// Current Status boxes (date inputs)
+// -----------------------
+function _setDateInvalid(el, msg) {
+  if (!el) return;
+  _showError(el, msg);
+  el.setCustomValidity(msg);
+}
+
+function _clearDateInvalid(el) {
+  if (!el) return;
+  _clearError(el);
+  el.setCustomValidity("");
+}
+
+function _wrapVisible(el) {
+  if (!el) return false;
+  const wrap = el.closest("[id$='_wrap'], .hrmis-field, .js-status-box") || el;
+  // if explicitly hidden via display:none on any ancestor, treat as hidden
+  let cur = wrap;
+  for (let i = 0; i < 6 && cur; i++) {
+    if (cur.style && cur.style.display === "none") return false;
+    cur = cur.parentElement;
+  }
+  return true;
+}
+
+function _syncStatusDatePair(form, startEl, endEl, labels) {
+  if (!startEl) return;
+
+  const today = _todayYmd();
+  const baseline = _postingBaselineYmd(form);
+
+  // START: <= today, >= baseline (if baseline exists)
+  startEl.setAttribute("max", today);
+  if (baseline) startEl.setAttribute("min", baseline);
+  else startEl.removeAttribute("min");
+
+  _clearDateInvalid(startEl);
+
+  const sv = (startEl.value || "").trim();
+  if (!_isEmpty(sv)) {
+    if (sv > today) {
+      _setDateInvalid(
+        startEl,
+        `${labels.start} cannot be in the future.`,
+      );
+    } else if (baseline && sv < baseline) {
+      _setDateInvalid(
+        startEl,
+        `${labels.start} cannot be before Posting Start.`,
+      );
+    }
+  }
+
+  if (!endEl) return;
+
+  // If end field is hidden (e.g. EOL end when ongoing), leave it alone.
+  if (!_wrapVisible(endEl)) {
+    _clearDateInvalid(endEl);
+    return;
+  }
+
+  const startOk = !_isEmpty(sv) && startEl.checkValidity();
+
+  // END: disabled until start selected; min=start; can be future (no max)
+  endEl.removeAttribute("max");
+  if (!startOk) {
+    if (!_isEmpty(endEl.value)) endEl.value = "";
+    endEl.disabled = true;
+    _setTranslucent(endEl, true);
+    _setDateInvalid(endEl, `Select ${labels.start} first.`);
+    endEl.removeAttribute("min");
+    return;
+  }
+
+  endEl.disabled = false;
+  _setTranslucent(endEl, false);
+  endEl.setAttribute("min", sv);
+  _clearDateInvalid(endEl);
+
+  const ev = (endEl.value || "").trim();
+  if (!_isEmpty(ev) && ev < sv) {
+    _setDateInvalid(endEl, `${labels.end} must be after ${labels.start}.`);
+  }
+}
+
+function _syncStatusDates(form) {
+  // Suspended
+  _syncStatusDatePair(
+    form,
+    _qs(form, 'input[name="frontend_suspension_date"]'),
+    null,
+    { start: "Suspension Date", end: "End Date" },
+  );
+
+  // On Leave
+  _syncStatusDatePair(
+    form,
+    _qs(form, 'input[name="frontend_onleave_start"]'),
+    _qs(form, 'input[name="frontend_onleave_end"]'),
+    { start: "On Leave Start Date", end: "On Leave End Date" },
+  );
+
+  // EOL (PGship)
+  const eolStart = _qs(form, 'input[name="frontend_eol_start"]');
+  const eolEnd = _qs(form, 'input[name="frontend_eol_end"]');
+  _syncStatusDatePair(
+    form,
+    eolStart,
+    eolEnd,
+    { start: "EOL Start Date", end: "EOL End Date" },
+  );
+}
+
 function _initExtraValidations() {
   const form = _qs(document, "#profile_update_form") || _qs(document, ".hrmis-form");
   if (!form) return;
@@ -334,7 +472,14 @@ function _initExtraValidations() {
     joining.addEventListener("change", () => {
       _syncPmdcDates(form);
       _syncAllPrevPosting(form);
+      _syncStatusDates(form);
     });
+  }
+
+  const postingStartMonth = _qs(form, 'input[name="current_posting_start"]');
+  if (postingStartMonth) {
+    postingStartMonth.addEventListener("change", () => _syncStatusDates(form));
+    postingStartMonth.addEventListener("input", () => _syncStatusDates(form));
   }
 
   // PMDC date events
@@ -351,6 +496,13 @@ function _initExtraValidations() {
       const row = t.closest(".hrmis-repeat-row");
       if (row) _syncPrevPostingRow(form, row);
     }
+    if (
+      t.matches?.(
+        'input[name="frontend_onleave_start"], input[name="frontend_onleave_end"], input[name="frontend_eol_start"], input[name="frontend_eol_end"], input[name="frontend_suspension_date"]',
+      )
+    ) {
+      _syncStatusDates(form);
+    }
   });
   form.addEventListener("input", (e) => {
     const t = e.target;
@@ -359,14 +511,25 @@ function _initExtraValidations() {
       const row = t.closest(".hrmis-repeat-row");
       if (row) _syncPrevPostingRow(form, row);
     }
+    if (
+      t.matches?.(
+        'input[name="frontend_onleave_start"], input[name="frontend_onleave_end"], input[name="frontend_eol_start"], input[name="frontend_eol_end"], input[name="frontend_suspension_date"]',
+      )
+    ) {
+      _syncStatusDates(form);
+    }
   });
 
   // Initial sync
   _syncPmdcDates(form);
   _syncAllPrevPosting(form);
+  _syncStatusDates(form);
 
   // Observe added rows
-  const obs = new MutationObserver(() => _syncAllPrevPosting(form));
+  const obs = new MutationObserver(() => {
+    _syncAllPrevPosting(form);
+    _syncStatusDates(form);
+  });
   obs.observe(form, { childList: true, subtree: true });
 }
 
