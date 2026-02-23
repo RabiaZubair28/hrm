@@ -53,10 +53,23 @@ function _filterFacilityAndDesignation() {
   }
   if (form && form.dataset) form.dataset.hrmisFilterBound = "1";
 
-  const districts = _qsa(form, "select.js-hrmis-district");
-  const facilities = _qsa(form, "select.js-hrmis-facility");
+  const districts = _qsa(
+    form,
+    "select.js-hrmis-district, select.js-current-district, select.js-post-district, select.js-suspension-district, select.js-onleave-district",
+  );
+
+  // Facility selects across the profile form (they use data-district-id on options)
+  const facilities = _qsa(
+    form,
+    "select.js-hrmis-facility, select.js-current-facility, select.js-suspension-facility, select.js-onleave-facility",
+  );
+
+  // Keep old designation/BPS filtering intact (if present)
   const designations = _qsa(form, "select.js-designation-select");
-  const bpsInputs = _qsa(form, "input.js-hrmis-bps, select.js-hrmis-bps, .js-hrmis-bps");
+  const bpsInputs = _qsa(
+    form,
+    "input.js-hrmis-bps, select.js-hrmis-bps, .js-hrmis-bps",
+  );
 
   if (!districts.length && !facilities.length && !designations.length) {
     console.warn("[HRMIS][FILTER] No relevant selects found (district/facility/designation).");
@@ -72,11 +85,23 @@ function _filterFacilityAndDesignation() {
 
   function _findDistrictFor(ctxRoot) {
     // Prefer district inside same ctx, otherwise fallback to first in form
-    return _qs(ctxRoot, "select.js-hrmis-district") || districts[0] || null;
+    return (
+      _qs(
+        ctxRoot,
+        "select.js-hrmis-district, select.js-current-district, select.js-post-district, select.js-suspension-district, select.js-onleave-district",
+      ) ||
+      districts[0] ||
+      null
+    );
   }
 
   function _findFacilityFor(ctxRoot) {
-    return _qs(ctxRoot, "select.js-hrmis-facility") || null;
+    return (
+      _qs(
+        ctxRoot,
+        "select.js-hrmis-facility, select.js-current-facility, select.js-suspension-facility, select.js-onleave-facility",
+      ) || null
+    );
   }
 
   function _findDesignationFor(ctxRoot) {
@@ -128,6 +153,11 @@ function _filterFacilityAndDesignation() {
       });
       facilitySelect.value = "";
       facilitySelect.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    // Refresh HRMIS combobox UI (if enhanced by hrmis_profile_validation.js)
+    if (typeof facilitySelect._hrmisRefreshCombobox === "function") {
+      facilitySelect._hrmisRefreshCombobox();
     }
 
     console.info("[HRMIS][FILTER][FAC] done", {
@@ -245,13 +275,21 @@ function _filterFacilityAndDesignation() {
     const t = ev.target;
     if (!(t instanceof Element)) return;
 
-    if (t.matches("select.js-hrmis-district")) {
+    if (
+      t.matches(
+        "select.js-hrmis-district, select.js-current-district, select.js-post-district, select.js-suspension-district, select.js-onleave-district",
+      )
+    ) {
       console.info("[HRMIS][FILTER] district changed", { name: t.name, value: t.value });
       runAllFilters(_getCtx(t, form));
       return;
     }
 
-    if (t.matches("select.js-hrmis-facility")) {
+    if (
+      t.matches(
+        "select.js-hrmis-facility, select.js-current-facility, select.js-suspension-facility, select.js-onleave-facility",
+      )
+    ) {
       console.info("[HRMIS][FILTER] facility changed", { name: t.name, value: t.value });
       runAllFilters(_getCtx(t, form));
       return;

@@ -2698,7 +2698,6 @@ function _initHRMISValidations() {
   _initCnicScanFiles(form);
   // Status UI (Suspended hides current posting + shows suspension box)
   _initFrontendStatusToggle(form);
-  _initAllowedToWorkToggle();
 
   _digitsOnly(_qs(form, '[name="hrmis_bps"]'), { maxLen: 2 });
   _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
@@ -2963,7 +2962,7 @@ function _initFrontendStatusToggle(formArg) {
   const boxes = Array.from(document.querySelectorAll(".js-status-box"));
 
   // Allowed-to-work UI
-  const allowedCb = form.querySelector(".js-allowed-to-work-toggle");
+  const allowedCbs = Array.from(form.querySelectorAll(".js-allowed-to-work-toggle"));
   const allowedBox = document.getElementById("allowed_to_work_box");
 
   // ---------- helpers ----------
@@ -3032,22 +3031,27 @@ function _initFrontendStatusToggle(formArg) {
   }
 
   function syncAllowedToWork(activeStatus) {
-    const isCurrentlyPosted = activeStatus === "currently_posted";
+    const eligible =
+      activeStatus === "currently_posted" || activeStatus === "eol_pgship";
 
-    // ✅ Merge change: ALWAYS force-hide unless currently_posted
-    if (!isCurrentlyPosted) {
-      if (allowedCb) {
-        allowedCb.checked = false;
-        allowedCb.disabled = true; // optional: prevents toggling when not relevant
-      }
+    // Force-hide unless eligible for allowed-to-work
+    if (!eligible) {
+      allowedCbs.forEach((cb) => {
+        remember(cb);
+        cb.checked = false;
+        cb.disabled = true;
+      });
       setAllowedBoxVisible(false);
       return;
     }
 
-    // currently posted: enable checkbox and follow its state
-    if (allowedCb) allowedCb.disabled = false;
+    // eligible: enable checkbox(es) and follow their state
+    allowedCbs.forEach((cb) => {
+      remember(cb);
+      cb.disabled = cb.dataset.hrmisOrigDisabled === "1";
+    });
 
-    const shouldShow = !!(allowedCb && allowedCb.checked);
+    const shouldShow = allowedCbs.some((cb) => cb.checked);
     setAllowedBoxVisible(shouldShow);
   }
 
@@ -3194,7 +3198,7 @@ function _initFrontendStatusToggle(formArg) {
   boxes.forEach((box) =>
     box.querySelectorAll("input, select, textarea").forEach(remember),
   );
-  if (allowedCb) remember(allowedCb);
+  allowedCbs.forEach((cb) => remember(cb));
   if (allowedBox)
     allowedBox.querySelectorAll("input, select, textarea").forEach(remember);
   if (suspensionFacilitySel) remember(suspensionFacilitySel);
@@ -3263,11 +3267,16 @@ function _initFrontendStatusToggle(formArg) {
   // events
   statusEl.addEventListener("change", sync);
 
-  if (allowedCb) {
-    allowedCb.addEventListener("change", () => {
+  allowedCbs.forEach((cb) => {
+    cb.addEventListener("change", () => {
+      // If multiple checkboxes exist in DOM, keep them synced
+      const checked = !!cb.checked;
+      allowedCbs.forEach((other) => {
+        if (other !== cb) other.checked = checked;
+      });
       syncAllowedToWork((statusEl.value || "").trim());
     });
-  }
+  });
 
   if (suspensionReportingTo)
     suspensionReportingTo.addEventListener("change", syncSuspensionFacility);
