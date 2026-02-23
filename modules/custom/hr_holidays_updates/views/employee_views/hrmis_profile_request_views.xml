@@ -1014,6 +1014,55 @@
                                 <label>Ending Date</label>
                                 <input type="date" class="hrmis-input" name="frontend_eol_end" />
                               </div>
+                              <div class="hrmis-field" style="grid-column: span 2;">
+                                <label>Designation</label>
+                                <!-- Keep visible for EOL, but disabled to avoid posting duplicate 'hrmis_designation' values
+                                     when Substantive Posting is also shown for EOL. -->
+                                <select class="hrmis-input js-other-select"
+                                  name="hrmis_designation"
+                                  data-other-name="hrmis_designation_other_name"
+                                  disabled="disabled">
+                                  <option value="" disabled="disabled" hidden="hidden"
+                                    t-att-selected="not (req.hrmis_designation or current_employee.hrmis_designation)">
+                                    Select Designation
+                                  </option>
+                                  <t t-foreach="designations_unique" t-as="des">
+                                    <t t-set="des_bps" t-value="''" />
+                                    <t t-if="'hrmis_bps' in des._fields and des.hrmis_bps">
+                                      <t t-set="des_bps" t-value="des.hrmis_bps" />
+                                    </t>
+                                    <t t-elif="'bps_id' in des._fields and des.bps_id">
+                                      <t t-if="'bps' in des.bps_id._fields and des.bps_id.bps">
+                                        <t t-set="des_bps" t-value="des.bps_id.bps" />
+                                      </t>
+                                      <t t-elif="'name' in des.bps_id._fields and des.bps_id.name">
+                                        <t t-set="des_bps" t-value="des.bps_id.name" />
+                                      </t>
+                                    </t>
+                                    <t t-elif="'name' in des._fields and des.name">
+                                      <t t-set="des_bps" t-value="des.name" />
+                                    </t>
+                                    <t t-set="des_fac_id" t-value="''" />
+                                    <t t-if="'facility_id' in des._fields and des.facility_id">
+                                      <t t-set="des_fac_id" t-value="des.facility_id.id" />
+                                    </t>
+                                    <option t-att-value="des.id"
+                                      t-att-data-bps="des_bps"
+                                      t-att-data-facility-id="des_fac_id"
+                                      t-att-selected="(req.hrmis_designation and req.hrmis_designation.id == des.id) or (current_employee.hrmis_designation and current_employee.hrmis_designation.id == des.id)">
+                                      <t t-esc="des.name" />
+                                    </option>
+                                  </t>
+                                  <option value="__other__">Other</option>
+                                </select>
+                                <div class="js-other-wrap" style="display:none; margin-top:6px;">
+                                  <input class="hrmis-input js-other-input"
+                                    type="text"
+                                    name="hrmis_designation_other_name"
+                                    placeholder="Enter Designation"
+                                    disabled="disabled" />
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
