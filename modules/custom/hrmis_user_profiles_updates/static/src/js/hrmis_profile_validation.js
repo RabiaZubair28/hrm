@@ -1924,6 +1924,9 @@ function _initPromotionChain(form) {
     _syncPromoRowConstraints(form, row);
     if (e.target?.matches?.('input[name="promotion_bps_from[]"]'))
       _applyPromoToMinFromFrom(row);
+
+    // Live validation: clears warnings as soon as values become valid
+    _validatePromoRow(form, row);
   });
 
   container.addEventListener("change", (e) => {

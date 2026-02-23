@@ -1257,7 +1257,7 @@
                               <!--  District  -->
                               <div class="hrmis-field" style="grid-column: span 2;">
                                 <label>Allowed to Work District</label>
-                                <select class="hrmis-input" name="allowed_district_id">
+                                <select class="hrmis-input js-hrmis-district" name="allowed_district_id">
                                   <option value="">Select District</option>
                                   <t t-foreach="districts" t-as="d">
                                     <option t-att-value="d.id">
@@ -1269,12 +1269,13 @@
                               <!--   Facility   -->
                               <div class="hrmis-field" style="grid-column: span 3;">
                                 <label>Allowed to Work Facility</label>
-                                <select class="hrmis-input js-other-select"
+                                <select class="hrmis-input js-hrmis-facility js-other-select"
                                   name="allowed_facility_id" data-enable-search="1"
                                   data-other-name="allowed_work_facility_other_name">
                                   <option value="">Select Facility</option>
                                   <t t-foreach="facilities" t-as="f">
-                                    <option t-att-value="f.id">
+                                    <option t-att-value="f.id"
+                                      t-att-data-district-id="f.district_id.id if f.district_id else ''">
                                       <t t-esc="f.name" />
                                     </option>
                                   </t>
@@ -1473,6 +1474,7 @@
                                   t-att-selected="not p.get('facility_id')">Select Facility</option>
                                 <t t-foreach="facilities" t-as="f">
                                   <option t-att-value="f.id"
+                                    t-att-data-district-id="f.district_id.id if f.district_id else ''"
                                     t-att-selected="p.get('facility_id') == f.id">
                                     <t t-esc="f.name" />
                                   </option>

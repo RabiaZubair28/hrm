@@ -55,13 +55,36 @@ function _filterFacilityAndDesignation() {
 
   const districts = _qsa(
     form,
-    "select.js-hrmis-district, select.js-current-district, select.js-post-district, select.js-suspension-district, select.js-onleave-district",
+    [
+      "select.js-hrmis-district",
+      "select.js-current-district",
+      "select.js-post-district",
+      "select.js-suspension-district",
+      "select.js-onleave-district",
+      // name-based fallbacks (some selects don't have a stable class)
+      'select[name="district_id"]',
+      'select[name="frontend_reporting_district_id"]',
+      'select[name="frontend_onleave_district_id"]',
+      'select[name="posting_district_id[]"]',
+      'select[name="allowed_district_id"]',
+    ].join(", "),
   );
 
   // Facility selects across the profile form (they use data-district-id on options)
   const facilities = _qsa(
     form,
-    "select.js-hrmis-facility, select.js-current-facility, select.js-suspension-facility, select.js-onleave-facility",
+    [
+      "select.js-hrmis-facility",
+      "select.js-current-facility",
+      "select.js-suspension-facility",
+      "select.js-onleave-facility",
+      // name-based fallbacks
+      'select[name="facility_id"]',
+      'select[name="frontend_reporting_facility_id"]',
+      'select[name="frontend_onleave_facility_id"]',
+      'select[name="posting_facility_id[]"]',
+      'select[name="allowed_facility_id"]',
+    ].join(", "),
   );
 
   // Keep old designation/BPS filtering intact (if present)
@@ -88,7 +111,18 @@ function _filterFacilityAndDesignation() {
     return (
       _qs(
         ctxRoot,
-        "select.js-hrmis-district, select.js-current-district, select.js-post-district, select.js-suspension-district, select.js-onleave-district",
+        [
+          "select.js-hrmis-district",
+          "select.js-current-district",
+          "select.js-post-district",
+          "select.js-suspension-district",
+          "select.js-onleave-district",
+          'select[name="district_id"]',
+          'select[name="frontend_reporting_district_id"]',
+          'select[name="frontend_onleave_district_id"]',
+          'select[name="posting_district_id[]"]',
+          'select[name="allowed_district_id"]',
+        ].join(", "),
       ) ||
       districts[0] ||
       null
@@ -99,7 +133,17 @@ function _filterFacilityAndDesignation() {
     return (
       _qs(
         ctxRoot,
-        "select.js-hrmis-facility, select.js-current-facility, select.js-suspension-facility, select.js-onleave-facility",
+        [
+          "select.js-hrmis-facility",
+          "select.js-current-facility",
+          "select.js-suspension-facility",
+          "select.js-onleave-facility",
+          'select[name="facility_id"]',
+          'select[name="frontend_reporting_facility_id"]',
+          'select[name="frontend_onleave_facility_id"]',
+          'select[name="posting_facility_id[]"]',
+          'select[name="allowed_facility_id"]',
+        ].join(", "),
       ) || null
     );
   }
@@ -277,7 +321,18 @@ function _filterFacilityAndDesignation() {
 
     if (
       t.matches(
-        "select.js-hrmis-district, select.js-current-district, select.js-post-district, select.js-suspension-district, select.js-onleave-district",
+        [
+          "select.js-hrmis-district",
+          "select.js-current-district",
+          "select.js-post-district",
+          "select.js-suspension-district",
+          "select.js-onleave-district",
+          'select[name="district_id"]',
+          'select[name="frontend_reporting_district_id"]',
+          'select[name="frontend_onleave_district_id"]',
+          'select[name="posting_district_id[]"]',
+          'select[name="allowed_district_id"]',
+        ].join(", "),
       )
     ) {
       console.info("[HRMIS][FILTER] district changed", { name: t.name, value: t.value });
@@ -287,7 +342,17 @@ function _filterFacilityAndDesignation() {
 
     if (
       t.matches(
-        "select.js-hrmis-facility, select.js-current-facility, select.js-suspension-facility, select.js-onleave-facility",
+        [
+          "select.js-hrmis-facility",
+          "select.js-current-facility",
+          "select.js-suspension-facility",
+          "select.js-onleave-facility",
+          'select[name="facility_id"]',
+          'select[name="frontend_reporting_facility_id"]',
+          'select[name="frontend_onleave_facility_id"]',
+          'select[name="posting_facility_id[]"]',
+          'select[name="allowed_facility_id"]',
+        ].join(", "),
       )
     ) {
       console.info("[HRMIS][FILTER] facility changed", { name: t.name, value: t.value });
