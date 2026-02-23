@@ -161,12 +161,13 @@ function _syncPmdcDates(form) {
 
   // Expiry depends on issue
   if (_isEmpty(issue.value)) {
+    // Keep expiry disabled until issue is set, but do NOT show warning by default.
     expiry.value = "";
     expiry.disabled = true;
     expiry.removeAttribute("min");
     _setTranslucent(expiry, true);
-    _showError(expiry, "Select PMDC Issue Date first.");
-    expiry.setCustomValidity("Select PMDC Issue Date first.");
+    _clearError(expiry);
+    expiry.setCustomValidity("");
     return;
   }
 
@@ -446,12 +447,44 @@ function _initExtraValidations() {
   const postal = _qs(form, 'input[name="hrmis_postal_code"]');
 
   if (pmdc) {
+    // Show warning only after first interaction (focus/click),
+    // then keep it until the full format is entered: 00000-X
+    const msg = "PMDC No. format is 00000-X";
+
+    function validateIfTouched() {
+      const touched = pmdc.dataset.hrmisTouched === "1";
+      if (!touched) return true;
+
+      const v = String(pmdc.value || "").trim().toUpperCase();
+      _clearError(pmdc);
+      pmdc.setCustomValidity("");
+
+      if (_isEmpty(v)) {
+        _showError(pmdc, msg);
+        // Don't block submit for empty value (field is optional)
+        return true;
+      }
+
+      const ok = /^\d{5}-[A-Z]$/.test(v);
+      if (!ok) {
+        _showError(pmdc, msg);
+        pmdc.setCustomValidity(msg);
+        return false;
+      }
+
+      return true;
+    }
+
+    pmdc.addEventListener("focus", () => {
+      pmdc.dataset.hrmisTouched = "1";
+      validateIfTouched();
+    });
     pmdc.addEventListener("input", () => {
       const next = _normalizePmdc(pmdc.value);
       if (next !== pmdc.value) pmdc.value = next;
-      _validatePmdc(pmdc, { strict: false });
+      validateIfTouched();
     });
-    pmdc.addEventListener("blur", () => _validatePmdc(pmdc, { strict: true }));
+    pmdc.addEventListener("blur", () => validateIfTouched());
   }
 
   if (email) {
