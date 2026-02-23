@@ -700,7 +700,7 @@
                               <div class="hrmis-field" id="frontend_reporting_district_wrap"
                                 style="grid-column: span 4; display:none;">
                                 <label>District</label>
-                                <select class="hrmis-input js-suspension-district"
+                                <select class="hrmis-input js-hrmis-district js-suspension-district"
                                   name="frontend_reporting_district_id">
                                   <option value="" selected="selected" disabled="disabled"
                                     hidden="hidden">Select District</option>
@@ -717,7 +717,7 @@
                                 <!-- <select class="hrmis-input js-current-facility js-other-select"
                                   name="facility_id" data-enable-search="1"
                                   data-other-name="facility_other_name" > -->
-                                <select class="hrmis-input js-suspension-facility js-other-select"
+                                <select class="hrmis-input js-hrmis-facility js-suspension-facility js-other-select"
                                   name="frontend_reporting_facility_id"
                                   data-enable-search="1"
                                   data-other-name="frontend_reporting_facility_other_name">
@@ -906,7 +906,7 @@
                               <div class="hrmis-field" id="frontend_onleave_district_wrap"
                                 style="grid-column: span 3; display:none;">
                                 <label>District</label>
-                                <select class="hrmis-input js-onleave-district"
+                                <select class="hrmis-input js-hrmis-district js-onleave-district"
                                   name="frontend_onleave_district_id">
                                   <option value="" selected="selected" disabled="disabled"
                                     hidden="hidden">Select District</option>
@@ -920,7 +920,7 @@
                               <div class="hrmis-field" id="frontend_onleave_facility_wrap"
                                 style="grid-column: span 3; display:none;">
                                 <label>Facility</label>
-                                <select class="hrmis-input js-onleave-facility"
+                                <select class="hrmis-input js-hrmis-facility js-onleave-facility"
                                   name="frontend_onleave_facility_id">
                                   <option value="" selected="selected" disabled="disabled"
                                     hidden="hidden">Select Facility</option>
@@ -1121,7 +1121,7 @@
                                 <label> Substantive Posting District
                                   <span class="req">*</span>
                                 </label>
-                                <select class="hrmis-input js-current-district" name="district_id"
+                                <select class="hrmis-input js-hrmis-district js-current-district" name="district_id"
                                   required="required">
                                   <option value="" disabled="disabled" hidden="hidden"
                                     t-att-selected="not (req.district_id or current_employee.district_id)">
@@ -1139,7 +1139,7 @@
                                 <label> Substantive Posting Facility
                                   <span class="req">*</span>
                                 </label>
-                                <select class="hrmis-input js-current-facility js-other-select"
+                                <select class="hrmis-input js-hrmis-facility js-current-facility js-other-select"
                                   name="posting_facility_id[]" data-enable-search="1"
                                   data-other-name="facility_other_name" required="required">
                                   <option value="" selected="selected">Select Facility</option>
@@ -1449,7 +1449,7 @@
                               <label> District
                                 <span class="req">*</span>
                               </label>
-                              <select class="hrmis-input js-post-district"
+                              <select class="hrmis-input js-hrmis-district js-post-district"
                                 name="posting_district_id[]" required="required">
                                 <option value="" disabled="disabled" hidden="hidden"
                                   t-att-selected="not p.get('district_id')">Select District</option>
@@ -1466,7 +1466,7 @@
                               <label> Facility
                                 <span class="req">*</span>
                               </label>
-                              <select class="hrmis-input js-other-select"
+                              <select class="hrmis-input js-hrmis-facility js-other-select"
                                 name="posting_facility_id[]" data-enable-search="1"
                                 data-other-name="posting_facility_other_name[]"
                                 required="required">
@@ -1560,7 +1560,7 @@
                             <label> District
                               <span class="req">*</span>
                             </label>
-                            <select class="hrmis-input js-post-district"
+                            <select class="hrmis-input js-hrmis-district js-post-district"
                               name="posting_district_id[]" required="required">
                               <option value="" disabled="disabled" selected="selected"
                                 hidden="hidden">Select District</option>
@@ -1576,16 +1576,16 @@
                               <span class="req">*</span>
                             </label>
                             <select
-                              class="hrmis-input js-current-facility js-suspension-facility"
-                              name="frontend_reporting_facility_id" required="required">
+                              class="hrmis-input js-hrmis-facility js-other-select"
+                              name="posting_facility_id[]" data-enable-search="1"
+                              data-other-name="posting_facility_other_name[]" required="required">
                               <option value="" disabled="disabled" selected="selected">Select
                                 Facility</option>
                               <!--  OPTIONAL: keep this loop if you want initial SSR list (JS
                                   will replace anyway)  -->
                               <t t-foreach="facilities" t-as="f">
                                 <option t-att-value="f.id"
-                                  t-att-data-district-id="f.district_id.id if f.district_id else ''"
-                                  t-att-selected="(req.facility_id and req.facility_id.id == f.id) or (current_employee.facility_id and current_employee.facility_id.id == f.id)">
+                                  t-att-data-district-id="f.district_id.id if f.district_id else ''">
                                   <t t-esc="f.name" />
                                 </option>
                               </t>
@@ -1593,9 +1593,9 @@
                             </select>
                             <div class="js-current-facility-other-wrap"
                               style="display:none; margin-top:6px;">
-                              <input class="hrmis-input js-current-facility-other" type="text"
-                                name="facility_other_name" placeholder="Enter Facility Name"
-                                disabled="disabled" />
+                              <input class="hrmis-input js-other-input" type="text"
+                                name="posting_facility_other_name[]"
+                                placeholder="Enter Facility Name" />
                             </div>
                           </div>
                           <div class="hrmis-field" style="grid-column: span 1;">
