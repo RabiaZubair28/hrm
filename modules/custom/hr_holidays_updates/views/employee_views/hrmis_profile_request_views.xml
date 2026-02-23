@@ -1208,8 +1208,7 @@
                         </div>
                       </div>
                       <!--  Allowed To Work Box  -->
-                      <div id="allowed_to_work_box" style="display:none; margin-top:15px;"
-                        class="js-status-dependent" data-statuses="currently_posted">
+                      <div id="allowed_to_work_box" style="display:none; margin-top:15px;">
                         <div class="hrmis-leave-row-wrap d-flex align-items-stretch">
                           <div class="hrmis-card p-3"
                             style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
@@ -1309,7 +1308,7 @@
                         </div>
                       </div>
                       <!-- ================= REPORTED TO HEALTH DEPARTMENT BOX (HIDDEN BY DEFAULT) ================= -->
-                      <div id="reported_to_hd_box" class="js-status-box" data-status="reported_to_hd" style="display:none;">
+                      <div id="reported_to_hd_box" class="js-status-box" data-status="reported_to_health_department" style="display:none;">
                         <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
                               style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
                           <div class="hrmis-card p-3" style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
