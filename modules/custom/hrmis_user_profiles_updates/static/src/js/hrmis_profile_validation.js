@@ -1093,7 +1093,11 @@ function _getAttrSafe(input, name) {
   }
 }
 function _getJoiningMinLeaveStartYmd() {
-  const form = _qs(document, ".hrmis-form");
+  const form =
+    document.getElementById("profile_update_form") ||
+    _qs(document, ".shrmis-form") ||
+    _qs(document, ".hrmis-form");
+  if (!form) return "";
   const joining = _qs(form, '[name="hrmis_joining_date"]')?.value || "";
   const d = _parseLocalYmd(joining);
   if (!d) return "";
@@ -2764,7 +2768,10 @@ function _applyPrefillRepeatables(form) {
  * Main init (guarded)
  * --------------------------------------------------------- */
 function _initHRMISValidations() {
-  const form = _qs(document, ".hrmis-form");
+  const form =
+    document.getElementById("profile_update_form") ||
+    _qs(document, ".shrmis-form") ||
+    _qs(document, ".hrmis-form");
   if (!form) return;
 
   // INIT GUARD: prevent double binding on pageshow/bfcache
@@ -3034,7 +3041,11 @@ function _setComboboxDisabled(selectEl, disabled, msg = "") {
   }
 }
 function _initFrontendStatusToggle(formArg) {
-  const form = formArg || document.querySelector(".hrmis-form");
+  const form =
+    formArg ||
+    document.getElementById("profile_update_form") ||
+    document.querySelector(".shrmis-form") ||
+    document.querySelector(".hrmis-form");
   if (!form) return;
 
   const statusEl = form.querySelector('[name="hrmis_current_status_frontend"]');
