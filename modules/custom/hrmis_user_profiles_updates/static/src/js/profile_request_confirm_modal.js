@@ -599,63 +599,8 @@ function _initConfirmModal() {
     ev.preventDefault();
     console.log("[HRMIS ConfirmModal] open clicked");
 
-    // If the first invalid field is inside a hidden tab, activate that tab first.
-    // Then call reportValidity() again so the browser can show the message.
-    const activateTabForEl = (el) => {
-      if (!(el instanceof HTMLElement)) return false;
-      const pane = el.closest(".tab-pane");
-      if (!pane || !pane.id) return false;
-
-      const tab =
-        document.querySelector(`.hrmis-tabs--profile .hrmis-tab[href="#${pane.id}"]`) ||
-        document.querySelector(`.hrmis-tabs--profile .hrmis-tab[data-bs-target="#${pane.id}"]`);
-      if (!(tab instanceof HTMLElement)) return false;
-
-      // Prefer Bootstrap Tab API if present; otherwise manual toggle.
-      try {
-        if (window.bootstrap && window.bootstrap.Tab) {
-          window.bootstrap.Tab.getOrCreateInstance(tab).show();
-          return true;
-        }
-      } catch {
-        // ignore and fall back
-      }
-
-      // Manual fallback (no Bootstrap JS)
-      document.querySelectorAll(".hrmis-tabs--profile .hrmis-tab").forEach((t) => {
-        t.classList.remove("active");
-        t.classList.remove("is-active");
-        t.setAttribute("aria-selected", "false");
-      });
-      tab.classList.add("active");
-      tab.classList.add("is-active");
-      tab.setAttribute("aria-selected", "true");
-
-      document.querySelectorAll(".tab-pane").forEach((p) => {
-        p.classList.remove("active");
-        p.classList.remove("show");
-      });
-      pane.classList.add("active");
-      pane.classList.add("show");
-      return true;
-    };
-
-    // Use checkValidity() to locate invalid control without showing tooltip yet.
-    if (!form.checkValidity()) {
-      const firstInvalid = form.querySelector(":invalid");
-      if (firstInvalid) {
-        activateTabForEl(firstInvalid);
-      }
-      // Now show the native validation message on the visible tab.
-      const ok = form.reportValidity();
+    if (!form.reportValidity()) {
       console.warn("[HRMIS ConfirmModal] form validation failed");
-      if (!ok && firstInvalid && firstInvalid.scrollIntoView) {
-        try {
-          firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
-        } catch {
-          // ignore
-        }
-      }
       return;
     }
 
