@@ -2,17 +2,47 @@
   <template id="hrmis_profile_request_form" name="HRMIS Profile Update Request">
     <t t-call="hr_holidays_updates.hrmis_ui_layout">
       <div class="shrmis-profile-page">
-        <!--   Header   -->
-        <div class="d-flex flex-column mb-2">
-          <div class="shrmis-pageTitle"> Welcome
-            <t
-                t-esc="(current_employee and current_employee.name) or (employee and employee.name) or ''" />
-              !
+        <t t-set="profile_emp" t-value="current_employee or employee"/>
+        <t t-set="is_draft" t-value="req and (req.state == 'draft')"/>
+
+        <!-- Header (match inspiration layout) -->
+        <div class="shrmis-pageHeader">
+          <div class="shrmis-pageHeader__left">
+            <div class="shrmis-pageHeader__title">Patient Profile</div>
+            <div class="shrmis-pageHeader__subtitle">Please complete your profile first.</div>
+            <div class="shrmis-pageHeader__pills">
+              <span t-attf-class="shrmis-pill #{'is-success' if is_draft else 'is-muted'}">
+                <t t-esc="'Draft' if is_draft else 'Submitted'"/>
+              </span>
+            </div>
           </div>
-          <div style="font-weight:600; opacity:0.85;">Please complete your profile first.</div>
+
+          <div class="shrmis-pageHeader__right" t-if="profile_emp">
+            <div class="shrmis-personCard">
+              <div class="shrmis-personCard__avatar">
+                <img t-att-alt="profile_emp.name"
+                     t-att-src="'/web/image/hr.employee.public/%s/avatar_1024/' % profile_emp.id"/>
+              </div>
+              <div class="shrmis-personCard__meta">
+                <div class="shrmis-personCard__name">
+                  <t t-esc="profile_emp.name or ''"/>
+                </div>
+                <div class="shrmis-personCard__sub">
+                  <t t-if="profile_emp.hrmis_employee_id">
+                    <span>PN <t t-esc="profile_emp.hrmis_employee_id"/></span>
+                  </t>
+                  <t t-if="profile_emp.hrmis_cnic">
+                    <span class="shrmis-dot">•</span>
+                    <span>CNIC <t t-esc="profile_emp.hrmis_cnic"/></span>
+                  </t>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <!--   Body   -->
-        <div >
+        <!-- Body -->
+        <div class="shrmis-surface shrmis-card">
+          <div class="shrmis-surface__body">
           <t t-if="info">
             <div class="hrmis-alert hrmis-alert--success mt-2">
               <t t-esc="info" />
@@ -28,7 +58,6 @@
               <t t-esc="success" />
             </div>
           </t>
-          <t t-set="is_draft" t-value="req and (req.state == 'draft')" />
           <form
             t-att-class="'shrmis-form mt-1 ' + ('is-draft' if req.state == 'draft' else 'is-submitted')"
             id="profile_update_form" method="post" enctype="multipart/form-data"

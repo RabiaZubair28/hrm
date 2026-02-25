@@ -24,6 +24,129 @@ $shrmis-radius-md: 12px;
   min-height: 100vh;
   scroll-behavior: smooth;
 
+  max-width: 1200px;
+  margin: 0 auto;
+
+  /* ===== HEADER (inspiration-style) ===== */
+  .shrmis-pageHeader {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .shrmis-pageHeader__title {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: .2px;
+    margin: 0;
+  }
+
+  .shrmis-pageHeader__subtitle {
+    margin-top: 4px;
+    font-weight: 600;
+    color: $shrmis-muted;
+  }
+
+  .shrmis-pageHeader__pills {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .shrmis-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid $shrmis-border;
+    font-weight: 700;
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.8);
+    color: $shrmis-text;
+
+    &.is-success {
+      border-color: rgba(6, 69, 38, 0.28);
+      background: rgba(6, 69, 38, 0.08);
+      color: $shrmis-primary;
+    }
+    &.is-muted {
+      opacity: 0.85;
+    }
+  }
+
+  .shrmis-dot {
+    display: inline-block;
+    margin: 0 8px;
+    opacity: 0.55;
+  }
+
+  .shrmis-personCard {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    background: $shrmis-white;
+    border: 1px solid $shrmis-border;
+    border-radius: 14px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.04);
+    max-width: 420px;
+  }
+
+  .shrmis-personCard__avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    overflow: hidden;
+    flex: 0 0 auto;
+    border: 1px solid $shrmis-border;
+    background: #eef0ec;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
+
+  .shrmis-personCard__name {
+    font-weight: 800;
+    font-size: 14px;
+    line-height: 1.1;
+    margin-bottom: 2px;
+  }
+
+  .shrmis-personCard__sub {
+    font-size: 12px;
+    color: $shrmis-muted;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ===== MAIN SURFACE ===== */
+  .shrmis-surface {
+    border-radius: $shrmis-radius-lg;
+  }
+
+  .shrmis-surface__body {
+    padding: 16px 16px 18px;
+  }
+
+  /* Normalize legacy inline borders inside the form */
+  [style*="border: 2px solid black"] {
+    border: 1px solid $shrmis-border !important;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.55);
+  }
+  [style*="border-bottom: 1px solid black"],
+  [style*="border-bottom:1px solid black"] {
+    border-bottom: 1px solid $shrmis-border !important;
+  }
+
   /* SIDEBAR */
   .shrmis-sidebar {
     width: 280px;
@@ -258,6 +381,15 @@ $shrmis-radius-md: 12px;
 
   /* RESPONSIVE */
   @media (max-width: 992px) {
+    max-width: 100%;
+
+    .shrmis-pageHeader {
+      grid-template-columns: 1fr;
+    }
+    .shrmis-personCard {
+      max-width: 100%;
+    }
+
     .shrmis-grid {
       grid-template-columns: 1fr;
     }
