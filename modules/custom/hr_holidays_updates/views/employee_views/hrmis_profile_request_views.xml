@@ -2309,8 +2309,25 @@
                 </div>
               </div>
               <div class="modal-footer">
-                <button type="button" class="hrmis-btn hrmis-btn--primary hrmis-btn--lg"
-                  id="btn_confirm_submit"> Confirm and Submit </button>
+                <!-- Keep this hidden button ONLY to satisfy existing JS selector binding.
+                     The existing JS uses `form.submit()` which bypasses submit event validations.
+                     We submit via a real submit button below so `hrmis_profile_validation.js`
+                     submit-time validations run without changing any JS. -->
+                <button type="button"
+                        class="hrmis-btn hrmis-btn--primary hrmis-btn--lg"
+                        id="btn_confirm_submit"
+                        style="display:none;">
+                  Confirm and Submit
+                </button>
+
+                <!-- Native submit: triggers submit event + validations -->
+                <button type="submit"
+                        form="profile_update_form"
+                        data-bs-dismiss="modal"
+                        class="hrmis-btn hrmis-btn--primary hrmis-btn--lg"
+                        id="btn_confirm_submit_native">
+                  Confirm and Submit
+                </button>
               </div>
             </div>
           </div>
