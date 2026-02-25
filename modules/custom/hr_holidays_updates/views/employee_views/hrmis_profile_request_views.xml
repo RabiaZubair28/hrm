@@ -70,7 +70,7 @@
             </t>
             <t t-set="is_draft" t-value="req and (req.state == 'draft')" />
             <form
-            t-att-class="'hrmis-form' + ('is-draft' if req.state == 'draft' else 'is-submitted')"
+            t-att-class="'hrmis-form ' + ('is-draft' if req.state == 'draft' else 'is-submitted')"
             id="profile_update_form" method="post" enctype="multipart/form-data"
             action="/hrmis/profile/request/submit"
             t-att-onsubmit="'return false;' if req.state != 'draft' else None">
