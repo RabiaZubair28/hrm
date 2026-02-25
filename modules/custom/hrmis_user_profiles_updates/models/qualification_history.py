@@ -92,7 +92,21 @@ class HrmisQualificationHistory(models.Model):
         ondelete="cascade",
         index=True,
     )
+    # add this (uncomment / restore)
+    training_institute_id = fields.Many2one(
+        "hrmis.training.institute",
+        string="Training Institute",
+    )
 
+    # keep your existing code field (already present)
+    qual_institute_code = fields.Char(
+        string="Training Institute (Code)",
+        help="Stores frontend string values like 'jpmc', 'duhs' when institute_id is not an integer ID.",
+    )
+
+    # rename is optional, but recommended for clarity
+    # if you don’t want a DB rename, keep your existing field name:
+    training_institute_other_name = fields.Char(string="Other Training Institute")
     degree = fields.Selection(
         [
             ("ms", "MS"),
@@ -101,13 +115,17 @@ class HrmisQualificationHistory(models.Model):
             ("fcps_2", "FCPS-II"),
             ("mcps", "MCPS"),
             ("diploma", "Diploma"),
+            ("mbbs", "MBBS"),
+            ("mph", "MPH"),
+            ("mba", "MBA(Health Management)"),
+            ("msph", "MSPH"),
             ("other", "Other"),
         ],
         string="Degree",
         required=True,
     )
     degree_other_name = fields.Char()  # NEW
-    specialization = fields.Char(string="Specialization")
+    # specialization = fields.Char(string="Specialization")
     # specialization = fields.Char(string="Specialization")
 
     status = fields.Selection(
@@ -117,47 +135,45 @@ class HrmisQualificationHistory(models.Model):
         required=True,
     )
 
-    start_date = fields.Date(string="Start Date", required=True)
-    end_date = fields.Date(string="End Date")
+    # start_date = fields.Date(string="Start Date", required=True)
+    # end_date = fields.Date(string="End Date")
 
 
     specialization = fields.Selection([
-        ("general_medicine", "General Medicine"),
-        ("family_medicine", "Family Medicine"),
-        ("medicine", "Medicine"),
-        ("emergency_medicine", "Emergency Medicine"),
-        ("pediatrics", "Pediatrics"),
-        ("pediatric_surgery", "Pediatric Surgery"),
-        ("cardiology", "Cardiology"),
-        ("neurology", "Neurology"),
-        ("psychiatry", "Psychiatry"),
-        ("dermatology", "Dermatology"),
-        ("endocrinology", "Endocrinology"),
-        ("pulmonology", "Pulmonology"),
-        ("nephrology", "Nephrology"),
-        ("gastroenterology", "Gastroenterology"),
-        ("oncology", "Oncology"),
-        ("hematology", "Hematology"),
-        ("general_surgery", "General Surgery"),
-        ("surgery", "Surgery"),
-        ("neurosurgery", "Neurosurgery"),
-        ("plastic_surgery", "Plastic Surgery"),
-        ("urology", "Urology"),
-        ("orthopedics", "Orthopedics"),
-        ("gynecology", "Gynecology"),
-        ("obstetrics_gynecology", "Obstetrics and Gynaecology"),
-        ("radiology", "Radiology"),
-        ("pathology", "Pathology"),
-        ("anesthesia", "Anesthesia"),
-        ("anesthesiology", "Anesthesiology"),
-        ("physiotherapy", "Physiotherapy"),
-        ("nutrition", "Nutrition"),
-        ("ophthalmology", "Ophthalmology"),
-        ("ent", "ENT"),
-        ("dentistry", "Dentistry"),
-        ("orthodontist", "Orthodontist"),
-        ("other", "Other"),
+("general_medicine", "General Medicine"),
+("pediatrics", "Pediatrics"),
+("cardiology", "Cardiology"),
+("neurology", "Neurology"),
+("dermatology", "Dermatology"),
+("psychiatry", "Psychiatry"),
+("endocrinology", "Endocrinology"),
+("pulmonology", "Pulmonology"),
+("nephrology", "Nephrology"),
+("gastroenterology", "Gastroenterology"),
+("oncology", "Oncology"),
+("family_medicine", "Family Medicine"),
+("general_surgery", "General Surgery"),
+("obstetrics_gynecology", "Obstetrics & Gynaecology"),
+("orthopedics", "Orthopedics"),
+("ophthalmology", "Ophthalmology"),
+("ent", "ENT"),
+("neurosurgery", "Neurosurgery"),
+("plastic_surgery", "Plastic Surgery"),
+("urology", "Urology"),
+("anesthesiology", "Anesthesiology"),
+("pediatric_surgery", "Pediatric Surgery"),
+("radiology", "Radiology"),
+("pathology", "Pathology"),
+("hematology", "Hematology"),
+("physiotherapy", "Physiotherapy"),
+("nutrition", "Nutrition"),
+("dentistry", "Dentistry"),
+("orthodontist", "Orthodontist"),
+("emergency_medicine", "Emergency medicine"),
+("other", "Other"),
 ], string="Specialization")
+    specialization_other_name = fields.Char(string="Other Specialization")
+    
     # ✅ controller creates start_date/end_date (YYYY-MM-01)
     start_date = fields.Date(required=True, index=True)
     end_date = fields.Date(index=True)

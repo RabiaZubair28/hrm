@@ -49,6 +49,10 @@ class HrmisProfilePostingStatus(models.Model):
         "hrmis.facility.type",
         string="Suspension Reporting Facility",
     )
+    suspension_reporting_designation_id = fields.Many2one(
+        "hrmis.designation",
+        string="Suspension Reporting Designation",
+    )
 
     # -----------------------
     # On-leave details (XML)
@@ -84,11 +88,29 @@ class HrmisProfilePostingStatus(models.Model):
         "hrmis.training.institute",
         string="Training Institute",
     )
+    
     eol_institute_code = fields.Char(
         string="Training Institute (Code)",
         help="Stores frontend string values like 'jpmc', 'duhs' when institute_id is not an integer ID.",
     )
+    eol_degree = fields.Selection(
+        [
+            ("ms", "MS"),
+            ("md", "MD"),
+            ("fcps_1", "FCPS-I"),
+            ("fcps_2", "FCPS-II"),
+            ("mcps", "MCPS"),
+            ("mbbs", "MBBS"),
+            ("mph", "MPH"),
+            ("mba", "MBA (Health Management)"),
+            ("msph", "MSPH"),
+            ("diploma", "Diploma"),
+            ("other", "Other"),
+        ],
+        string="EOL Degree",
+    )
 
+    eol_degree_other_name = fields.Char(string="Other EOL Degree")
     eol_specialization_id = fields.Many2one(
         "hrmis.training.specialization",
         string="Specialization",
@@ -108,6 +130,26 @@ class HrmisProfilePostingStatus(models.Model):
 
     eol_start = fields.Date(string="EOL Start Date")
     eol_end = fields.Date(string="EOL End Date")
+    
+    # -----------------------
+    # EOL (PGship) - Primary Posting
+    # -----------------------
+    eol_primary_district_id = fields.Many2one(
+        "hrmis.district.master",
+        string="EOL Primary Posting District",
+    )
+
+    eol_primary_facility_id = fields.Many2one(
+        "hrmis.facility.type",
+        string="EOL Primary Posting Facility",
+    )
+
+    eol_primary_designation_id = fields.Many2one(
+        "hrmis.designation",
+        string="EOL Primary Posting Designation",
+    )
+
+    eol_primary_bps = fields.Integer(string="EOL Primary Posting BPS")
 
     # -----------------------
     # Allowed to Work details (XML)

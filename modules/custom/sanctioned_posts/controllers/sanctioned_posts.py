@@ -26,6 +26,71 @@ except Exception:
 
 class HrmisSanctionedPostsController(http.Controller):
 
+
+    def _slug_part(self, s: str) -> str:
+        """
+        For login parts: keep letters+digits only, lowercase.
+        """
+        s = "" if s is None else str(s)
+        s = s.strip().lower()
+        s = re.sub(r"[^a-z0-9]+", "", s)
+        return s
+
+    def _strip_titles(self, name: str) -> str:
+        """
+        Removes common prefixes like Dr., Prof., etc.
+        """
+        name = "" if name is None else str(name)
+        name = name.strip()
+
+        # remove leading "Dr", "Dr.", "Doctor", etc (case-insensitive)
+        name = re.sub(r"^(dr\.?|doctor|prof\.?|professor)\s+", "", name, flags=re.I)
+
+        # optional: remove extra whitespace
+        name = re.sub(r"\s+", " ", name).strip()
+        return name
+
+    def _first_last_from_doctor_name(self, full_name: str):
+        """
+        Extract firstname/lastname from "Name of doctor".
+        Strategy:
+        - Strip titles
+        - Remove everything after relational markers like S/o, D/o, W/o (because it adds noise)
+        - Split remaining by spaces; first token = first name, last token = last name
+        """
+        n = self._strip_titles(full_name)
+
+        # cut off at S/o, D/o, W/o etc (case-insensitive)
+        n = re.split(r"\b(s/o|d/o|w/o)\b", n, flags=re.I)[0].strip()
+
+        # remove trailing punctuation
+        n = re.sub(r"[.,]+$", "", n).strip()
+        n = re.sub(r"\s+", " ", n).strip()
+
+        parts = [p for p in n.split(" ") if p.strip()]
+        if len(parts) < 2:
+            return (parts[0] if parts else "", "")
+        return (parts[0], parts[-1])
+
+    def _dob_digits(self, dob_val) -> str:
+        """
+        New requirement: DOB digits only, keep natural DDMMYYYY if date object.
+        If string => strip non-digits (04.02.1979 => 04021979).
+        """
+        if isinstance(dob_val, (datetime.date, datetime.datetime)):
+            return dob_val.strftime("%d%m%Y")
+        return self._digits_only("" if dob_val is None else str(dob_val))
+
+    def _domicile_key(self, domicile_val) -> str:
+        """
+        last three letters of domicile (letters only), lowercase.
+        If < 3 letters, use whatever exists.
+        """
+        s = "" if domicile_val is None else str(domicile_val)
+        letters_only = re.sub(r"[^A-Za-z]+", "", s).lower()
+        if not letters_only:
+            return ""
+        return letters_only[-3:] if len(letters_only) >= 3 else letters_only
     # ---- helpers ----
     def _ensure_admin(self):
         if not request.env.user.has_group("base.group_system"):
@@ -171,6 +236,7 @@ class HrmisSanctionedPostsController(http.Controller):
                 "attachment_id": None,
             })
 
+    
     @http.route(
         "/hrmis/sanctioned_posts/create_users",
         type="http",
@@ -190,6 +256,7 @@ class HrmisSanctionedPostsController(http.Controller):
                 "upload_error": "Missing attachment_id. Please upload the XLSX again.",
                 "attachment_id": None,
                 "creds_attachment_id": None,
+                "failed_attachment_id": None,
                 "creds_preview": [],
             })
 
@@ -201,6 +268,7 @@ class HrmisSanctionedPostsController(http.Controller):
                 "upload_error": "Uploaded file not found. Please upload again.",
                 "attachment_id": None,
                 "creds_attachment_id": None,
+                "failed_attachment_id": None,
                 "creds_preview": [],
             })
 
@@ -211,8 +279,12 @@ class HrmisSanctionedPostsController(http.Controller):
                 "upload_error": "openpyxl is not installed on the server.",
                 "attachment_id": attachment.id,
                 "creds_attachment_id": None,
+                "failed_attachment_id": None,
                 "creds_preview": [],
             })
+
+        Users = request.env["res.users"].sudo()
+        Attach = request.env["ir.attachment"].sudo()
 
         try:
             content = base64.b64decode(attachment.datas or b"")
@@ -221,127 +293,203 @@ class HrmisSanctionedPostsController(http.Controller):
 
             columns = self._normalize_columns([c.value for c in ws[1]])
 
-            # Your headers: CNIC, DOB, PHONE
-            cnic_col = self._find_col(columns, ["cnic"])
-            dob_col = self._find_col(columns, ["dob", "date of birth", "date_of_birth"])
-            phone_col = self._find_col(columns, ["phone", "mobile", "mobile_no", "mobile no"])
-            name_col = self._find_col(columns, ["name", "employee name", "employee_name", "full name", "full_name"])
+            # Required headers for doctor sheet
+            name_col = self._find_col(columns, ["name of doctor", "name", "doctor name"])
+            dob_col = self._find_col(columns, ["date of birth", "dob", "date_of_birth"])
+            domicile_col = self._find_col(columns, ["domicile"])
 
-            if not cnic_col or not dob_col or not phone_col:
+            if not name_col or not dob_col or not domicile_col:
                 raise UserError(
-                    "Missing required columns. Required: CNIC, DOB, PHONE.\n"
+                    "Missing required columns. Required: Name of doctor, Date of birth, Domicile.\n"
                     f"Detected columns: {', '.join(columns)}"
                 )
 
-            Users = request.env["res.users"].sudo()
-            Attach = request.env["ir.attachment"].sudo()
+            # ---------------------------
+            # PASS 1: Collect candidate logins (no DB writes)
+            # ---------------------------
+            candidate_logins = set()
+            for row_cells in ws.iter_rows(min_row=2, values_only=True):
+                if not row_cells or all((v is None or str(v).strip() == "") for v in row_cells):
+                    continue
+                row = {columns[i]: (row_cells[i] if i < len(row_cells) else None) for i in range(len(columns))}
+                full_name = ("" if row.get(name_col) is None else str(row.get(name_col)).strip())
+                if not full_name:
+                    continue
 
+                first, last = self._first_last_from_doctor_name(full_name)
+                first_s = self._slug_part(first)
+                last_s = self._slug_part(last)
+                if first_s and last_s:
+                    candidate_logins.add(f"{first_s}.{last_s}")
+
+            # Query existing logins only for those in the sheet (1 SQL query)
+            existing_logins = set()
+            if candidate_logins:
+                existing_logins = set(
+                    rec["login"] for rec in Users.search_read([("login", "in", list(candidate_logins))], ["login"])
+                )
+
+            # Reset worksheet iterator (reload workbook)
+            wb = openpyxl.load_workbook(filename=BytesIO(content), data_only=True)
+            ws = wb.active
+
+            # ---------------------------
+            # Import state
+            # ---------------------------
             created = 0
             skipped = 0
-            errors = []
             processed = 0
 
-            seen_logins = set()
+            errors_preview = []
+            errors_preview_limit = 50
 
-            # Store ALL created credentials for CSV
-            created_creds_all = []  # list of (login, password)
-            # Show only first N on page
+            failed_rows = []  # full downloadable list
+
+            created_creds_all = []  # (login, password)
             creds_preview = []
             preview_limit = 50
 
+            seen_logins = set()  # duplicates within sheet
+
             batch = []
-            batch_creds = []   # parallel list of (login,password) for the batch
-            batch_size = 500
+            batch_creds = []     # (login, password)
+            batch_meta = []      # meta dict for failure XLSX
+            batch_size = 2000
 
             def add_cred(login, password):
                 created_creds_all.append((login, password))
                 if len(creds_preview) < preview_limit:
                     creds_preview.append({"login": login, "password": password})
 
+            def log_fail(row_index, full_name, login, dob_digits, domicile, reason):
+                nonlocal skipped
+                skipped += 1
+                if len(errors_preview) < errors_preview_limit:
+                    errors_preview.append(f"Row {row_index}: {reason}")
+                failed_rows.append({
+                    "row": row_index,
+                    "name": full_name or "",
+                    "login": login or "",
+                    "dob_digits": dob_digits or "",
+                    "domicile": domicile or "",
+                    "reason": reason or "",
+                })
+
             def flush_batch():
-                nonlocal created, batch, batch_creds, skipped, errors
+                nonlocal created, batch, batch_creds, batch_meta
                 if not batch:
                     return
                 try:
                     new_users = Users.create(batch)
-                    # assume recordset order matches input order (usually yes)
                     for _u, (lg, pw) in zip(new_users, batch_creds):
                         add_cred(lg, pw)
+                        existing_logins.add(lg)  # keep set current
                     created += len(batch)
                     request.env.cr.commit()
-                    batch = []
-                    batch_creds = []
-                except Exception as e:
-                    # Rollback and isolate bad rows (duplicate login etc.)
+                except Exception:
                     request.env.cr.rollback()
-                    for vals, (lg, pw) in zip(batch, batch_creds):
+                    # isolate failing rows
+                    for vals, (lg, pw), meta in zip(batch, batch_creds, batch_meta):
                         try:
                             Users.create(vals)
                             add_cred(lg, pw)
+                            existing_logins.add(lg)
                             created += 1
                         except Exception as e2:
-                            skipped += 1
-                            if len(errors) < 50:
-                                errors.append(f"Skipped {lg}: {str(e2)}")
+                            log_fail(
+                                meta.get("row_index"),
+                                meta.get("full_name"),
+                                lg,
+                                meta.get("dob_digits"),
+                                meta.get("domicile"),
+                                f"Create failed: {str(e2)}"
+                            )
                     request.env.cr.commit()
+                finally:
                     batch = []
                     batch_creds = []
+                    batch_meta = []
 
+            # ---------------------------
+            # PASS 2: Validate + Create
+            # ---------------------------
             for row_index, row_cells in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
                 if not row_cells or all((v is None or str(v).strip() == "") for v in row_cells):
                     continue
 
                 processed += 1
 
-                row = {}
-                for idx, col in enumerate(columns):
-                    row[col] = row_cells[idx] if idx < len(row_cells) else None
+                row = {columns[i]: (row_cells[i] if i < len(row_cells) else None) for i in range(len(columns))}
 
-                cnic = ("" if row.get(cnic_col) is None else str(row.get(cnic_col)).strip())
-                if not cnic:
-                    skipped += 1
-                    if len(errors) < 50:
-                        errors.append(f"Row {row_index}: Missing CNIC")
+                full_name = ("" if row.get(name_col) is None else str(row.get(name_col)).strip())
+                domicile = ("" if row.get(domicile_col) is None else str(row.get(domicile_col)).strip())
+                dob_val = row.get(dob_col)
+
+                if not full_name:
+                    log_fail(row_index, full_name, "", "", domicile, "Missing Name of doctor")
+                    continue
+                if not domicile:
+                    log_fail(row_index, full_name, "", "", domicile, "Missing Domicile")
                     continue
 
-                login = cnic
+                dob_digits = self._dob_digits(dob_val)
+                if not dob_digits:
+                    log_fail(row_index, full_name, "", "", domicile, "Missing/invalid Date of birth")
+                    continue
 
-                # duplicates inside same upload
+                first, last = self._first_last_from_doctor_name(full_name)
+                first_s = self._slug_part(first)
+                last_s = self._slug_part(last)
+
+                if not first_s or not last_s:
+                    log_fail(row_index, full_name, "", dob_digits, domicile, "Cannot parse firstname/lastname from Name of doctor")
+                    continue
+
+                login = f"{first_s}.{last_s}"
+
+                # duplicates inside sheet
                 if login in seen_logins:
-                    skipped += 1
+                    log_fail(row_index, full_name, login, dob_digits, domicile, "Duplicate login in sheet")
                     continue
                 seen_logins.add(login)
 
-                # duplicates already in DB
-                if Users.search([("login", "=", login)], limit=1):
-                    skipped += 1
+                # duplicates in DB (fast set check)
+                if login in existing_logins:
+                    log_fail(row_index, full_name, login, dob_digits, domicile, "Login already exists in database")
                     continue
 
-                dob_digits = self._dob_digits(row.get(dob_col))
-                phone_last4 = self._last4_digits(row.get(phone_col))
-                cnic_last4 = self._last4_digits(login)
+                domicile_key = self._domicile_key(domicile)
+                if not domicile_key:
+                    log_fail(row_index, full_name, login, dob_digits, domicile, "Invalid domicile for domicilekey (needs letters)")
+                    continue
 
-                password = f"{cnic_last4}{dob_digits}{phone_last4}"
+                password = f"{last_s}{dob_digits}{domicile_key}"
 
-                name = ""
-                if name_col:
-                    name = row.get(name_col) or ""
-                name = (str(name).strip() if name else "") or login
-
-                batch.append({
-                    "name": name,
+                vals = {
+                    "name": full_name,
                     "login": login,
                     "password": password,
                     "hrmis_role": "employee",
-                })
+                }
+                meta = {
+                    "row_index": row_index,
+                    "full_name": full_name,
+                    "dob_digits": dob_digits,
+                    "domicile": domicile,
+                }
+
+                batch.append(vals)
                 batch_creds.append((login, password))
+                batch_meta.append(meta)
 
                 if len(batch) >= batch_size:
                     flush_batch()
 
             flush_batch()
 
-            # Build downloadable CSV for ALL created credentials
+            # ---------------------------
+            # Credentials CSV attachment
+            # ---------------------------
             csv_buf = StringIO()
             writer = csv.writer(csv_buf)
             writer.writerow(["login", "password"])
@@ -356,13 +504,61 @@ class HrmisSanctionedPostsController(http.Controller):
                 "res_model": "res.users",
             })
 
+            # ---------------------------
+            # Failed XLSX attachment (ALL skipped rows)
+            # ---------------------------
+            failed_attachment = None
+            if failed_rows:
+                fail_wb = openpyxl.Workbook()
+                fail_ws = fail_wb.active
+                fail_ws.title = "Failed Users"
+
+                headers = ["Row", "Name of doctor", "Login", "DOB Digits", "Domicile", "Reason"]
+                fail_ws.append(headers)
+
+                header_font = Font(bold=True)
+                for col in range(1, len(headers) + 1):
+                    c = fail_ws.cell(row=1, column=col)
+                    c.font = header_font
+                    c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+                for fr in failed_rows:
+                    fail_ws.append([
+                        fr.get("row", ""),
+                        fr.get("name", ""),
+                        fr.get("login", ""),
+                        fr.get("dob_digits", ""),
+                        fr.get("domicile", ""),
+                        fr.get("reason", ""),
+                    ])
+
+                fail_ws.freeze_panes = "A2"
+                fail_ws.column_dimensions["A"].width = 8
+                fail_ws.column_dimensions["B"].width = 45
+                fail_ws.column_dimensions["C"].width = 25
+                fail_ws.column_dimensions["D"].width = 14
+                fail_ws.column_dimensions["E"].width = 20
+                fail_ws.column_dimensions["F"].width = 55
+
+                out = BytesIO()
+                fail_wb.save(out)
+                out.seek(0)
+
+                failed_attachment = Attach.create({
+                    "name": "failed_users.xlsx",
+                    "type": "binary",
+                    "datas": base64.b64encode(out.getvalue()),
+                    "mimetype": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "res_model": "res.users",
+                })
+
             upload_result = {
                 "count": processed,
                 "columns": columns,
                 "top10": [],
                 "created": created,
                 "skipped": skipped,
-                "errors": errors,
+                "errors": errors_preview,
             }
 
             return request.render(self._template(), {
@@ -371,6 +567,7 @@ class HrmisSanctionedPostsController(http.Controller):
                 "upload_error": None,
                 "attachment_id": attachment.id,
                 "creds_attachment_id": creds_attachment.id,
+                "failed_attachment_id": failed_attachment.id if failed_attachment else None,
                 "creds_preview": creds_preview,
             })
 
@@ -381,8 +578,43 @@ class HrmisSanctionedPostsController(http.Controller):
                 "upload_error": f"Import failed: {e}",
                 "attachment_id": attachment.id,
                 "creds_attachment_id": None,
+                "failed_attachment_id": None,
                 "creds_preview": [],
             })
+
+    @http.route(
+        "/hrmis/sanctioned_posts/download_failed",
+        type="http",
+        auth="user",
+        methods=["GET"],
+        csrf=False,
+        website=True,
+    )
+    def download_failed(self, attachment_id=None, **kw):
+        self._ensure_admin()
+
+        try:
+            att_id = int(attachment_id or 0)
+        except Exception:
+            att_id = 0
+
+        if not att_id:
+            raise UserError("Missing attachment_id for failed file.")
+
+        attachment = request.env["ir.attachment"].sudo().browse(att_id).exists()
+        if not attachment:
+            raise UserError("Failed file not found.")
+
+        content = base64.b64decode(attachment.datas or b"")
+        filename = attachment.name or "failed_users.xlsx"
+
+        return request.make_response(
+            content,
+            headers=[
+                ("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+                ("Content-Disposition", f'attachment; filename="{filename}"'),
+            ],
+        )
 
     # (optional) keep /hrmis/sanctioned_posts route if you want, but ensure template exists
     @http.route('/hrmis/sanctioned_posts', type='http', auth='user', website=True)

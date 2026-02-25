@@ -16,6 +16,21 @@
 /* ---------------------------------------------------------
  * Helpers
  * --------------------------------------------------------- */
+let _hrmisComboboxGlobalListenerAttached = false;
+
+function _attachComboboxGlobalCloser() {
+  if (_hrmisComboboxGlobalListenerAttached) return;
+  _hrmisComboboxGlobalListenerAttached = true;
+
+  document.addEventListener("click", (e) => {
+    document.querySelectorAll(".hrmis-combobox").forEach((wrap) => {
+      if (!wrap.contains(e.target)) {
+        const dd = wrap.querySelector(".hrmis-combobox-dd");
+        if (dd) dd.style.display = "none";
+      }
+    });
+  });
+}
 function _qs(root, sel) {
   return root ? root.querySelector(sel) : null;
 }
@@ -25,7 +40,6 @@ function _qsa(root, sel) {
 function _isEmpty(val) {
   return val === null || val === undefined || String(val).trim() === "";
 }
-
 function _setHint(input, message) {
   if (!input) return;
   let hint = input.parentElement?.querySelector?.(".hrmis-hint");
@@ -459,7 +473,19 @@ function _enhanceSelect(select) {
     input.value =
       selOpt && selOpt.value ? (selOpt.textContent || "").trim() : "";
   }
+  function selectedLabel() {
+    const selOpt = select.options[select.selectedIndex];
+    return selOpt && selOpt.value ? (selOpt.textContent || "").trim() : "";
+  }
 
+  function clearSelection() {
+    // reset select + visible input
+    select.selectedIndex = 0;
+    input.value = "";
+    _clearError(select);
+    _clearError(input);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }
   function rebuildDD(query) {
     const q = (query || "").trim().toLowerCase();
     dd.innerHTML = "";
@@ -508,15 +534,54 @@ function _enhanceSelect(select) {
 
   function openDD() {
     if (input.disabled) return;
-    rebuildDD(input.value || "");
+
+    // If input currently equals selected label, treat it as "no query"
+    // so user sees full dropdown on click/focus.
+    const q = (input.value || "").trim();
+    const selLbl = selectedLabel();
+    const effectiveQuery = q && selLbl && q === selLbl ? "" : q;
+
+    rebuildDD(effectiveQuery);
     dd.style.display = "block";
   }
   function closeDD() {
     dd.style.display = "none";
   }
 
-  input.addEventListener("focus", openDD);
-  input.addEventListener("input", openDD);
+  // input.addEventListener("focus", openDD);
+  // input.addEventListener("input", openDD);
+  input.addEventListener("focus", () => {
+    openDD();
+    input.select();
+  });
+
+  input.addEventListener("mousedown", (e) => {
+    if (input.disabled) return;
+    e.stopPropagation();
+    openDD();
+  });
+
+  input.addEventListener("input", () => {
+    if ((input.value || "").trim() === "") {
+      clearSelection();
+      openDD();
+      return;
+    }
+    openDD();
+  });
+  //   input.addEventListener("focus", () => {
+  //   openDD();
+  //   input.select();
+  // });
+  //   input.addEventListener("input", () => {
+  //   // If user cleared the visible input, truly clear the select too
+  //   if ((input.value || "").trim() === "") {
+  //     clearSelection();
+  //     openDD(); // optional: show full list immediately
+  //     return;
+  //   }
+  //   openDD();
+  // });
   input.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeDD();
@@ -527,13 +592,18 @@ function _enhanceSelect(select) {
   input.addEventListener("blur", () => {
     setTimeout(() => {
       closeDD();
+
+      // If user left it empty, don't restore from select (this was your bug #2)
+      if ((input.value || "").trim() === "") return;
+
+      // Otherwise, restore label from select (normal behavior)
       setDisplayFromSelect();
     }, 120);
   });
 
-  document.addEventListener("click", (e) => {
-    if (!wrap.contains(e.target)) closeDD();
-  });
+  // document.addEventListener("click", (e) => {
+  //   if (!wrap.contains(e.target)) closeDD();
+  // });
 
   select.addEventListener("change", setDisplayFromSelect);
 
@@ -1320,12 +1390,20 @@ function _applyLeaveOverlapRule(row, changedEl) {
   const endEl = _qs(row, 'input[name="leave_end[]"]');
   if (!startEl || !endEl) return true;
 
-  const s = (startEl.value || "").trim();
-  const e = (endEl.value || "").trim();
+  // ✅ If joining date isn't selected (or fields are disabled),
+  // don't clear errors that were set by _syncLeaveRowDateConstraints.
+  const joinMin = _getJoiningMinLeaveStartYmd();
+  if (!joinMin || startEl.disabled || endEl.disabled) {
+    return true; // overlap rule irrelevant right now
+  }
 
+  // (now it's safe to clear overlap-related errors)
   if (changedEl) changedEl.setCustomValidity("");
   _clearError(startEl);
   _clearError(endEl);
+
+  const s = (startEl.value || "").trim();
+  const e = (endEl.value || "").trim();
 
   const others = _collectLeaveRanges(row);
 
@@ -1353,6 +1431,7 @@ function _applyLeaveOverlapRule(row, changedEl) {
       return false;
     }
   }
+
   return true;
 }
 
@@ -1924,6 +2003,9 @@ function _initPromotionChain(form) {
     _syncPromoRowConstraints(form, row);
     if (e.target?.matches?.('input[name="promotion_bps_from[]"]'))
       _applyPromoToMinFromFrom(row);
+
+    // Live validation: clears warnings as soon as values become valid
+    _validatePromoRow(form, row);
   });
 
   container.addEventListener("change", (e) => {
@@ -2690,7 +2772,7 @@ function _initHRMISValidations() {
   form.dataset.hrmisInited = "1";
 
   _initSearchableSelects(form);
-
+  _attachComboboxGlobalCloser();
   _initDates(form);
   _initProfileDatePickers(form); // DOB only (commission/joining use month proxy)
   _initCNIC(form);
@@ -2698,7 +2780,6 @@ function _initHRMISValidations() {
   _initCnicScanFiles(form);
   // Status UI (Suspended hides current posting + shows suspension box)
   _initFrontendStatusToggle(form);
-  _initAllowedToWorkToggle();
 
   _digitsOnly(_qs(form, '[name="hrmis_bps"]'), { maxLen: 2 });
   _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
@@ -2963,7 +3044,9 @@ function _initFrontendStatusToggle(formArg) {
   const boxes = Array.from(document.querySelectorAll(".js-status-box"));
 
   // Allowed-to-work UI
-  const allowedCb = form.querySelector(".js-allowed-to-work-toggle");
+  const allowedCbs = Array.from(
+    form.querySelectorAll(".js-allowed-to-work-toggle"),
+  );
   const allowedBox = document.getElementById("allowed_to_work_box");
 
   // ---------- helpers ----------
@@ -2990,23 +3073,20 @@ function _initFrontendStatusToggle(formArg) {
   }
 
   function showOnly(statusValue) {
-    const normalized =
-      statusValue === "reported_to_health_department"
-        ? "reported_to_hd"
-        : statusValue;
-    // hide + disable all
+    const normalized = (statusValue || "").trim();
     boxes.forEach((b) => {
       b.style.display = "none";
       setBoxEnabled(b, false);
     });
 
-    // show + enable selected
-    const active = boxes.find((b) => (b.dataset.status || "") === normalized);
+    const active = boxes.find(
+      (b) => (b.dataset.status || "").trim() === normalized,
+    );
     if (active) {
       active.style.display = "";
       setBoxEnabled(active, true);
     }
-    return active;
+    return active || null;
   }
 
   // ---------- Allowed-to-work toggle ----------
@@ -3037,22 +3117,27 @@ function _initFrontendStatusToggle(formArg) {
   }
 
   function syncAllowedToWork(activeStatus) {
-    const isCurrentlyPosted = activeStatus === "currently_posted";
+    const eligible =
+      activeStatus === "currently_posted" || activeStatus === "eol_pgship";
 
-    // ✅ Merge change: ALWAYS force-hide unless currently_posted
-    if (!isCurrentlyPosted) {
-      if (allowedCb) {
-        allowedCb.checked = false;
-        allowedCb.disabled = true; // optional: prevents toggling when not relevant
-      }
+    // Force-hide unless eligible for allowed-to-work
+    if (!eligible) {
+      allowedCbs.forEach((cb) => {
+        remember(cb);
+        cb.checked = false;
+        cb.disabled = true;
+      });
       setAllowedBoxVisible(false);
       return;
     }
 
-    // currently posted: enable checkbox and follow its state
-    if (allowedCb) allowedCb.disabled = false;
+    // eligible: enable checkbox(es) and follow their state
+    allowedCbs.forEach((cb) => {
+      remember(cb);
+      cb.disabled = cb.dataset.hrmisOrigDisabled === "1";
+    });
 
-    const shouldShow = !!(allowedCb && allowedCb.checked);
+    const shouldShow = allowedCbs.some((cb) => cb.checked);
     setAllowedBoxVisible(shouldShow);
   }
 
@@ -3199,7 +3284,7 @@ function _initFrontendStatusToggle(formArg) {
   boxes.forEach((box) =>
     box.querySelectorAll("input, select, textarea").forEach(remember),
   );
-  if (allowedCb) remember(allowedCb);
+  allowedCbs.forEach((cb) => remember(cb));
   if (allowedBox)
     allowedBox.querySelectorAll("input, select, textarea").forEach(remember);
   if (suspensionFacilitySel) remember(suspensionFacilitySel);
@@ -3268,11 +3353,16 @@ function _initFrontendStatusToggle(formArg) {
   // events
   statusEl.addEventListener("change", sync);
 
-  if (allowedCb) {
-    allowedCb.addEventListener("change", () => {
+  allowedCbs.forEach((cb) => {
+    cb.addEventListener("change", () => {
+      // If multiple checkboxes exist in DOM, keep them synced
+      const checked = !!cb.checked;
+      allowedCbs.forEach((other) => {
+        if (other !== cb) other.checked = checked;
+      });
       syncAllowedToWork((statusEl.value || "").trim());
     });
-  }
+  });
 
   if (suspensionReportingTo)
     suspensionReportingTo.addEventListener("change", syncSuspensionFacility);

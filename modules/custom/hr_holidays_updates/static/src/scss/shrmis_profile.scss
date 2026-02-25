@@ -1,0 +1,282 @@
+/* =========================================================
+   SHRMiS PROFILE UI
+   Completely isolated from hrmis-* system
+   Colors: #064526 #F6F7F3 #FFFFFF
+   Font: Inter
+   ========================================================= */
+
+$shrmis-primary: #064526;
+$shrmis-bg: #F6F7F3;
+$shrmis-white: #FFFFFF;
+$shrmis-border: #E5E7EB;
+$shrmis-text: #1F2937;
+$shrmis-muted: #6B7280;
+
+$shrmis-radius-lg: 16px;
+$shrmis-radius-md: 12px;
+
+/* ===== PAGE WRAPPER (MANDATORY) ===== */
+.shrmis-profile-page {
+
+  background: $shrmis-bg;
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Noto Sans", Arial, sans-serif;
+  color: $shrmis-text;
+  min-height: 100vh;
+  scroll-behavior: smooth;
+
+  /* SIDEBAR */
+  .shrmis-sidebar {
+    width: 280px;
+    background: $shrmis-white;
+    border-right: 1px solid $shrmis-border;
+    min-height: 100vh;
+    padding: 18px 16px;
+  }
+
+  .shrmis-sidebar__brand {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .shrmis-sidebar__seal {
+    width: 54px;
+    height: 54px;
+    border-radius: $shrmis-radius-md;
+    background: $shrmis-bg;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid $shrmis-border;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .shrmis-sidebar__title {
+    font-weight: 800;
+    font-size: 14px;
+    line-height: 1.1;
+    color: $shrmis-primary;
+    letter-spacing: .4px;
+  }
+
+  .shrmis-sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .shrmis-sidebar__link {
+    padding: 12px 16px;
+    border-radius: $shrmis-radius-md;
+    font-weight: 600;
+    color: $shrmis-text;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: all .2s ease;
+
+    &:hover {
+      background: $shrmis-bg;
+      border-color: $shrmis-border;
+      text-decoration: none;
+    }
+
+    &.is-active {
+      background: $shrmis-primary;
+      border-color: $shrmis-primary;
+      color: $shrmis-white;
+    }
+  }
+
+  /* CONTENT AREA */
+  .shrmis-content {
+    padding: 24px 28px;
+  }
+
+  .shrmis-pageTitle {
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 12px;
+  }
+
+  /* FORM LAYOUT */
+  .shrmis-form {
+    display: block;
+  }
+
+  .shrmis-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 16px;
+  }
+
+  .shrmis-section {
+    grid-column: 1 / -1;
+    scroll-margin-top: 120px;
+  }
+
+  /* CARDS */
+  .shrmis-card {
+    background: $shrmis-white;
+    border-radius: $shrmis-radius-lg;
+    border: 1px solid $shrmis-border;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+  }
+
+  .shrmis-card__header {
+    padding: 16px 20px;
+    border-bottom: 1px solid $shrmis-border;
+    font-weight: 800;
+    font-size: 16px;
+  }
+
+  .shrmis-card__body {
+    padding: 18px 20px;
+  }
+
+  /* FIELD WRAPPERS */
+  .shrmis-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .shrmis-field label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: $shrmis-muted;
+  }
+
+  /* =========================
+     TABS  (profile sections)
+     ========================= */
+
+  .shrmis-tabs {
+    /* FIX 1: span full grid width so tabs aren't half-width */
+    grid-column: 1 / -1;
+
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+
+    padding: 10px 12px 0;
+    margin: 14px 0 0;
+
+    background: #eef0ec;
+    border-radius: 14px 14px 0 0;
+    border: 1px solid $shrmis-border;
+    border-bottom: none;
+
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .shrmis-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 10px 20px;
+    border-radius: 10px 10px 0 0;
+
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+
+    color: #4B5563;
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+
+    position: relative;
+    transition: background 0.15s ease-in-out, color 0.15s ease-in-out;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.65);
+      color: $shrmis-primary;
+    }
+
+    &.is-active {
+      background: $shrmis-white;
+      border-color: $shrmis-border;
+      border-bottom-color: $shrmis-white;
+      color: $shrmis-primary;
+      font-weight: 700;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+
+      /* Green top-bar accent, matching the inspiration image */
+      &::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 3px;
+        border-radius: 10px 10px 0 0;
+        background: $shrmis-primary;
+      }
+    }
+  }
+
+  /* Panels */
+  .shrmis-tabPanel {
+    /* FIX 2: hidden by default, span full grid width */
+    display: none;
+    grid-column: 1 / -1;
+
+    background: $shrmis-white;
+    border: 1px solid $shrmis-border;
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  .shrmis-tabPanel.is-active {
+    display: block;
+  }
+
+  /* Remove redundant card styles when nested inside a tab panel */
+  .shrmis-tabPanel > .shrmis-section > .shrmis-card,
+  .shrmis-tabPanel > .shrmis-card {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 992px) {
+    .shrmis-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .shrmis-content {
+      padding: 16px 14px;
+    }
+
+    .shrmis-pageTitle {
+      font-size: 20px;
+    }
+
+    .shrmis-tabs {
+      gap: 2px;
+    }
+
+    .shrmis-tab {
+      padding: 8px 14px;
+      font-size: 12px;
+    }
+  }
+}

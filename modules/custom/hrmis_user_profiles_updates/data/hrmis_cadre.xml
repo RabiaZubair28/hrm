@@ -1,81 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <data noupdate="1">
-
-  <record id="cadre_Generalist" model="hrmis.cadre">
-        <field name="name">Generalist</field>
-        <field name="code">generalist</field>
+    <record id="cadre_Generalist" model="hrmis.cadre">
+      <field name="name">General</field>
+      <field name="code">generalist</field>
     </record>
-
     <record id="cadre_health_management" model="hrmis.cadre">
-        <field name="name">Health Management</field>
-        <field name="code">health_management</field>
+      <field name="name">Health Management</field>
+      <field name="code">health_management</field>
     </record>
-
     <record id="cadre_specialist" model="hrmis.cadre">
-        <field name="name">Specialist</field>
-        <field name="code">specialist</field>
+      <field name="name">Specialist</field>
+      <field name="code">specialist</field>
     </record>
-
     <record id="cadre_dental" model="hrmis.cadre">
       <field name="name">Dental</field>
       <field name="code">dental</field>
     </record>
-
     <record id="cadre_nurse" model="hrmis.cadre">
       <field name="name">Nurse</field>
       <field name="code">nurse</field>
     </record>
-
     <record id="cadre_accounts" model="hrmis.cadre">
       <field name="name">Accounts</field>
       <field name="code">accounts</field>
     </record>
-
     <record id="cadre_pharmacist" model="hrmis.cadre">
       <field name="name">Pharmacist</field>
       <field name="code">pharmacist</field>
     </record>
-
     <record id="cadre_physiotherapist" model="hrmis.cadre">
       <field name="name">Physiotherapist</field>
       <field name="code">physiotherapist</field>
     </record>
-
     <record id="cadre_biomedical" model="hrmis.cadre">
       <field name="name">Bio-medical</field>
       <field name="code">bio_medical</field>
     </record>
-
-<record id="cadre_biochemist" model="hrmis.cadre">
+    <record id="cadre_biochemist" model="hrmis.cadre">
       <field name="name">Bio-chemist</field>
       <field name="code">bio-chemist</field>
     </record>
-
     <record id="cadre_nutritionist" model="hrmis.cadre">
       <field name="name">Nutritionist</field>
       <field name="code">nutritionist</field>
     </record>
-
     <record id="cadre_registrar" model="hrmis.cadre">
       <field name="name">Registrar</field>
       <field name="code">registrar</field>
     </record>
-
     <record id="cadre_nursing_instructor" model="hrmis.cadre">
       <field name="name">Nursing instructor</field>
       <field name="code">nursing_instructor</field>
     </record>
-
     <record id="cadre_health_education_officer" model="hrmis.cadre">
       <field name="name">Health Education Officer</field>
       <field name="code">health_education_officer</field>
     </record>
-
     <record id="cadre_development" model="hrmis.cadre">
       <field name="name">Development</field>
       <field name="code">development</field>
     </record>
-
   </data>
 </odoo>

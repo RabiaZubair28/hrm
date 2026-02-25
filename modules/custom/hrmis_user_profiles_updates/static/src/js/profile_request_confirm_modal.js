@@ -4,26 +4,56 @@
 // - Opens modal on "Submit Request" click
 // - Builds summary table from current form values
 // - On confirm, submits the form
-// - Odoo-style init pattern like your filter script
+// - Includes dynamic "Current Status" box fields (Suspended / EOL / On Leave / etc.)
+// - Shows Allowed To Work details from #allowed_to_work_box when checked
+// - Odoo-friendly logs for debugging
 
 function _qs(root, sel) {
   return root ? root.querySelector(sel) : null;
 }
 
+function _qsa(root, sel) {
+  return root ? Array.from(root.querySelectorAll(sel)) : [];
+}
+
 function _getSelectedText(selectEl) {
   if (!selectEl) return "";
-  const opt = selectEl.options[selectEl.selectedIndex];
-  return opt ? (opt.textContent || "").trim() : "";
+
+  const idx = selectEl.selectedIndex;
+  const opt = idx >= 0 ? selectEl.options[idx] : null;
+  if (!opt) return "";
+
+  const val = (opt.value || "").trim();
+  const txt = (opt.textContent || "").trim();
+
+  // If placeholder option (value empty), treat as empty
+  if (!val) return "";
+
+  // Extra guard: if someone sets value but still looks like placeholder
+  const lower = txt.toLowerCase();
+  if (lower.startsWith("select ")) return "";
+
+  return txt;
+}
+
+function _escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function _addRow(tbody, label, value) {
   const safeValue =
     value === null || value === undefined || value === "" ? "-" : value;
+
   const tr = document.createElement("tr");
   tr.innerHTML = `
-        <th style="width: 35%;">${label}</th>
-        <td>${String(safeValue)}</td>
-    `;
+    <th style="width: 35%;">${_escapeHtml(label)}</th>
+    <td>${String(safeValue)}</td>
+  `;
   tbody.appendChild(tr);
 }
 
@@ -43,6 +73,7 @@ function _fileName(inputEl) {
   if (!inputEl || !inputEl.files || !inputEl.files.length) return "";
   return inputEl.files[0]?.name || "";
 }
+
 function _imgPreviewHtml(inputEl) {
   if (!inputEl || !inputEl.files || !inputEl.files.length) return "";
   const f = inputEl.files[0];
@@ -59,7 +90,7 @@ function _imgPreviewHtml(inputEl) {
           style="max-width:220px; max-height:160px; border-radius:6px; display:block;"
         />
         <div style="font-size:12px; color:#666; margin-top:6px;">
-          ${String(f.name || "image")}
+          ${_escapeHtml(String(f.name || "image"))}
         </div>
       </div>
     </div>
@@ -102,36 +133,196 @@ function _collectRows(root, rowSelector, buildLineFn) {
   return out;
 }
 
+// ------------------------------
+// Dynamic status-box field collector
+// ------------------------------
+
+function _getFieldLabel(fieldEl) {
+  const lbl = _qs(fieldEl, "label");
+  if (lbl && (lbl.textContent || "").trim()) return (lbl.textContent || "").trim();
+
+  const ctl = _qs(fieldEl, "input, select, textarea");
+  if (ctl) {
+    const aria = (ctl.getAttribute("aria-label") || "").trim();
+    if (aria) return aria;
+    const ph = (ctl.getAttribute("placeholder") || "").trim();
+    if (ph) return ph;
+    const nm = (ctl.getAttribute("name") || "").trim();
+    if (nm) return nm;
+  }
+  return "Field";
+}
+function _readOtherTextForSelect(selectEl, fieldEl) {
+  if (!selectEl) return "";
+
+  const v = (selectEl.value || "").trim();
+  if (v !== "__other__") return "";
+
+  // 1) Preferred: data-other-name tells us the input name
+  const otherName = (selectEl.getAttribute("data-other-name") || "").trim();
+  if (otherName) {
+    const otherInputByName =
+      _qs(fieldEl, `input[name="${CSS && CSS.escape ? CSS.escape(otherName) : otherName}"]`) ||
+      _qs(fieldEl, `textarea[name="${CSS && CSS.escape ? CSS.escape(otherName) : otherName}"]`);
+    const val1 = (otherInputByName && (otherInputByName.value || "").trim()) || "";
+    if (val1) return val1;
+  }
+
+  // 2) Fallback: common pattern in your XML
+  const otherInput = _qs(fieldEl, ".js-other-input");
+  const val2 = (otherInput && (otherInput.value || "").trim()) || "";
+  if (val2) return val2;
+
+  return "Other (not specified)";
+}
+function _getControlValue(controlEl, fieldEl) {
+  if (!controlEl) return "";
+
+  const tag = (controlEl.tagName || "").toLowerCase();
+  const type = (controlEl.getAttribute("type") || "").toLowerCase();
+
+  if (tag === "select") {
+    // ✅ if Other selected, show typed other value
+    const otherVal = _readOtherTextForSelect(controlEl, fieldEl);
+    if (otherVal) return otherVal;
+
+    return _getSelectedText(controlEl);
+  }
+
+  if (tag === "textarea") return (controlEl.value || "").trim();
+
+  if (tag === "input") {
+    if (type === "checkbox") return _fmtCheckbox(controlEl);
+    if (type === "radio") return controlEl.checked ? "Yes" : "No";
+    if (type === "file") return _fileName(controlEl) || "-";
+    return (controlEl.value || "").trim();
+  }
+
+  return (controlEl.value || "").trim();
+}
+function _isSearchHelperInput(el) {
+  if (!el) return false;
+
+  // common injected search inputs (select2-like, custom "type to search" etc.)
+  const ph = (el.getAttribute("placeholder") || "").toLowerCase();
+  if (ph.includes("type to search")) return true;
+
+  const type = (el.getAttribute("type") || "").toLowerCase();
+  if (type === "search") return true;
+
+  const cls = (el.className || "").toLowerCase();
+  if (cls.includes("select2-search") || cls.includes("o_searchview") || cls.includes("js-search")) return true;
+
+  // if it has no name and looks like helper input, skip it
+  const name = (el.getAttribute("name") || "").trim();
+  if (!name && (ph || type === "search")) return true;
+
+  return false;
+}
+
+function _looksLikePlaceholderValue(val) {
+  const v = (val || "").trim().toLowerCase();
+  if (!v) return true;
+  if (v.startsWith("select ")) return true; // "Select District", "Select Facility"
+  return false;
+}
+
+function _collectLabeledFields(containerEl, { includeEmpty = false } = {}) {
+  const fields = _qsa(containerEl, ".hrmis-field");
+  const pairs = [];
+
+  fields.forEach((fieldEl) => {
+    // pick first meaningful control
+    const ctl =
+      _qs(fieldEl, "select") ||
+      _qs(fieldEl, "textarea") ||
+      _qs(fieldEl, 'input:not([type="hidden"])');
+
+    if (!ctl) return;
+
+    // ✅ skip injected search helper inputs
+    if (_isSearchHelperInput(ctl)) return;
+
+    // Some widgets may inject the search input *inside* same hrmis-field,
+    // so also skip if any "type to search" input exists and ctl is not named
+    if (!ctl.getAttribute("name") && _qsa(fieldEl, 'input[placeholder*="Type to search"]').length) {
+      return;
+    }
+
+    const label = _getFieldLabel(fieldEl);
+    let val = _getControlValue(ctl, fieldEl);
+
+    // ✅ Convert "Select X" (or empty) into empty so it becomes "-"
+    if (typeof val === "string" && _looksLikePlaceholderValue(val)) {
+      val = "";
+    }
+
+    const isEmpty = !val || String(val).trim() === "-" || String(val).trim() === "";
+    if (!includeEmpty && isEmpty) return;
+
+    pairs.push(`${_escapeHtml(label)}: ${_escapeHtml(val || "-")}`);
+  });
+
+  return pairs;
+}
+
+function _findStatusSelect(form) {
+  return (
+    _qs(form, 'select[name="hrmis_current_status_frontend"]') ||
+    _qs(form, "#hrmis_current_status_frontend") ||
+    _qs(form, 'select[name="status"]') ||
+    _qs(form, 'select[name="current_status"]') ||
+    _qs(form, 'select[name="hrmis_current_status"]')
+  );
+}
+
+function _findActiveStatusBox(form, statusKey) {
+  if (!statusKey) return null;
+
+  try {
+    const esc = window.CSS && CSS.escape ? CSS.escape(statusKey) : statusKey.replace(/"/g, '\\"');
+    const byData = _qs(form, `.js-status-box[data-status="${esc}"]`);
+    if (byData) return byData;
+  } catch (e) {
+    console.warn("[HRMIS ConfirmModal] CSS.escape failed; fallback", e);
+  }
+
+  const byId1 = _qs(form, `#${statusKey}_box`);
+  if (byId1) return byId1;
+
+  const visible = _qsa(form, ".js-status-box").find((el) => {
+    const st = window.getComputedStyle(el);
+    return st && st.display !== "none" && st.visibility !== "hidden" && st.opacity !== "0";
+  });
+  return visible || null;
+}
+
 function _buildSummary(form, tbody) {
+  console.log("[HRMIS ConfirmModal] building summary...");
   tbody.innerHTML = "";
 
   // ============ Employee Information ============
-  const employeeId = _qs(
-    form,
-    'input[name="hrmis_employee_id"]',
-  )?.value?.trim();
+  const employeeId = _qs(form, 'input[name="hrmis_employee_id"]')?.value?.trim();
   const cnic = _qs(form, 'input[name="hrmis_cnic"]')?.value?.trim();
   const father = _qs(form, 'input[name="hrmis_father_name"]')?.value?.trim();
   const birthday = _qs(form, 'input[name="birthday"]')?.value?.trim();
-  const commission = _qs(
-    form,
-    'input[name="hrmis_commission_date"]',
-  )?.value?.trim();
+  const commission = _qs(form, 'input[name="hrmis_commission_date"]')?.value?.trim();
   const merit = _qs(form, 'input[name="hrmis_merit_number"]')?.value?.trim();
   const joining = _qs(form, 'input[name="hrmis_joining_date"]')?.value?.trim();
-  const bps = _qs(form, 'input[name="hrmis_bps"]')?.value?.trim();
-  const leavesTaken = _qs(
-    form,
-    'input[name="hrmis_leaves_taken"]',
-  )?.value?.trim();
+  const leavesTaken = _qs(form, 'input[name="hrmis_leaves_taken"]')?.value?.trim();
   const contact = _qs(form, 'input[name="hrmis_contact_info"]')?.value?.trim();
+
+  const pmdcNo = _qs(form, 'input[name="hrmis_pmdc_no"]')?.value?.trim();
+  const pmdcIssue = _qs(form, 'input[name="hrmis_pmdc_issue_date"]')?.value?.trim();
+  const pmdcExpiry = _qs(form, 'input[name="hrmis_pmdc_expiry_date"]')?.value?.trim();
+  const email = _qs(form, 'input[name="hrmis_email"]')?.value?.trim();
+  const address = _qs(form, 'input[name="hrmis_address"]')?.value?.trim();
+  const postalCode = _qs(form, 'input[name="hrmis_postal_code"]')?.value?.trim();
 
   const genderSel = _qs(form, 'select[name="gender"]');
   const domicileSel = _qs(form, 'select[name="hrmis_domicile"]');
-
   const cadreSel = _qs(form, 'select[name="hrmis_cadre"]');
 
-  // CNIC file uploads
   const cnicFrontInput = _qs(form, 'input[name="hrmis_cnic_front"]');
   const cnicBackInput = _qs(form, 'input[name="hrmis_cnic_back"]');
   const cnicFrontName = _fileName(cnicFrontInput);
@@ -149,52 +340,63 @@ function _buildSummary(form, tbody) {
   _addRow(tbody, "Cadre", _getSelectedText(cadreSel));
   _addRow(tbody, "Contact Number", contact);
 
-  // Show file names + previews if selected
-  if (cnicFrontName || cnicBackName) {
-    _addRow(
-      tbody,
-      "CNIC Front Preview",
-      _imgPreviewHtml(cnicFrontInput) || "-",
-    );
+  _addRow(tbody, "PMDC No.", pmdcNo);
+  _addRow(tbody, "PMDC Issue Date", _fmtDate(pmdcIssue));
+  _addRow(tbody, "PMDC Expiry Date", _fmtDate(pmdcExpiry));
+  _addRow(tbody, "Email", email);
+  _addRow(tbody, "Address", address);
+  _addRow(tbody, "Postal Code", postalCode);
 
+  if (cnicFrontName || cnicBackName) {
+    _addRow(tbody, "CNIC Front Preview", _imgPreviewHtml(cnicFrontInput) || "-");
     _addRow(tbody, "CNIC Back Preview", _imgPreviewHtml(cnicBackInput) || "-");
   }
 
-  // ============ Current Posting ============
-  const districtSel = _qs(form, 'select[name="district_id"]');
-  const facilitySel = _qs(form, 'select[name="facility_id"]');
-  const facilityOtherInput = _qs(form, 'input[name="facility_other_name"]');
-  const designationSel = _qs(form, 'select[name="hrmis_designation"]');
-  const currentPostingStart = _qs(
-    form,
-    'input[name="current_posting_start"]',
-  )?.value?.trim();
+  // ============ Posting Status (ONLY once; no duplicate "Substantive Posting — ..." rows) ============
+  const statusSel = _findStatusSelect(form);
+  const statusKey = (statusSel?.value || "").trim();
+  const statusTxt = _getSelectedText(statusSel) || "-";
 
-  const facilityOtherVal = _getOtherIfSelected(
-    facilitySel,
-    facilityOtherInput,
-    "__other__",
-  );
+  _addRow(tbody, "Posting Status", statusTxt);
 
-  _addRow(tbody, "Current Posting — District", _getSelectedText(districtSel));
-  _addRow(
-    tbody,
-    "Current Posting — Facility",
-    facilityOtherVal
-      ? `Other: ${facilityOtherVal}`
-      : _getSelectedText(facilitySel),
-  );
-  _addRow(tbody, "Current Posting — BPS", bps);
-  _addRow(
-    tbody,
-    "Current Posting — Designation",
-    _getSelectedText(designationSel),
-  );
-  _addRow(
-    tbody,
-    "Current Posting — Start (MM-YYYY)",
-    _fmtMonth(currentPostingStart),
-  );
+  const activeBox = _findActiveStatusBox(form, statusKey);
+  if (activeBox) {
+    console.log("[HRMIS ConfirmModal] active status box found", {
+      statusKey,
+      boxId: activeBox.id,
+      dataStatus: activeBox.dataset.status,
+    });
+
+    const boxPairs = _collectLabeledFields(activeBox);
+    _addRow(tbody, "Posting Status Details", boxPairs.length ? _ul(boxPairs) : "-");
+  } else {
+    console.log("[HRMIS ConfirmModal] no active status box found", { statusKey });
+    _addRow(tbody, "Posting Status Details", "-");
+  }
+
+  // ============ Allowed To Work Details ============
+  // Your checkbox lives inside current_posting_box; detail fields live in #allowed_to_work_box
+  const allowedChk = _qs(form, 'input[name="allowed_to_work"]');
+  const allowedYes = allowedChk && allowedChk.checked;
+
+  if (allowedYes) {
+    const allowedBox = _qs(form, "#allowed_to_work_box");
+    if (allowedBox) {
+      // Even if hidden (display:none), we can still read values
+      const allowedPairs = _collectLabeledFields(allowedBox);
+      console.log("[HRMIS ConfirmModal] allowed_to_work checked; details collected", {
+        count: allowedPairs.length,
+      });
+      _addRow(
+        tbody,
+        "Allowed To Work Details",
+        allowedPairs.length ? _ul(allowedPairs) : "-"
+      );
+    } else {
+      console.warn("[HRMIS ConfirmModal] allowed_to_work_box not found in DOM");
+      _addRow(tbody, "Allowed To Work Details", "-");
+    }
+  }
 
   // ============ Qualification History (multiple) ============
   const qualWrap = _qs(document, "#qual_rows");
@@ -203,28 +405,40 @@ function _buildSummary(form, tbody) {
     '.hrmis-repeat-row[data-row="qual"]',
     (row, idx) => {
       const degSel = _qs(row, 'select[name="qualification_degree[]"]');
-      const spec = _qs(
-        row,
-        'input[name="qualification_specialization[]"]',
-      )?.value?.trim();
-      const start = _qs(
-        row,
-        'input[name="qualification_start[]"]',
-      )?.value?.trim();
-      const statusSel = _qs(row, 'select[name="qualification_status[]"]');
+      const degOther = _qs(row, 'input[name="qualification_degree_other[]"]');
+
+      const specInput = _qs(row, 'input[name="qualification_specialization[]"]');
+      const specSel = _qs(row, 'select[name="qualification_specialization[]"]');
+      const specOther = _qs(row, 'input[name="qualification_specialization_other[]"]');
+
+      const start = _qs(row, 'input[name="qualification_start[]"]')?.value?.trim();
       const end = _qs(row, 'input[name="qualification_end[]"]')?.value?.trim();
 
-      const degTxt = _getSelectedText(degSel) || "-";
-      const specTxt = spec ? ` — ${spec}` : "";
-      const status = (statusSel?.value || "").trim() || "ongoing";
-      const isCompleted = status === "completed";
-      const statusTxt = isCompleted ? "Complete" : "Ongoing";
+      const completedChk = _qs(row, 'input[name="qualification_completed[]"]');
+      const statusSel2 = _qs(row, 'select[name="qualification_status[]"]');
+      const completedByStatus =
+        (statusSel2 && (statusSel2.value || "").trim() === "completed") || false;
+      const isCompleted = (completedChk && completedChk.checked) || completedByStatus;
+
+      const degOtherVal = _getOtherIfSelected(degSel, degOther, "__other__");
+      const degTxt = degOtherVal ? `Other: ${degOtherVal}` : (_getSelectedText(degSel) || "-");
+
+      let specTxt = "";
+      if (specInput) {
+        specTxt = (specInput.value || "").trim();
+      } else if (specSel) {
+        const specOtherVal = _getOtherIfSelected(specSel, specOther, "__other__");
+        specTxt = specOtherVal ? `Other: ${specOtherVal}` : (_getSelectedText(specSel) || "");
+      }
+
+      const specPart = specTxt ? ` — ${_escapeHtml(specTxt)}` : "";
+      const statusTxt2 = isCompleted ? "Complete" : "Ongoing";
       const rangeTxt = isCompleted
         ? `${_fmtMonth(start)} → ${_fmtMonth(end)}`
         : `${_fmtMonth(start)} → (ongoing)`;
 
-      return `<b>#${idx + 1}</b> ${degTxt}${specTxt} <span style="color:#666;">(${statusTxt}, ${rangeTxt})</span>`;
-    },
+      return `<b>#${idx + 1}</b> ${_escapeHtml(degTxt)}${specPart} <span style="color:#666;">(${statusTxt2}, ${_escapeHtml(rangeTxt)})</span>`;
+    }
   );
   _addRow(tbody, "Qualification History", _ul(qualItems));
 
@@ -235,27 +449,39 @@ function _buildSummary(form, tbody) {
     '.hrmis-repeat-row[data-row="prev_post"]',
     (row, idx) => {
       const dSel = _qs(row, 'select[name="posting_district_id[]"]');
+
       const fSel = _qs(row, 'select[name="posting_facility_id[]"]');
       const fOther = _qs(row, 'input[name="posting_facility_other_name[]"]');
+
       const bpsV = _qs(row, 'input[name="posting_bps[]"]')?.value?.trim();
+
       const desSel = _qs(row, 'select[name="posting_designation_id[]"]');
+      const desOther = _qs(row, 'input[name="posting_designation_other_name[]"]');
+
       const st = _qs(row, 'input[name="posting_start[]"]')?.value?.trim();
       const en = _qs(row, 'input[name="posting_end[]"]')?.value?.trim();
 
       const facOther = _getOtherIfSelected(fSel, fOther, "__other__");
-      const facTxt = facOther ? `Other: ${facOther}` : _getSelectedText(fSel);
+      const facTxt = facOther
+        ? `Other: ${_escapeHtml(facOther)}`
+        : _escapeHtml(_getSelectedText(fSel) || "-");
+
+      const desOtherVal = _getOtherIfSelected(desSel, desOther, "__other__");
+      const desTxt = desOtherVal
+        ? `Other: ${_escapeHtml(desOtherVal)}`
+        : _escapeHtml(_getSelectedText(desSel) || "-");
 
       const parts = [
         `<b>#${idx + 1}</b>`,
-        _getSelectedText(dSel) || "-",
+        _escapeHtml(_getSelectedText(dSel) || "-"),
         facTxt || "-",
-        `BPS: ${bpsV || "-"}`,
-        _getSelectedText(desSel) || "-",
-        `${_fmtMonth(st)} → ${_fmtMonth(en)}`,
+        `BPS: ${_escapeHtml(bpsV || "-")}`,
+        desTxt || "-",
+        `${_escapeHtml(_fmtMonth(st))} → ${_escapeHtml(_fmtMonth(en))}`,
       ];
 
       return parts.join(" — ");
-    },
+    }
   );
   _addRow(tbody, "Previous Posting History", _ul(prevItems));
 
@@ -265,15 +491,12 @@ function _buildSummary(form, tbody) {
     promoWrap,
     '.hrmis-repeat-row[data-row="promo"]',
     (row, idx) => {
-      const from = _qs(
-        row,
-        'input[name="promotion_bps_from[]"]',
-      )?.value?.trim();
+      const from = _qs(row, 'input[name="promotion_bps_from[]"]')?.value?.trim();
       const to = _qs(row, 'input[name="promotion_bps_to[]"]')?.value?.trim();
       const dt = _qs(row, 'input[name="promotion_date[]"]')?.value?.trim();
 
-      return `<b>#${idx + 1}</b> BPS ${from || "-"} → ${to || "-"} <span style="color:#666;">(Date: ${_fmtMonth(dt)})</span>`;
-    },
+      return `<b>#${idx + 1}</b> BPS ${_escapeHtml(from || "-")} → ${_escapeHtml(to || "-")} <span style="color:#666;">(Date: ${_escapeHtml(_fmtMonth(dt))})</span>`;
+    }
   );
   _addRow(tbody, "Promotion History", _ul(promoItems));
 
@@ -288,22 +511,21 @@ function _buildSummary(form, tbody) {
       const en = _qs(row, 'input[name="leave_end[]"]')?.value?.trim();
 
       const tTxt = _getSelectedText(tSel) || "-";
-      return `<b>#${idx + 1}</b> ${tTxt} <span style="color:#666;">(${_fmtDate(st)} → ${_fmtDate(en)})</span>`;
-    },
+      return `<b>#${idx + 1}</b> ${_escapeHtml(tTxt)} <span style="color:#666;">(${_escapeHtml(_fmtDate(st))} → ${_escapeHtml(_fmtDate(en))})</span>`;
+    }
   );
   _addRow(tbody, "Leave History", _ul(leaveItems));
 
-  // Total leaves taken (auto-calculated field you already had)
   _addRow(tbody, "Total Leaves Taken Since Joining (Days)", leavesTaken);
+
+  console.log("[HRMIS ConfirmModal] summary ready");
 }
 
 function _showModal(modalEl) {
-  // Create backdrop
   let backdrop = document.createElement("div");
   backdrop.className = "modal-backdrop fade show";
   backdrop.dataset.hrmisBackdrop = "1";
 
-  // Show modal (bootstrap-like)
   modalEl.style.display = "block";
   modalEl.classList.add("show");
   modalEl.removeAttribute("aria-hidden");
@@ -321,20 +543,16 @@ function _hideModal(modalEl) {
 
   document.body.classList.remove("modal-open");
 
-  // Remove backdrop
   const backdrop = document.querySelector(
-    'div.modal-backdrop[data-hrmis-backdrop], div.modal-backdrop[data-hrmisBackdrop="1"]',
+    'div.modal-backdrop[data-hrmis-backdrop], div.modal-backdrop[data-hrmisBackdrop="1"]'
   );
   if (backdrop) backdrop.remove();
 }
 
 function _initConfirmModal() {
-  // IMPORTANT: don’t run on other pages (like login)
   const panel = _qs(document, ".hrmis-panel");
   if (!panel) {
-    console.log(
-      "[HRMIS ConfirmModal] .hrmis-panel not found; skipping on this page",
-    );
+    console.log("[HRMIS ConfirmModal] .hrmis-panel not found; skipping on this page");
     return;
   }
 
@@ -345,36 +563,41 @@ function _initConfirmModal() {
   const tbody = _qs(document, "#confirm_table_body");
 
   if (!form || !openBtn || !confirmBtn || !modalEl || !tbody) {
-    console.warn(
-      "[HRMIS ConfirmModal] missing required DOM elements; check IDs in template.",
-    );
+    console.warn("[HRMIS ConfirmModal] missing required DOM elements; check IDs in template.", {
+      form: !!form,
+      openBtn: !!openBtn,
+      confirmBtn: !!confirmBtn,
+      modalEl: !!modalEl,
+      tbody: !!tbody,
+    });
     return;
   }
 
-  // Prevent rebinding on pageshow
   if (openBtn.dataset.hrmiscfmBound === "1") {
+    console.log("[HRMIS ConfirmModal] already bound; skipping rebind");
     return;
   }
   openBtn.dataset.hrmiscfmBound = "1";
 
-  // Close buttons inside modal (btn-close, [data-bs-dismiss], etc.)
+  console.log("[HRMIS ConfirmModal] init bound", {
+    formId: form.id,
+    modalId: modalEl.id,
+  });
+
   const closeBtn = modalEl.querySelector(".btn-close");
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => _hideModal(modalEl));
-  }
+  if (closeBtn) closeBtn.addEventListener("click", () => _hideModal(modalEl));
+
   modalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach((el) => {
     el.addEventListener("click", () => _hideModal(modalEl));
   });
 
-  // Click backdrop area to close (optional)
   modalEl.addEventListener("click", (ev) => {
-    if (ev.target === modalEl) {
-      _hideModal(modalEl);
-    }
+    if (ev.target === modalEl) _hideModal(modalEl);
   });
 
   openBtn.addEventListener("click", (ev) => {
     ev.preventDefault();
+    console.log("[HRMIS ConfirmModal] open clicked");
 
     if (!form.reportValidity()) {
       console.warn("[HRMIS ConfirmModal] form validation failed");
@@ -387,6 +610,7 @@ function _initConfirmModal() {
 
   confirmBtn.addEventListener("click", (ev) => {
     ev.preventDefault();
+    console.log("[HRMIS ConfirmModal] confirm clicked -> submitting form");
     confirmBtn.disabled = true;
     form.submit();
   });

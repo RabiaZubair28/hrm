@@ -29,6 +29,13 @@ class HREmployee(models.Model):
     hrmis_commission_date = fields.Date(string="Commision Date")
     hrmis_father_name = fields.Char(string="Father's Name")
     hrmis_joining_date = fields.Date(string="Joining Date")
+    hrmis_pmdc_no = fields.Char(string="PMDC No.")
+    hrmis_pmdc_issue_date = fields.Date(string="PMDC Issue Date")
+    hrmis_pmdc_expiry_date = fields.Date(string="PMDC Expiry Date")
+
+    hrmis_email = fields.Char(string="Email")
+    hrmis_address = fields.Char(string="Address")
+    hrmis_postal_code = fields.Char(string="Postal Code")
     gender = fields.Selection([
         ('male', 'Male'),
         ('female', 'Female'),
@@ -95,7 +102,7 @@ class HREmployee(models.Model):
 
     qualification = fields.Char(
         string="Last Qualification Received",
-        help="Example: MBBS, FCPS, MCPS, Diploma",
+        help="Example: MBBS, FCPS, MCPS, MSPH, MPH, MBA Diploma",
         required=True
     )
 
@@ -116,6 +123,14 @@ class HREmployee(models.Model):
         help="Date of last qualification received",
         required=True
     )
+
+    hrmis_pmdc_no = fields.Char(string="PMDC No.")
+    hrmis_pmdc_issue_date = fields.Date(string="PMDC Issue Date")
+    hrmis_pmdc_expiry_date = fields.Date(string="PMDC Expiry Date")
+ 
+    hrmis_email = fields.Char(string="Email")
+    hrmis_address = fields.Char(string="Address")
+    hrmis_postal_code = fields.Char(string="Postal Code")
     # qualification_history_ids = fields.One2many(
     #     "hrmis.qualification.history",
     #     "employee_id",

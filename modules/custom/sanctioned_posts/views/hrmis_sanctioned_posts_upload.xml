@@ -120,6 +120,17 @@
                                 </div>
                             </t>
 
+                            <!-- ✅ NEW: Failed / Skipped download -->
+                            <t t-if="failed_attachment_id">
+                                <div class="alert alert-warning mt-2">
+                                    Some records were skipped. You can download the skipped list with reasons:
+                                    <a t-att-href="'/hrmis/sanctioned_posts/download_failed?attachment_id=%s' % failed_attachment_id"
+                                       class="btn btn-sm btn-outline-danger ms-2">
+                                        Download Skipped Records (XLSX)
+                                    </a>
+                                </div>
+                            </t>
+
                             <t t-if="creds_preview">
                                 <div class="table-responsive">
                                     <table class="table table-sm table-bordered align-middle">
@@ -143,6 +154,7 @@
                                     </div>
                                 </div>
                             </t>
+
                             <t t-if="request.env.user.has_group('base.group_system')">
                                 <div class="d-flex justify-content-center my-3">
                                     <a class="btn btn-outline-primary"
@@ -151,7 +163,6 @@
                                     </a>
                                 </div>
                             </t>
-
 
                             <!-- Top 10 preview table -->
                             <t t-if="upload_result.get('top10')">

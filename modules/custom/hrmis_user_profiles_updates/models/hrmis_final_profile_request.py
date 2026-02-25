@@ -69,7 +69,16 @@ class EmployeeProfileRequest(models.Model):
     hrmis_joining_date = fields.Date(
         string="Joining Date",
     )
+    # -----------------------
+    # NEW: PMDC + Contact fields
+    # -----------------------
+    hrmis_pmdc_no = fields.Char(string="PMDC No.")
+    hrmis_pmdc_issue_date = fields.Date(string="PMDC Issue Date")
+    hrmis_pmdc_expiry_date = fields.Date(string="PMDC Expiry Date")
 
+    hrmis_email = fields.Char(string="Email")
+    hrmis_address = fields.Char(string="Address")
+    hrmis_postal_code = fields.Char(string="Postal Code")
     gender = fields.Selection([
         ('male', 'Male'),
         ('female', 'Female'),
@@ -123,7 +132,7 @@ class EmployeeProfileRequest(models.Model):
 
     qualification = fields.Char(
         string="Last Qualification Received",
-        help="Example: MBBS, FCPS, MCPS, Diploma"
+        help="Example: MBBS, FCPS, MCPS, MSPH, MPH, MBA, Diploma"
     )
 
     qualification_date = fields.Date(
@@ -210,6 +219,13 @@ class EmployeeProfileRequest(models.Model):
             "qualification_date": employee.qualification_date,
             "date_promotion": employee.date_promotion,
             "year_qualification": employee.year_qualification,
+            
+            "hrmis_pmdc_no": employee.hrmis_pmdc_no,
+            "hrmis_pmdc_issue_date": employee.hrmis_pmdc_issue_date,
+            "hrmis_pmdc_expiry_date": employee.hrmis_pmdc_expiry_date,
+            "hrmis_email": employee.hrmis_email,
+            "hrmis_address": employee.hrmis_address,
+            "hrmis_postal_code": employee.hrmis_postal_code,
         })
 
         return res
@@ -332,6 +348,12 @@ class EmployeeProfileRequest(models.Model):
             'qualification_date': self.qualification_date,
             'date_promotion': self.date_promotion,
             'year_qualification': self.year_qualification,
+            "hrmis_pmdc_no": self.hrmis_pmdc_no,
+            "hrmis_pmdc_issue_date": self.hrmis_pmdc_issue_date,
+            "hrmis_pmdc_expiry_date": self.hrmis_pmdc_expiry_date,
+            "hrmis_email": self.hrmis_email,
+            "hrmis_address": self.hrmis_address,
+            "hrmis_postal_code": self.hrmis_postal_code,
         })
 
         self.approved_by = self.env.user.id
