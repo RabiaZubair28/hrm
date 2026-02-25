@@ -1696,40 +1696,55 @@
 
 .hrmis-profile-request .hrmis-pr-tabs {
   display: flex;
-  gap: 8px;
-  padding: 0 14px;
+  gap: 10px;
+  padding: 14px 14px 0;
   background: var(--hrmis-pr-bg);
   border-bottom: 1px solid #e6eef0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-.hrmis-profile-request .hrmis-pr-tab {
+/* Tabs look like the reference screenshot (rounded, subtle border, active highlight) */
+.hrmis-profile-request .hrmis-tabs--profile-request .hrmis-tab.hrmis-pr-tab {
   flex: 0 0 auto;
-  margin-top: 12px;
-  margin-bottom: -1px;
+  position: relative;
   text-decoration: none;
-  color: var(--hrmis-pr-text);
-  background: #e9f0ef;
-  border: 1px solid var(--hrmis-pr-border);
-  border-bottom: none;
-  padding: 10px 14px;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid #d6dee1;
+  border-bottom: 0;
+  padding: 10px 16px;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
   font-weight: 800;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.1;
   white-space: nowrap;
 }
 
-.hrmis-profile-request .hrmis-pr-tab:hover {
-  background: #dfeceb;
+.hrmis-profile-request .hrmis-tabs--profile-request .hrmis-tab.hrmis-pr-tab:hover {
+  background: #f8fbfa;
 }
 
-.hrmis-profile-request .hrmis-pr-tab.is-active {
-  background: var(--hrmis-pr-card);
-  border-color: #cfd9dc;
+.hrmis-profile-request .hrmis-tabs--profile-request .hrmis-tab.hrmis-pr-tab.is-active,
+.hrmis-profile-request .hrmis-tabs--profile-request .hrmis-tab.hrmis-pr-tab.active {
   color: var(--hrmis-pr-green);
-  box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.03);
+}
+
+.hrmis-profile-request .hrmis-tabs--profile-request .hrmis-tab.hrmis-pr-tab.is-active::after,
+.hrmis-profile-request .hrmis-tabs--profile-request .hrmis-tab.hrmis-pr-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: -2px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--hrmis-pr-green);
+}
+
+.hrmis-profile-request .hrmis-pr-tab-content {
+  padding-top: 14px;
 }
 
 .hrmis-profile-request .hrmis-pr-shell__body {
@@ -1760,11 +1775,14 @@
 
 /* Inputs */
 .hrmis-profile-request .hrmis-input {
-  height: 40px;
+  height: 44px;
   border-radius: 10px;
-  border: 1px solid #cfd9dc;
+  border: 1px solid #d1d5db;
   background: #fff;
   padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .hrmis-profile-request .hrmis-input:focus {
@@ -1773,13 +1791,20 @@
   box-shadow: 0 0 0 3px rgba(6, 69, 38, 0.12);
 }
 
+.hrmis-profile-request .hrmis-input::placeholder {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
 .hrmis-profile-request select.hrmis-input {
   padding-right: 34px;
 }
 
 .hrmis-profile-request .hrmis-field label {
   font-weight: 800;
-  color: var(--hrmis-pr-text);
+  color: #0f172a;
+  font-size: 13px;
+  margin-bottom: 8px;
 }
 
 .hrmis-profile-request .hrmis-help {

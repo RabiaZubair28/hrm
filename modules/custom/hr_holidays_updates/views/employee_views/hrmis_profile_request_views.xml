@@ -31,14 +31,52 @@
             </div>
           </div>
 
-          <!-- Tabs (visual + anchors; no functional change) -->
-          <div class="hrmis-pr-tabs" role="tablist" aria-label="Profile sections">
-            <a class="hrmis-pr-tab is-active" href="#hrmis_pr_employee_info">Employee Details</a>
-            <a class="hrmis-pr-tab" href="#hrmis_pr_current_posting">Current Posting</a>
-            <a class="hrmis-pr-tab" href="#hrmis_pr_posting_history">Posting History</a>
-            <a class="hrmis-pr-tab" href="#hrmis_pr_qualification_history">Qualification</a>
-            <a class="hrmis-pr-tab" href="#hrmis_pr_promotion_history">Promotion</a>
-            <a class="hrmis-pr-tab" href="#hrmis_pr_leave_history">Leave History</a>
+          <!-- Tabs (sections shown one at a time; keeps same IDs & fields) -->
+          <div class="hrmis-pr-tabs hrmis-tabs--profile hrmis-tabs--profile-request"
+               role="tablist"
+               aria-label="Profile sections">
+            <a class="hrmis-tab hrmis-pr-tab active is-active"
+               id="hrmis_pr_tab_employee_info"
+               data-bs-toggle="tab"
+               href="#hrmis_pr_employee_info"
+               role="tab"
+               aria-controls="hrmis_pr_employee_info"
+               aria-selected="true">Employee Information</a>
+            <a class="hrmis-tab hrmis-pr-tab"
+               id="hrmis_pr_tab_current_posting"
+               data-bs-toggle="tab"
+               href="#hrmis_pr_current_posting"
+               role="tab"
+               aria-controls="hrmis_pr_current_posting"
+               aria-selected="false">Current Posting Status</a>
+            <a class="hrmis-tab hrmis-pr-tab"
+               id="hrmis_pr_tab_posting_history"
+               data-bs-toggle="tab"
+               href="#hrmis_pr_posting_history"
+               role="tab"
+               aria-controls="hrmis_pr_posting_history"
+               aria-selected="false">Previous Posting History</a>
+            <a class="hrmis-tab hrmis-pr-tab"
+               id="hrmis_pr_tab_qualification"
+               data-bs-toggle="tab"
+               href="#hrmis_pr_qualification_history"
+               role="tab"
+               aria-controls="hrmis_pr_qualification_history"
+               aria-selected="false">Qualification History</a>
+            <a class="hrmis-tab hrmis-pr-tab"
+               id="hrmis_pr_tab_promotion"
+               data-bs-toggle="tab"
+               href="#hrmis_pr_promotion_history"
+               role="tab"
+               aria-controls="hrmis_pr_promotion_history"
+               aria-selected="false">Promotion History</a>
+            <a class="hrmis-tab hrmis-pr-tab"
+               id="hrmis_pr_tab_leave"
+               data-bs-toggle="tab"
+               href="#hrmis_pr_leave_history"
+               role="tab"
+               aria-controls="hrmis_pr_leave_history"
+               aria-selected="false">Leave History</a>
           </div>
 
           <!-- Body -->
@@ -67,8 +105,13 @@
             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()" />
             <input type="hidden" name="request_id" t-att-value="req.id" />
             <div class="hrmis-form__grid">
+              <div class="tab-content hrmis-pr-tab-content" style="grid-column: 1 / -1;">
               <!--   ===================== Employee Information =====================   -->
-              <div id="hrmis_pr_employee_info" class="hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_employee_info"
+                   class="tab-pane fade show active hrmis-section"
+                   style="grid-column: 1 / -1;"
+                   role="tabpanel"
+                   aria-labelledby="hrmis_pr_tab_employee_info">
                 <div class="hrmis-panel mb-1">
                   <div class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">
                     Employee Information </div>
@@ -365,7 +408,11 @@
               </div>
               <!--   ===================== Posting Status =====================   -->
               <!--   NOTE: removed the stray <div> and fixed missing closes above   -->
-              <div id="hrmis_pr_current_posting" class="hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_current_posting"
+                   class="tab-pane fade hrmis-section"
+                   style="grid-column: 1 / -1;"
+                   role="tabpanel"
+                   aria-labelledby="hrmis_pr_tab_current_posting">
                 <div class="hrmis-panel mb-1">
                   <div class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">
                     Current Posting Status </div>
@@ -1328,7 +1375,11 @@
               </div>
               <!--  Previous Posting History (always available; rows added via Add button
                       like Qualifications)  -->
-              <div id="hrmis_pr_posting_history" class="js-prev-posting-wrap hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_posting_history"
+                   class="tab-pane fade js-prev-posting-wrap hrmis-section"
+                   style="grid-column: 1 / -1;"
+                   role="tabpanel"
+                   aria-labelledby="hrmis_pr_tab_posting_history">
                 <div class="hrmis-panel mb-1">
                   <div
                     class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">Previous
@@ -1584,7 +1635,11 @@
                 </div>
               </div>
               <!--   ===================== Qualification History =====================   -->
-              <div id="hrmis_pr_qualification_history" class="hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_qualification_history"
+                   class="tab-pane fade hrmis-section"
+                   style="grid-column: 1 / -1;"
+                   role="tabpanel"
+                   aria-labelledby="hrmis_pr_tab_qualification">
                 <div class="hrmis-panel mb-1">
                   <div class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">
                     Qualification History </div>
@@ -1955,7 +2010,11 @@
                 </div>
               </div>
               <!--   ===================== Promotion History =====================   -->
-              <div id="hrmis_pr_promotion_history" class="hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_promotion_history"
+                   class="tab-pane fade hrmis-section"
+                   style="grid-column: 1 / -1;"
+                   role="tabpanel"
+                   aria-labelledby="hrmis_pr_tab_promotion">
                 <div class="hrmis-panel mb-1">
                   <div class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">
                     Promotion History </div>
@@ -2058,7 +2117,11 @@
                 </div>
               </div>
               <!--   ===================== Leave History =====================   -->
-              <div id="hrmis_pr_leave_history" class="hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_leave_history"
+                   class="tab-pane fade hrmis-section"
+                   style="grid-column: 1 / -1;"
+                   role="tabpanel"
+                   aria-labelledby="hrmis_pr_tab_leave">
                 <div class="hrmis-panel mb-1">
                   <div class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">
                     Leave History </div>
@@ -2202,6 +2265,7 @@
                     </div>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
             <!--   /.hrmis-form__grid   -->
