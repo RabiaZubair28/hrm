@@ -1,20 +1,48 @@
 <odoo>
   <template id="hrmis_profile_request_form" name="HRMIS Profile Update Request">
     <t t-call="hr_holidays_updates.hrmis_ui_layout">
-      <div class="hrmis-panel mb-1">
-        <!--   Header   -->
-        <div class="hrmis-panel__header">
-          <div class="d-flex flex-column gap-1">
-            <div class="hrmis-panel__title"> Welcome
-              <t
-                t-esc="(current_employee and current_employee.name) or (employee and employee.name) or ''" />
-              !
+      <div class="hrmis-profile-request">
+        <t t-set="emp" t-value="current_employee or employee"/>
+        <div class="hrmis-panel mb-1 hrmis-pr-shell">
+          <!-- Header -->
+          <div class="hrmis-panel__header hrmis-pr-shell__header">
+            <div class="hrmis-pr-shell__heading">
+              <div class="hrmis-pr-title">Employee Profile</div>
+              <div class="hrmis-pr-subtitle">
+                Welcome <t t-esc="(emp and emp.name) or ''"/>! Please complete your profile first.
+              </div>
             </div>
-            <div style="font-weight:600; opacity:0.85;">Please complete your profile first.</div>
+            <div class="hrmis-pr-employee" t-if="emp">
+              <div class="hrmis-pr-employee__avatar" aria-hidden="true">
+                <img t-att-alt="emp.name"
+                     t-att-src="'/web/image/hr.employee.public/%s/avatar_1024/' % emp.id"/>
+              </div>
+              <div class="hrmis-pr-employee__meta">
+                <div class="hrmis-pr-employee__name">
+                  <t t-esc="emp.name or ''"/>
+                </div>
+                <div class="hrmis-pr-employee__line" t-if="emp.hrmis_cnic">
+                  CNIC: <t t-esc="emp.hrmis_cnic"/>
+                </div>
+                <div class="hrmis-pr-employee__line" t-if="emp.hrmis_employee_id">
+                  Personal #: <t t-esc="emp.hrmis_employee_id"/>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-        <!--   Body   -->
-        <div class="hrmis-panel__body">
+
+          <!-- Tabs (visual + anchors; no functional change) -->
+          <div class="hrmis-pr-tabs" role="tablist" aria-label="Profile sections">
+            <a class="hrmis-pr-tab is-active" href="#hrmis_pr_employee_info">Employee Details</a>
+            <a class="hrmis-pr-tab" href="#hrmis_pr_current_posting">Current Posting</a>
+            <a class="hrmis-pr-tab" href="#hrmis_pr_posting_history">Posting History</a>
+            <a class="hrmis-pr-tab" href="#hrmis_pr_qualification_history">Qualification</a>
+            <a class="hrmis-pr-tab" href="#hrmis_pr_promotion_history">Promotion</a>
+            <a class="hrmis-pr-tab" href="#hrmis_pr_leave_history">Leave History</a>
+          </div>
+
+          <!-- Body -->
+          <div class="hrmis-panel__body hrmis-pr-shell__body">
           <t t-if="info">
             <div class="hrmis-alert hrmis-alert--success mt-2">
               <t t-esc="info" />
@@ -40,7 +68,7 @@
             <input type="hidden" name="request_id" t-att-value="req.id" />
             <div class="hrmis-form__grid">
               <!--   ===================== Employee Information =====================   -->
-              <div class="hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_employee_info" class="hrmis-section" style="grid-column: 1 / -1;">
                 <div class="hrmis-panel mb-1">
                   <div class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">
                     Employee Information </div>
@@ -337,7 +365,7 @@
               </div>
               <!--   ===================== Posting Status =====================   -->
               <!--   NOTE: removed the stray <div> and fixed missing closes above   -->
-              <div class="hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_current_posting" class="hrmis-section" style="grid-column: 1 / -1;">
                 <div class="hrmis-panel mb-1">
                   <div class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">
                     Current Posting Status </div>
@@ -1300,7 +1328,7 @@
               </div>
               <!--  Previous Posting History (always available; rows added via Add button
                       like Qualifications)  -->
-              <div class="js-prev-posting-wrap hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_posting_history" class="js-prev-posting-wrap hrmis-section" style="grid-column: 1 / -1;">
                 <div class="hrmis-panel mb-1">
                   <div
                     class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">Previous
@@ -1556,7 +1584,7 @@
                 </div>
               </div>
               <!--   ===================== Qualification History =====================   -->
-              <div class="hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_qualification_history" class="hrmis-section" style="grid-column: 1 / -1;">
                 <div class="hrmis-panel mb-1">
                   <div class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">
                     Qualification History </div>
@@ -1927,7 +1955,7 @@
                 </div>
               </div>
               <!--   ===================== Promotion History =====================   -->
-              <div class="hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_promotion_history" class="hrmis-section" style="grid-column: 1 / -1;">
                 <div class="hrmis-panel mb-1">
                   <div class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">
                     Promotion History </div>
@@ -2030,7 +2058,7 @@
                 </div>
               </div>
               <!--   ===================== Leave History =====================   -->
-              <div class="hrmis-section" style="grid-column: 1 / -1;">
+              <div id="hrmis_pr_leave_history" class="hrmis-section" style="grid-column: 1 / -1;">
                 <div class="hrmis-panel mb-1">
                   <div class="hrmis-panel__title hrmis-panel__header" style="margin-bottom:10px;">
                     Leave History </div>
@@ -2224,6 +2252,7 @@
           </div>
         </div>
       </t>
+      </div>
     </t>
   </template>
 </odoo>
