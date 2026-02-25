@@ -12,41 +12,97 @@ function _initNavDrawer(root = document) {
   if (!app || !btn || !backdrop || !sidebar) return;
 
   const OPEN_CLASS = "is-nav-open";
+  const COLLAPSED_CLASS = "is-sidebar-collapsed";
+  const STORAGE_KEY = "hrmis_sidebar_collapsed";
+  const DESKTOP_MIN = 1201;
 
-  function isOpen() {
+  function isDesktop() {
+    return window.innerWidth >= DESKTOP_MIN;
+  }
+
+  function isDrawerOpen() {
     return app.classList.contains(OPEN_CLASS);
   }
 
-  function setOpen(open) {
+  function setDrawerOpen(open) {
     app.classList.toggle(OPEN_CLASS, !!open);
     btn.setAttribute("aria-expanded", open ? "true" : "false");
   }
 
+  function getStoredCollapsed() {
+    try {
+      return (
+        window.localStorage && window.localStorage.getItem(STORAGE_KEY) === "1"
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function storeCollapsed(collapsed) {
+    try {
+      if (!window.localStorage) return;
+      window.localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
+    } catch {
+      // ignore
+    }
+  }
+
+  function isCollapsed() {
+    return app.classList.contains(COLLAPSED_CLASS);
+  }
+
+  function setCollapsed(collapsed) {
+    app.classList.toggle(COLLAPSED_CLASS, !!collapsed);
+    btn.setAttribute("aria-pressed", collapsed ? "true" : "false");
+    storeCollapsed(!!collapsed);
+    // On desktop, the button is a collapse toggle, not a drawer.
+    btn.setAttribute("aria-expanded", "false");
+  }
+
   btn.addEventListener("click", (e) => {
     e.preventDefault();
-    setOpen(!isOpen());
+    if (isDesktop()) {
+      setDrawerOpen(false);
+      setCollapsed(!isCollapsed());
+      return;
+    }
+    setCollapsed(false);
+    setDrawerOpen(!isDrawerOpen());
   });
 
   backdrop.addEventListener("click", (e) => {
     e.preventDefault();
-    setOpen(false);
+    setDrawerOpen(false);
   });
 
   // Close drawer when a nav item is clicked (mobile/tablet UX).
   sidebar.addEventListener("click", (e) => {
     const item = e.target.closest(".hrmis-nav__item");
     if (!item) return;
-    setOpen(false);
+    if (!isDesktop()) setDrawerOpen(false);
   });
 
   // ESC closes drawer
   root.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") setOpen(false);
+    if (e.key === "Escape") setDrawerOpen(false);
   });
 
-  // If resized to desktop, ensure drawer state is closed.
+  // Init: restore desktop collapsed state.
+  if (isDesktop()) {
+    setCollapsed(getStoredCollapsed());
+  } else {
+    setCollapsed(false);
+  }
+
+  // If resized, ensure drawer is closed, and apply collapsed state on desktop only.
   window.addEventListener("resize", () => {
-    if (window.innerWidth > 1200) setOpen(false);
+    setDrawerOpen(false);
+    if (isDesktop()) {
+      setCollapsed(getStoredCollapsed());
+    } else {
+      setCollapsed(false);
+    }
   });
 }
 
