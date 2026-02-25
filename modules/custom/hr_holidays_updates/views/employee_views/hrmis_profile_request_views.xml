@@ -6,9 +6,9 @@
         <div class="hrmis-panel mb-1 hrmis-pr-shell">
           <!-- Header -->
           <div class="hrmis-panel__header hrmis-pr-shell__header">
-            <div class="hrmis-pr-shell__heading">
-              <div class="hrmis-pr-title">Employee Profile</div>
-              <div class="hrmis-pr-subtitle">
+            <div class="d-flex flex-column gap-1 hrmis-pr-shell__heading">
+              <div class="hrmis-panel__title hrmis-pr-title">Employee Profile</div>
+              <div class="hrmis-pr-subtitle" style="font-weight:600; opacity:0.85;">
                 Welcome <t t-esc="(emp and emp.name) or ''"/>! Please complete your profile first.
               </div>
             </div>
