@@ -1708,11 +1708,13 @@
 .hrmis-profile-request .hrmis-tabs--profile-request .hrmis-tab.hrmis-pr-tab {
   flex: 0 0 auto;
   position: relative;
+  width: auto;
   text-decoration: none;
   color: #0f172a;
   background: #ffffff;
   border: 1px solid #d6dee1;
   border-bottom: 0;
+  border-right: 0;
   padding: 10px 16px;
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
