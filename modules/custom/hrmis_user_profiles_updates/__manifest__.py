@@ -4,7 +4,7 @@
     'summary': "Staff Personal Information Profile - Read Only for Employees",
     'category': 'Human Resources',
     'author': "Humza Aqeel Shaikh",
-    'depends': ['hr'],
+    'depends': ['hr', 'website'],
     'data': [
         # Security always first
         'security/ir.model.access.csv',
@@ -37,11 +37,11 @@
             'hrmis_user_profiles_updates/static/src/js/facility_filter.js',
             'hrmis_user_profiles_updates/static/src/js/hrmis_profile_validation.js',
              'hrmis_user_profiles_updates/static/src/js/hrmis_extra_validations.js',
+            'hrmis_user_profiles_updates/static/src/js/hrmis_user_profile_validation.js',
             'hrmis_user_profiles_updates/static/src/js/profile_request_confirm_modal.js',
             'hrmis_user_profiles_updates/static/src/js/search_combobox.js',
             'hrmis_user_profiles_updates/static/src/js/transfer_vacancies_accordion.js',
             'hrmis_user_profiles_updates/static/src/scss/hrmis_user_profile_styles.scss',
-            'hrmis_user_profiles_updates/static/src/js/hrmis_profile_validation.js',
         ],
     },
     'installable': True,
