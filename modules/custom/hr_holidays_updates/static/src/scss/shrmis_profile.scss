@@ -33,7 +33,6 @@ $shrmis-radius-md: 12px;
     grid-template-columns: minmax(0, 1fr) max-content;
     gap: 16px;
     align-items: center;
-    margin-bottom: 14px;
   }
 
   .shrmis-pageHeader__title {
@@ -130,6 +129,13 @@ $shrmis-radius-md: 12px;
   /* ===== MAIN SURFACE ===== */
   .shrmis-surface {
     border-radius: $shrmis-radius-lg;
+  }
+
+  .shrmis-surface__header {
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid $shrmis-border;
+    background: rgba(255, 255, 255, 0.65);
+    border-radius: $shrmis-radius-lg $shrmis-radius-lg 0 0;
   }
 
   .shrmis-surface__body {
