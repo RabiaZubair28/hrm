@@ -35,6 +35,7 @@
             'hr_holidays_updates/static/src/js/hrmis_pending_badges.js',
             'hr_holidays_updates/static/src/js/hrmis_leave_filters.js',
             'hr_holidays_updates/static/src/js/hrmis_profile_draft_save.js',
+            'hr_holidays_updates/static/src/js/hrmis_profile_request_tabs_guard.js',
             
             # 'hr_holidays_updates/static/src/js/hrmis_profile_request_facility_filter.js',
             # 'hrmis_user_profiles_updates/static/src/js/hrmis_user_profile_validation.js',
