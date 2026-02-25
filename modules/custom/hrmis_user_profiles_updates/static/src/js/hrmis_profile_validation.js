@@ -2763,33 +2763,23 @@ function _applyPrefillRepeatables(form) {
 /* ---------------------------------------------------------
  * Main init (guarded)
  * --------------------------------------------------------- */
-function _initHRMISValidations(formEl) {
-  const form =
-    formEl || _qs(document, "#profile_update_form") || _qs(document, ".hrmis-form");
+function _initHRMISValidations() {
+  const form = _qs(document, ".hrmis-form");
   if (!form) return;
 
   // INIT GUARD: prevent double binding on pageshow/bfcache
   if (form.dataset.hrmisInited === "1") return;
   form.dataset.hrmisInited = "1";
 
-  function _safe(step, fn) {
-    try {
-      fn();
-    } catch (err) {
-      // Never let one broken step kill other critical validations (e.g., CNIC).
-      console.error("[HRMIS] init step failed:", step, err);
-    }
-  }
-
-  _safe("_initSearchableSelects", () => _initSearchableSelects(form));
-  _safe("_attachComboboxGlobalCloser", () => _attachComboboxGlobalCloser());
-  _safe("_initDates", () => _initDates(form));
-  _safe("_initProfileDatePickers", () => _initProfileDatePickers(form)); // DOB only (commission/joining use month proxy)
-  _safe("_initCNIC", () => _initCNIC(form));
-  _safe("_initContact", () => _initContact(form));
-  _safe("_initCnicScanFiles", () => _initCnicScanFiles(form));
+  _initSearchableSelects(form);
+  _attachComboboxGlobalCloser();
+  _initDates(form);
+  _initProfileDatePickers(form); // DOB only (commission/joining use month proxy)
+  _initCNIC(form);
+  _initContact(form);
+  _initCnicScanFiles(form);
   // Status UI (Suspended hides current posting + shows suspension box)
-  _safe("_initFrontendStatusToggle", () => _initFrontendStatusToggle(form));
+  _initFrontendStatusToggle(form);
 
   _digitsOnly(_qs(form, '[name="hrmis_bps"]'), { maxLen: 2 });
   _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
@@ -3407,7 +3397,7 @@ function _initHRMIS() {
     return;
   }
 
-  _initHRMISValidations(form);
+  _initHRMISValidations();
 }
 
 if (document.readyState === "loading") {
