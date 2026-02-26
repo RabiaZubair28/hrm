@@ -2108,25 +2108,64 @@
                       </div>
                     </div>
                   </div>
+                  <!--   ===================== Tab Actions =====================   -->
+                  <!-- Keep a single actions row, but switch Next/Submit based on active tab -->
+                  <style>
+                    .hrmis-tab-actions__switch { display: none; }
+                    #hrmis_pr_employee_info.active ~ .hrmis-tab-actions .hrmis-tab-actions__next--employee { display: inline-flex; }
+                    #hrmis_pr_current_posting.active ~ .hrmis-tab-actions .hrmis-tab-actions__next--current { display: inline-flex; }
+                    #hrmis_pr_posting_history.active ~ .hrmis-tab-actions .hrmis-tab-actions__next--posting { display: inline-flex; }
+                    #hrmis_pr_qualification_history.active ~ .hrmis-tab-actions .hrmis-tab-actions__next--qualification { display: inline-flex; }
+                    #hrmis_pr_promotion_history.active ~ .hrmis-tab-actions .hrmis-tab-actions__next--promotion { display: inline-flex; }
+                    #hrmis_pr_leave_history.active ~ .hrmis-tab-actions .hrmis-tab-actions__submit { display: inline-flex; }
+                  </style>
+                  <t t-if="req.state == 'draft'">
+                    <div class="hrmis-form__actions hrmis-tab-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
+                      <!-- Save Draft (unchanged) -->
+                      <button class="hrmis-btn hrmis-btn--secondary hrmis-btn--lg" type="button"
+                              id="btn_save_draft">
+                        Save
+                      </button>
+
+                      <!-- Next buttons (one per tab) -->
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__next--employee"
+                              type="button"
+                              onclick="document.getElementById('hrmis_pr_tab_current_posting')?.click();">
+                        Next
+                      </button>
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__next--current"
+                              type="button"
+                              onclick="document.getElementById('hrmis_pr_tab_posting_history')?.click();">
+                        Next
+                      </button>
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__next--posting"
+                              type="button"
+                              onclick="document.getElementById('hrmis_pr_tab_qualification')?.click();">
+                        Next
+                      </button>
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__next--qualification"
+                              type="button"
+                              onclick="document.getElementById('hrmis_pr_tab_promotion')?.click();">
+                        Next
+                      </button>
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__next--promotion"
+                              type="button"
+                              onclick="document.getElementById('hrmis_pr_tab_leave')?.click();">
+                        Next
+                      </button>
+
+                      <!-- Submit (only on last tab) -->
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__submit"
+                              type="button"
+                              id="btn_open_confirm_modal">
+                        Submit Request
+                      </button>
+                    </div>
+                    <div id="draft_save_msg" class="hrmis-help" style="margin-top:10px; display:none;"></div>
+                  </t>
                 </div>
               </div>
               <!--   /.hrmis-form__grid   -->
-              <t t-if="req.state == 'draft'">
-                <div class="hrmis-form__actions" style="display:flex; gap:10px; flex-wrap:wrap;">
-                  <!-- NEW: Save Draft -->
-                  <button class="hrmis-btn hrmis-btn--secondary hrmis-btn--lg" type="button"
-                  id="btn_save_draft">
-                  Save
-                </button>
-                  <!-- Existing: Submit Request (UNCHANGED) -->
-                  <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg" type="button"
-                  id="btn_open_confirm_modal">
-                  Submit Request
-                </button>
-                </div>
-                <!-- NEW: small inline message area (optional but nice) -->
-                <div id="draft_save_msg" class="hrmis-help" style="margin-top:10px; display:none;"></div>
-              </t>
             </form>
           </div>
           <!--   /.hrmis-panel__body   -->
