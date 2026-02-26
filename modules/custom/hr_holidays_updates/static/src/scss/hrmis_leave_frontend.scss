@@ -584,8 +584,9 @@
   }
 
   .hrmis-app.is-sidebar-collapsed .hrmis-brand__seal {
-    width: 48px;
-    height: 48px;
+    /* Collapsed sidebar: keep logo visually aligned with icon tiles */
+    width: 40px;
+    height: 40px;
   }
 
   .hrmis-app.is-sidebar-collapsed .hrmis-nav__label {
@@ -600,6 +601,29 @@
   .hrmis-app.is-sidebar-collapsed .hrmis-powered {
     display: none;
   }
+}
+
+/* =========================================================
+   Profile Request UI fixes
+   - Prevent searchable-select dropdown clipping in Current Posting Status
+   ========================================================= */
+
+/* The combobox dropdown is absolutely positioned; do not clip it. */
+.hrmis-profile-request #hrmis_pr_current_posting .hrmis-panel {
+  overflow: visible !important;
+}
+.hrmis-profile-request #hrmis_pr_current_posting .px-3,
+.hrmis-profile-request #hrmis_pr_current_posting fieldset {
+  overflow: visible !important;
+}
+
+/* Ensure dropdown stacks above neighboring sections/cards */
+.hrmis-profile-request #hrmis_pr_current_posting .hrmis-combobox {
+  position: relative;
+  z-index: 1200;
+}
+.hrmis-profile-request #hrmis_pr_current_posting .hrmis-combobox-dd {
+  z-index: 2000 !important;
 }
 
 .hrmis-nav__badge {
