@@ -1098,7 +1098,7 @@ body.hrmis-drawer-open {
 .hrmis-field label {
   display: block;
   font-weight: 800;
-  font-variant: capitalize;
+  text-transform: capitalize;
   margin-bottom: 6px;
 }
 .hrmis-help {
@@ -1952,7 +1952,7 @@ body.hrmis-drawer-open {
 .hrmis-profile-request .hrmis-field label {
   font-weight: 800;
   color: #0f172a;
-  font-variant: capitalize;
+  text-transform: capitalize;
   font-size: 13px;
   margin-bottom: 8px;
 }
