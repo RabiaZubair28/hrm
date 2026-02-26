@@ -1108,7 +1108,7 @@ body.hrmis-drawer-open {
 .hrmis-field label {
   display: block;
   font-weight: 800;
-  text-transform: capitalize;
+  text-transform: capitalize !important;
   margin-bottom: 6px;
 }
 .hrmis-help {
@@ -1963,14 +1963,14 @@ body.hrmis-drawer-open {
 .hrmis-profile-request .hrmis-field label {
   font-weight: 800;
   color: #0f172a;
-  text-transform: capitalize;
+  text-transform: capitalize !important;
   font-size: 13px;
   margin-bottom: 8px;
 }
 
 /* Force label capitalization in profile request (covers labels not wrapped in .hrmis-field too) */
 .hrmis-profile-request label {
-  text-transform: capitalize;
+  text-transform: capitalize !important;
 }
 
 .hrmis-profile-request .hrmis-help {

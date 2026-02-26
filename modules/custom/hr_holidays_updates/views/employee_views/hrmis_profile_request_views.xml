@@ -2169,6 +2169,35 @@
                 </div>
               </div>
               <!--   /.hrmis-form__grid   -->
+              <!-- Auto-open native date/month pickers on click/focus (where supported) -->
+              <script type="text/javascript">
+                (function () {
+                  function bind() {
+                    var form = document.getElementById("profile_update_form");
+                    if (!form) return;
+                    if (form.dataset &amp;&amp; form.dataset.hrmisPickerAuto === "1") return;
+                    if (form.dataset) form.dataset.hrmisPickerAuto = "1";
+
+                    var inputs = form.querySelectorAll('input[type="date"], input[type="month"]');
+                    function safeShowPicker(inp) {
+                      try {
+                        if (inp &amp;&amp; typeof inp.showPicker === "function") inp.showPicker();
+                      } catch (e) {}
+                    }
+                    inputs.forEach(function (inp) {
+                      inp.addEventListener("focus", function () { safeShowPicker(inp); });
+                      inp.addEventListener("click", function () { safeShowPicker(inp); });
+                    });
+                  }
+
+                  if (document.readyState === "loading") {
+                    document.addEventListener("DOMContentLoaded", bind);
+                  } else {
+                    bind();
+                  }
+                  window.addEventListener("pageshow", bind);
+                })();
+              </script>
             </form>
           </div>
           <!--   /.hrmis-panel__body   -->
