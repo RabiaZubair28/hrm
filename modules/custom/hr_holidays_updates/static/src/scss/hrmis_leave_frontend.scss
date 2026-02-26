@@ -627,10 +627,14 @@
 /* Ensure dropdown stacks above neighboring sections/cards */
 .hrmis-profile-request #hrmis_pr_current_posting .hrmis-combobox {
   position: relative;
-  z-index: 1200;
+  /* IMPORTANT:
+     Don't set z-index on the wrapper.
+     A z-index here creates a stacking context per field, causing other fields
+     (later in DOM) to overlap an open dropdown from an earlier field. */
 }
 .hrmis-profile-request #hrmis_pr_current_posting .hrmis-combobox-dd {
-  z-index: 2000 !important;
+  /* Put z-index on the dropdown itself so it overlays other inputs */
+  z-index: 5000 !important;
   overflow: auto !important;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
