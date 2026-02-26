@@ -415,10 +415,12 @@
                               </div>
                             </div>
                           </div>
-                          <!-- ================= Substantive Posting (shared) ================= -->
-                          <!-- Keep these fields ONLY ONCE in the form so the existing JS (which uses querySelector for single fields)
-                               can bind correctly and validations work. -->
-                          <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
+                          <!-- ================= CURRENTLY POSTED BOX (HIDDEN BY DEFAULT) ================= -->
+                          <!-- Substantive Posting should ONLY appear when status = currently_posted -->
+                          <div id="current_posting_box" class="js-status-box" data-status="currently_posted" style="display:none;">
+                            <!-- ================= Substantive Posting (shared) ================= -->
+                            <!-- Keep these fields ONLY ONCE in the form so the existing JS can bind correctly. -->
+                            <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
                         style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
                             <div class="hrmis-card p-3"
                           style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
@@ -537,6 +539,7 @@
                                 </div>
                               </div>
                             </div>
+                          </div>
                           </div>
                           <!--   Your status boxes here (suspension_box, on_leave_box, eol_box, etc.)
                            KEEP THEM INSIDE Posting History fieldset (one copy only)   -->
