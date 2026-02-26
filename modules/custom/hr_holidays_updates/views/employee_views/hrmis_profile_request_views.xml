@@ -1522,7 +1522,7 @@
                         </div>
                       </t>
                     </div>
-                    <t t-tag="'template'" t-att-id="'tpl_prev_post_row'">
+                    <template id="tpl_prev_post_row">
                       <div class="hrmis-repeat-row hrmis-card p-3" data-row="prev_post"
                         style="position:relative; border:1px solid #f0f0f0;background:#fafafa;">
                         <t t-if="is_draft">
@@ -1630,7 +1630,7 @@
                           </div>
                         </div>
                       </div>
-                    </t>
+                    </template>
                   </div>
                 </div>
               </div>
@@ -1840,7 +1840,7 @@
                         </t>
                       </div>
                     </fieldset>
-                    <t t-tag="'template'" t-att-id="'tpl_qual_row'">
+                    <template id="tpl_qual_row">
                       <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
                         style="gap:10px; border: 2px solid black">
                         <div class="hrmis-repeat-row hrmis-card p-3" data-row="qual"
@@ -2005,7 +2005,7 @@
                           </div>
                         </div>
                       </div>
-                    </t>
+                    </template>
                   </div>
                 </div>
               </div>
@@ -2075,7 +2075,7 @@
                         </t>
                       </div>
                     </fieldset>
-                    <t t-tag="'template'" t-att-id="'tpl_promo_row'">
+                    <template id="tpl_promo_row">
                       <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
                         style="gap:10px; border: 2px solid black">
                         <div class="hrmis-repeat-row hrmis-card p-3" data-row="promo"
@@ -2112,7 +2112,7 @@
                           </div>
                         </div>
                       </div>
-                    </t>
+                    </template>
                   </div>
                 </div>
               </div>
@@ -2198,7 +2198,7 @@
                         </t>
                       </div>
                     </fieldset>
-                    <t t-tag="'template'" t-att-id="'tpl_leave_row'">
+                    <template id="tpl_leave_row">
                       <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
                         style="gap:10px; border: 2px solid black">
                         <div class="hrmis-repeat-row hrmis-card p-3" data-row="leave"
@@ -2250,7 +2250,7 @@
                           </div>
                         </div>
                       </div>
-                    </t>
+                    </template>
                     <div class="hrmis-field" style="margin-top:15px;">
                       <label> Total Leaves Taken Since Joining (Days)
                         <span class="req">*</span>
