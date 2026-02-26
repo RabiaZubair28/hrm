@@ -634,7 +634,10 @@
   overflow: auto !important;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  max-height: min(320px, calc(100vh - 220px));
+  /* Avoid CSS min() here: some Sass pipelines treat it as a math function and error. */
+  max-height: 320px;
+  /* On shorter viewports, keep it within the screen. */
+  max-height: calc(100vh - 220px);
 }
 
 .hrmis-nav__badge {
