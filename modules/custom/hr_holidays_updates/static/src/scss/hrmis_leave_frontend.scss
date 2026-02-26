@@ -649,6 +649,16 @@ body.hrmis-drawer-open {
   max-height: calc(100vh - 220px);
 }
 
+/* Apply the same dropdown stacking/scroll rules to all tabs in profile request */
+.hrmis-profile-request .hrmis-combobox-dd {
+  z-index: 5000 !important;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  max-height: 320px;
+  max-height: calc(100vh - 220px);
+}
+
 .hrmis-nav__badge {
   position: absolute;
   top: 6px;
@@ -1904,7 +1914,8 @@ body.hrmis-drawer-open {
 /* Make section panels look like cards */
 .hrmis-profile-request .hrmis-section > .hrmis-panel {
   
-  overflow: hidden;
+  /* IMPORTANT: do not clip searchable-select dropdowns (absolute positioned) */
+  overflow: visible;
   background: var(--hrmis-pr-card);
 }
 
@@ -1955,6 +1966,11 @@ body.hrmis-drawer-open {
   text-transform: capitalize;
   font-size: 13px;
   margin-bottom: 8px;
+}
+
+/* Force label capitalization in profile request (covers labels not wrapped in .hrmis-field too) */
+.hrmis-profile-request label {
+  text-transform: capitalize;
 }
 
 .hrmis-profile-request .hrmis-help {
