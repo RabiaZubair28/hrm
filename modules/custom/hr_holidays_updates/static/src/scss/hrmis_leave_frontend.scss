@@ -608,6 +608,13 @@
    - Prevent searchable-select dropdown clipping in Current Posting Status
    ========================================================= */
 
+/* The main shell uses overflow:hidden for rounded corners, but that clips
+   absolutely-positioned dropdowns (searchable selects). Allow overflow on this page. */
+.hrmis-profile-request .hrmis-pr-shell,
+.hrmis-profile-request .hrmis-pr-shell__body {
+  overflow: visible !important;
+}
+
 /* The combobox dropdown is absolutely positioned; do not clip it. */
 .hrmis-profile-request #hrmis_pr_current_posting .hrmis-panel {
   overflow: visible !important;
@@ -624,6 +631,10 @@
 }
 .hrmis-profile-request #hrmis_pr_current_posting .hrmis-combobox-dd {
   z-index: 2000 !important;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  max-height: min(320px, calc(100vh - 220px));
 }
 
 .hrmis-nav__badge {
