@@ -41,7 +41,6 @@
             'hrmis_user_profiles_updates/static/src/js/search_combobox.js',
             'hrmis_user_profiles_updates/static/src/js/transfer_vacancies_accordion.js',
             'hrmis_user_profiles_updates/static/src/scss/hrmis_user_profile_styles.scss',
-            'hrmis_user_profiles_updates/static/src/js/hrmis_profile_validation.js',
         ],
     },
     'installable': True,
