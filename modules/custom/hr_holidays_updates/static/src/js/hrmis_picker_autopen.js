@@ -47,10 +47,34 @@ function _bindPickerAutoOpen() {
   );
 }
 
+function _enforceCuteLabelCaps() {
+  const root = document.querySelector(".hrmis-profile-request");
+  if (!root) return;
+
+  // Do it once per page load.
+  if (root.dataset.hrmisLabelCaps === "1") return;
+  root.dataset.hrmisLabelCaps = "1";
+
+  root.querySelectorAll("label").forEach((lbl) => {
+    try {
+      lbl.style.textTransform = "capitalize";
+    } catch {
+      // ignore
+    }
+  });
+}
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", _bindPickerAutoOpen);
+  document.addEventListener("DOMContentLoaded", () => {
+    _bindPickerAutoOpen();
+    _enforceCuteLabelCaps();
+  });
 } else {
   _bindPickerAutoOpen();
+  _enforceCuteLabelCaps();
 }
-window.addEventListener("pageshow", _bindPickerAutoOpen);
+window.addEventListener("pageshow", () => {
+  _bindPickerAutoOpen();
+  _enforceCuteLabelCaps();
+});
 
