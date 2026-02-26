@@ -481,6 +481,11 @@
   z-index: 880;
 }
 
+/* When mobile drawer is open, prevent background scroll */
+body.hrmis-drawer-open {
+  overflow: hidden;
+}
+
 
 .hrmis-sidebar {
   background: #ffffff;
@@ -1625,6 +1630,19 @@
   }
   .hrmis-kv--grid .hrmis-kv__item:nth-child(odd) {
     border-right: none;
+  }
+}
+
+/* Very small screens: drawer should cover full width (no sliver overlap) */
+@media (max-width: 640px) {
+  .hrmis-sidebar {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  /* Hide the "Welcome ..." title in the topbar on small screens */
+  .hrmis-topbar .hrmis-pr-title {
+    display: none !important;
   }
 }
 
