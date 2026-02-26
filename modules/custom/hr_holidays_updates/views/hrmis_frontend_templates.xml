@@ -213,11 +213,13 @@
                             </a>
                         </nav>
                         <div class="hrmis-powered">
-                            Powered by
-                            <br/>
-                            Health Department,
-                            <br/>
-                            Government of Sindh
+                            <div class="hrmis-powered__card" role="img" aria-label="Powered by Health Department, Government of Sindh">
+                                <div class="hrmis-powered__title">Powered by</div>
+                                <div class="hrmis-powered__text">
+                                    Health Department,<br/>
+                                    Government of Sindh
+                                </div>
+                            </div>
                         </div>
                     </aside>
                     <div class="hrmis-main">
