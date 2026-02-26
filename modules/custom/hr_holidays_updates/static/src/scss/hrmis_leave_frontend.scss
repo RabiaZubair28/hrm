@@ -1973,6 +1973,11 @@ body.hrmis-drawer-open {
   text-transform: capitalize !important;
 }
 
+/* Extra specificity to beat later-loaded CSS */
+.hrmis-app .hrmis-profile-request label {
+  text-transform: capitalize !important;
+}
+
 .hrmis-profile-request .hrmis-help {
   color: var(--hrmis-pr-muted);
 }

@@ -8,8 +8,6 @@ function _bindPickerAutoOpen() {
   if (form.dataset.hrmisPickerAuto === "1") return;
   form.dataset.hrmisPickerAuto = "1";
 
-  const inputs = form.querySelectorAll('input[type="date"], input[type="month"]');
-
   function safeShowPicker(inp) {
     try {
       if (inp && typeof inp.showPicker === "function") inp.showPicker();
@@ -18,10 +16,35 @@ function _bindPickerAutoOpen() {
     }
   }
 
-  inputs.forEach((inp) => {
-    inp.addEventListener("focus", () => safeShowPicker(inp));
-    inp.addEventListener("click", () => safeShowPicker(inp));
-  });
+  // Use event delegation so dynamically-added inputs (month proxies, repeatable rows)
+  // also get the behavior without re-binding.
+  function isPickerInput(el) {
+    return (
+      el &&
+      el.tagName === "INPUT" &&
+      (el.type === "date" || el.type === "month")
+    );
+  }
+
+  // Pointer/click should open picker without needing the icon.
+  form.addEventListener(
+    "click",
+    (ev) => {
+      const t = ev.target;
+      if (isPickerInput(t)) safeShowPicker(t);
+    },
+    true,
+  );
+
+  // Keyboard/tab focus should also open (where supported).
+  form.addEventListener(
+    "focusin",
+    (ev) => {
+      const t = ev.target;
+      if (isPickerInput(t)) safeShowPicker(t);
+    },
+    true,
+  );
 }
 
 if (document.readyState === "loading") {
