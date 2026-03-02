@@ -29,6 +29,67 @@
   --hrmis-topbar-h: 64px;
 }
 
+/* =========================================================
+   Global page loader (4 dots cycling clockwise)
+   ========================================================= */
+.hrmis-page-loader {
+  position: fixed;
+  inset: 0;
+  display: flex; /* shown by default; JS hides on window load */
+  align-items: center;
+  justify-content: center;
+  background: rgba(209, 213, 219, 0.92); /* light gray like screenshot */
+  z-index: 20000;
+}
+
+.hrmis-page-loader__dots {
+  display: grid;
+  grid-template-columns: repeat(2, 18px);
+  grid-template-rows: repeat(2, 18px);
+  gap: 12px;
+}
+
+.hrmis-page-loader__dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(6, 69, 38, 0.35);
+  animation: hrmisDotCycle 1s infinite ease-in-out;
+}
+
+/* Clockwise order: TL -> TR -> BR -> BL */
+.hrmis-page-loader__dot--1 {
+  animation-delay: 0s;
+}
+.hrmis-page-loader__dot--2 {
+  animation-delay: 0.15s;
+}
+.hrmis-page-loader__dot--3 {
+  animation-delay: 0.30s;
+}
+.hrmis-page-loader__dot--4 {
+  animation-delay: 0.45s;
+}
+
+@keyframes hrmisDotCycle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.98);
+    background: rgba(6, 69, 38, 0.35);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.08);
+    background: rgba(6, 69, 38, 0.95);
+  }
+  55% {
+    opacity: 0.35;
+    transform: scale(0.98);
+    background: rgba(6, 69, 38, 0.35);
+  }
+}
+
 .hrmis-topbar {
   height: var(--hrmis-topbar-h);
   background: #ffffff;

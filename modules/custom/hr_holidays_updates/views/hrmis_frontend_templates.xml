@@ -141,6 +141,15 @@
             <t t-set="no_footer" t-value="True"/>
             <t t-set="body_class" t-value="'hrmis-ui'"/>
             <div class="hrmis-app">
+                <!-- Global page loader (shown until window load) -->
+                <div id="hrmis_page_loader" class="hrmis-page-loader" role="status" aria-live="polite" aria-label="Loading">
+                    <div class="hrmis-page-loader__dots" aria-hidden="true">
+                        <span class="hrmis-page-loader__dot hrmis-page-loader__dot--1"></span>
+                        <span class="hrmis-page-loader__dot hrmis-page-loader__dot--2"></span>
+                        <span class="hrmis-page-loader__dot hrmis-page-loader__dot--3"></span>
+                        <span class="hrmis-page-loader__dot hrmis-page-loader__dot--4"></span>
+                    </div>
+                </div>
                 <t t-set="current_employee" t-value="request.env.user.employee_ids[:1] or None"/>
                 <t t-set="is_hrmis_employee" t-value="request.env.user.has_group('custom_login.group_hrmis_employee_self')"/>
                 <t t-set="facility_name"

@@ -29,6 +29,7 @@
     'assets': {
         'web.assets_frontend': [
             'hr_holidays_updates/static/src/scss/hrmis_leave_frontend.scss',
+            'hr_holidays_updates/static/src/js/hrmis_page_loader.js',
             'hr_holidays_updates/static/src/js/hrmis_leave_frontend.js',
             'hr_holidays_updates/static/src/js/hrmis_nav_drawer.js',
             'hr_holidays_updates/static/src/js/hrmis_notifications.js',
