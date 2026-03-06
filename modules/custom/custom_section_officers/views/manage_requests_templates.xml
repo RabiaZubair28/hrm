@@ -1218,6 +1218,10 @@
                                         <div style="text-wrap: wrap">
                                             <t t-esc="lv.request_date_from" style="text-wrap: wrap" /> →
                                             <t t-esc="lv.request_date_to" style="text-wrap: wrap"/>
+                                            <t t-set="dur_txt" t-value="(leave_duration_text_by_leave_id.get(lv.id) if leave_duration_text_by_leave_id else '') or ''"/>
+                                            <t t-if="dur_txt">
+                                                (<t t-esc="dur_txt"/>)
+                                            </t>
                                         </div>
                                         <div style="text-wrap: wrap">
                                             <t t-if="lv.state == 'confirm'">Pending</t>

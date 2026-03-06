@@ -847,6 +847,18 @@ class HrmisSectionOfficerManageRequestsController(http.Controller):
 
         elif tab == "history":
             leave_history = leave_request_history_for_user(uid)
+            # Compute effective duration display for history rows too.
+            try:
+                if leave_history:
+                    for lv in leave_history:
+                        try:
+                            dur = float(self._leave_days_for_duration_display(lv) or 0.0)
+                        except Exception:
+                            dur = 0.0
+                        leave_duration_days_by_leave_id[lv.id] = dur
+                        leave_duration_text_by_leave_id[lv.id] = self._format_days(dur)
+            except Exception:
+                _logger.exception("Failed preparing Leave History duration display")
 
         elif tab == "transfer_requests":
             Transfer = request.env["hrmis.transfer.request"].sudo()
