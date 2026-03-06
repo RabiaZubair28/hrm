@@ -818,18 +818,49 @@ function _validateDobCommission(form) {
   const cv = (commission.value || "").trim();
   if (_isEmpty(dobVal) || _isEmpty(cv)) return true;
 
-  const dobYear = parseInt(dobVal.slice(0, 4), 10);
-  const commYear = parseInt(cv.slice(0, 4), 10);
-  if (Number.isNaN(dobYear) || Number.isNaN(commYear)) return true;
+  // Commission is month-granular; enforce month >= DOB month.
+  const minMonth = dobVal.length >= 7 ? dobVal.slice(0, 7) : "";
+  const commMonth = cv.length >= 7 ? cv.slice(0, 7) : "";
+  if (!_isValidMonth(minMonth) || !_isValidMonth(commMonth)) return true;
 
-  if (commYear < dobYear) {
+  if (_monthToIndex(commMonth) < _monthToIndex(minMonth)) {
     _showError(
       cErrTarget,
-      "Commission year cannot be before Date of Birth",
+      "Commission month cannot be before Date of Birth",
     );
     return false;
   }
   return true;
+}
+
+function _syncCommissionMinFromDob(form) {
+  const dob = _qs(form, '[name="birthday"]'); // date YYYY-MM-DD
+  const commission = _qs(form, '[name="hrmis_commission_date"]'); // hidden date YYYY-MM-DD
+  if (!dob || !commission) return;
+
+  const dobVal = (dob.value || "").trim();
+  const minMonth = dobVal.length >= 7 ? dobVal.slice(0, 7) : "";
+
+  const commissionUI = commission._hrmisMonthProxy || null;
+  const cUi = commissionUI || null;
+
+  if (_isValidMonth(minMonth)) {
+    if (cUi) cUi.setAttribute("min", minMonth);
+    commission.setAttribute("min", `${minMonth}-01`);
+  } else {
+    if (cUi) cUi.removeAttribute("min");
+    commission.removeAttribute("min");
+    return;
+  }
+
+  // Clamp existing value into min range.
+  const curMonth =
+    (cUi && (cUi.value || "").trim()) ||
+    ((commission.value || "").trim().slice(0, 7) || "");
+  if (_isValidMonth(curMonth) && _monthToIndex(curMonth) < _monthToIndex(minMonth)) {
+    if (cUi) cUi.value = minMonth;
+    commission.value = `${minMonth}-01`;
+  }
 }
 
 /* ---------------------------------------------------------
@@ -1727,8 +1758,14 @@ function _initProfileDatePickers(form) {
   if (dob) {
     _ensureNativeDateInput(dob);
     // Keep Commission-vs-DOB validation in sync.
-    dob.addEventListener("change", () => _validateDobCommission(form));
-    dob.addEventListener("blur", () => _validateDobCommission(form));
+    dob.addEventListener("change", () => {
+      _syncCommissionMinFromDob(form);
+      _validateDobCommission(form);
+    });
+    dob.addEventListener("blur", () => {
+      _syncCommissionMinFromDob(form);
+      _validateDobCommission(form);
+    });
   }
 }
 
@@ -2882,6 +2919,9 @@ function _initHRMISValidations() {
     const syncMinMax = () => {
       const jmv = (joiningUI.value || "").trim(); // YYYY-MM
       const cmv = (commissionUI.value || "").trim(); // YYYY-MM
+
+      // DOB constraint: commission >= DOB month
+      _syncCommissionMinFromDob(form);
 
       commissionUI.setAttribute("max", _todayMonth());
       commissionInput.setAttribute("max", _todayLocalYmd());
