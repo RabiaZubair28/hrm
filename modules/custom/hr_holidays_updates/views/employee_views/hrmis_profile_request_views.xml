@@ -2172,6 +2172,8 @@
             </form>
             <!-- Load picker auto-open + label caps (separate file) -->
             <script type="text/javascript" src="/hr_holidays_updates/static/src/js/hrmis_picker_autopen.js"></script>
+            <!-- Leaves taken auto-calc aligned with Sunday-only policy -->
+            <script type="text/javascript" src="/hr_holidays_updates/static/src/js/hrmis_leaves_taken_policy.js"></script>
           </div>
           <!--   /.hrmis-panel__body   -->
         </div>
