@@ -51,7 +51,25 @@ function _initHrmisPageLoader() {
     (ev) => {
       const form = ev.target;
       if (!form) return;
-      show();
+      // Many HRMIS pages submit via AJAX (preventDefault + fetch).
+      // Only show the loader if the submit is not prevented.
+      // Also allow opt-out via data attribute.
+      if (
+        form?.dataset?.hrmisNoLoader === "1" ||
+        form?.getAttribute?.("data-hrmis-no-loader") === "1"
+      ) {
+        return;
+      }
+
+      // Defer so other listeners can call preventDefault().
+      setTimeout(() => {
+        try {
+          if (ev.defaultPrevented) return;
+        } catch {
+          // ignore
+        }
+        show();
+      }, 0);
     },
     true,
   );
