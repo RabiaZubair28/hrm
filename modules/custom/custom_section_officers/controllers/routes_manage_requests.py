@@ -372,6 +372,8 @@ class HrmisSectionOfficerManageRequestsController(http.Controller):
         if is_partial:
             return float(self._leave_days_value(leave) or 0.0)
 
+        d_from = None
+        d_to = None
         try:
             d_from = getattr(leave, "request_date_from", None)
             d_to = getattr(leave, "request_date_to", None)
@@ -381,11 +383,23 @@ class HrmisSectionOfficerManageRequestsController(http.Controller):
                 and d_to
                 and hasattr(leave, "_hrmis_effective_days")
             ):
-                return float(leave._hrmis_effective_days(leave.employee_id, d_from, d_to) or 0.0)
+                v = float(leave._hrmis_effective_days(leave.employee_id, d_from, d_to) or 0.0)
+                if v > 0:
+                    return v
         except Exception:
             pass
 
-        return float(self._leave_days_value(leave) or 0.0)
+        v = float(self._leave_days_value(leave) or 0.0)
+        if v > 0:
+            return v
+
+        # Last-resort: if we still got 0 but dates are valid, show inclusive days.
+        try:
+            if d_from and d_to and d_to >= d_from:
+                return float((d_to - d_from).days + 1)
+        except Exception:
+            pass
+        return 0.0
 
     @staticmethod
     def _format_days(days: float) -> str:

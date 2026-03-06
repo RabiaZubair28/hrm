@@ -319,6 +319,12 @@
                                             <input type="hidden" name="action" value="approve"/>
                                             <div class="hrmis-modal__field hrmis-date-range">
                                                 <div class="hrmis-modal__label">Leave Dates</div>
+                                                <t t-set="dur_txt" t-value="(leave_duration_text_by_leave_id.get(lv.id) if leave_duration_text_by_leave_id else '') or ''"/>
+                                                <t t-if="dur_txt">
+                                                    <div class="hrmis-modal__value" style="margin-top:4px;">
+                                                        (<t t-esc="dur_txt"/>)
+                                                    </div>
+                                                </t>
                                                 <div class="hrmis-date-range__inputs">
                                                     <div class="hrmis-date-range__input-wrapper">
                                                         <div class="hrmis-date-range__label">From</div>
