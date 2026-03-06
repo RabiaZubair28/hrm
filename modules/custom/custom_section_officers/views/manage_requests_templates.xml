@@ -185,20 +185,15 @@
                                     <div class="hrmis-leave-row__cell" style="text-wrap: wrap;">
                                         <t t-set="d_from" t-value="lv.request_date_from"/>
                                         <t t-set="d_to" t-value="lv.request_date_to"/>
-                                        <t t-set="raw_days"
-                                           t-value="(('number_of_days_display' in lv._fields and lv.number_of_days_display) or ('number_of_days' in lv._fields and lv.number_of_days) or 0)"/>
-                                        <t t-set="is_partial"
-                                           t-value="(('request_unit_half' in lv._fields and lv.request_unit_half) or ('request_unit_hours' in lv._fields and lv.request_unit_hours) or ('request_unit_custom' in lv._fields and lv.request_unit_custom))"/>
-                                        <t t-set="days_count"
-                                           t-value="(raw_days if is_partial else ((lv._hrmis_effective_days(lv.employee_id, d_from, d_to) if (d_from and d_to) else raw_days) if hasattr(lv, '_hrmis_effective_days') else (d_to and d_from and ((d_to - d_from).days + 1)) or raw_days))"/>
+                                        <t t-set="days_count" t-value="(leave_duration_days_by_leave_id.get(lv.id) if leave_duration_days_by_leave_id else 0) or 0"/>
                                         <t t-set="from_txt" t-value="(d_from and ('%s-%s-%s' % (d_from.day, d_from.month, d_from.year))) or ''"/>
                                         <t t-set="to_txt" t-value="(d_to and ('%s-%s-%s' % (d_to.day, d_to.month, d_to.year))) or ''"/>
                                         <t t-esc="from_txt"/> to
                                         <t t-esc="to_txt"/>
                                         <t t-if="days_count">
                                             (
-                                            <t t-esc="days_count"/>
-                                            <t t-esc="'day' if days_count == 1 else 'days'"/>)
+                                            <t t-esc="(leave_duration_text_by_leave_id.get(lv.id) if leave_duration_text_by_leave_id else '') or ''"/>
+                                            )
                                         </t>
                                     </div>
                                     <!-- COMMENTS + ACTIONS -->
@@ -283,12 +278,12 @@
                                                         <div style="display:flex; gap:8px; align-items:center;">
                                                             <a class="hrmis-btn hrmis-btn--outline"
                                                                style="padding:6px 10px;"
-                                                               t-att-href="'/web/content/%s' % att.id"
+                                                               t-att-href="'/hrmis/leave/%s/attachment/%s?download=0' % (lv.id, att.id)"
                                                                onclick="event.stopPropagation();"
                                                                target="_blank">View</a>
                                                             <a class="hrmis-btn hrmis-btn--outline"
                                                                style="padding:6px 10px;"
-                                                               t-att-href="'/web/content/%s?download=true' % att.id"
+                                                               t-att-href="'/hrmis/leave/%s/attachment/%s?download=1' % (lv.id, att.id)"
                                                                onclick="event.stopPropagation();"
                                                                target="_blank">Download</a>
                                                         </div>
