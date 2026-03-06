@@ -800,6 +800,39 @@ function _validateJoiningCommission(form) {
 }
 
 /* ---------------------------------------------------------
+ * DOB vs Commission year rule
+ *  - Commission is month-proxy (YYYY-MM) stored as YYYY-MM-01
+ *  - Requirement: Commission year cannot be before Date of Birth year
+ * --------------------------------------------------------- */
+function _validateDobCommission(form) {
+  const dob = _qs(form, '[name="birthday"]'); // date YYYY-MM-DD
+  const commission = _qs(form, '[name="hrmis_commission_date"]'); // hidden date YYYY-MM-DD
+  if (!dob || !commission) return true;
+
+  const commissionUI = commission._hrmisMonthProxy || null;
+  const cErrTarget = commissionUI || commission;
+
+  _clearError(cErrTarget);
+
+  const dobVal = (dob.value || "").trim();
+  const cv = (commission.value || "").trim();
+  if (_isEmpty(dobVal) || _isEmpty(cv)) return true;
+
+  const dobYear = parseInt(dobVal.slice(0, 4), 10);
+  const commYear = parseInt(cv.slice(0, 4), 10);
+  if (Number.isNaN(dobYear) || Number.isNaN(commYear)) return true;
+
+  if (commYear < dobYear) {
+    _showError(
+      cErrTarget,
+      "Commission year cannot be before Date of Birth",
+    );
+    return false;
+  }
+  return true;
+}
+
+/* ---------------------------------------------------------
  * CNIC strict formatter: #####-#######-#
  * --------------------------------------------------------- */
 function _initCNIC(form) {
@@ -1693,6 +1726,9 @@ function _initProfileDatePickers(form) {
   const dob = _qs(form, '[name="birthday"]');
   if (dob) {
     _ensureNativeDateInput(dob);
+    // Keep Commission-vs-DOB validation in sync.
+    dob.addEventListener("change", () => _validateDobCommission(form));
+    dob.addEventListener("blur", () => _validateDobCommission(form));
   }
 }
 
@@ -2828,6 +2864,7 @@ function _initHRMISValidations() {
       toggle();
       _validateCurrentPostingStart(form);
       _validateJoiningCommission(form);
+      _validateDobCommission(form);
       _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
       _syncPostingBpsConstraints(form);
     });
@@ -2881,6 +2918,7 @@ function _initHRMISValidations() {
       }
 
       _validateJoiningCommission(form);
+      _validateDobCommission(form);
     };
 
     commissionUI.addEventListener("change", syncMinMax);
@@ -2977,6 +3015,7 @@ function _initHRMISValidations() {
 
     if (!_validateCurrentPostingStart(form)) hasError = true;
     if (!_validateJoiningCommission(form)) hasError = true;
+    if (!_validateDobCommission(form)) hasError = true;
 
     if (_validateRepeatables(form)) hasError = true;
     if (form._hrmisValidateCnicFiles && !form._hrmisValidateCnicFiles())
