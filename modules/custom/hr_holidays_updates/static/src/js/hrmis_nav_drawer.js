@@ -27,6 +27,12 @@ function _initNavDrawer(root = document) {
   function setDrawerOpen(open) {
     app.classList.toggle(OPEN_CLASS, !!open);
     btn.setAttribute("aria-expanded", open ? "true" : "false");
+    // Prevent background scroll on mobile drawer
+    try {
+      document.body.classList.toggle("hrmis-drawer-open", !!open);
+    } catch {
+      // ignore
+    }
   }
 
   function getStoredCollapsed() {
@@ -91,8 +97,10 @@ function _initNavDrawer(root = document) {
   // Init: restore desktop collapsed state.
   if (isDesktop()) {
     setCollapsed(getStoredCollapsed());
+    setDrawerOpen(false);
   } else {
     setCollapsed(false);
+    setDrawerOpen(false);
   }
 
   // If resized, ensure drawer is closed, and apply collapsed state on desktop only.

@@ -7,6 +7,8 @@ from odoo.exceptions import UserError, AccessError
 import logging
 _logger = logging.getLogger(__name__)
 import random
+import base64
+from odoo.http import content_disposition
 
 
 from odoo.addons.hr_holidays_updates.controllers.leave_data import (
@@ -347,6 +349,127 @@ class HrmisSectionOfficerManageRequestsController(http.Controller):
         except Exception:
             pass
         return 0.0
+
+    def _leave_days_for_duration_display(self, leave) -> float:
+        """
+        Duration for SO UI + downloads, aligned with HRMIS Sunday-only policy.
+
+        - For partial leaves (hours / half / custom): keep Odoo's computed duration.
+        - For day-based leaves: prefer HRMIS effective days if available.
+        """
+        if not leave:
+            return 0.0
+
+        try:
+            is_partial = bool(
+                ("request_unit_half" in leave._fields and leave.request_unit_half)
+                or ("request_unit_hours" in leave._fields and leave.request_unit_hours)
+                or ("request_unit_custom" in leave._fields and leave.request_unit_custom)
+            )
+        except Exception:
+            is_partial = False
+
+        if is_partial:
+            return float(self._leave_days_value(leave) or 0.0)
+
+        d_from = None
+        d_to = None
+        try:
+            d_from = getattr(leave, "request_date_from", None)
+            d_to = getattr(leave, "request_date_to", None)
+            if (
+                getattr(leave, "employee_id", False)
+                and d_from
+                and d_to
+                and hasattr(leave, "_hrmis_effective_days")
+            ):
+                v = float(leave._hrmis_effective_days(leave.employee_id, d_from, d_to) or 0.0)
+                if v > 0:
+                    return v
+        except Exception:
+            pass
+
+        v = float(self._leave_days_value(leave) or 0.0)
+        if v > 0:
+            return v
+
+        # Last-resort: if we still got 0 but dates are valid, show inclusive days.
+        try:
+            if d_from and d_to and d_to >= d_from:
+                return float((d_to - d_from).days + 1)
+        except Exception:
+            pass
+        return 0.0
+
+    @staticmethod
+    def _format_days(days: float) -> str:
+        try:
+            d = float(days or 0.0)
+        except Exception:
+            d = 0.0
+        if abs(d - round(d)) < 1e-6:
+            n = int(round(d))
+            unit = "day" if n == 1 else "days"
+            return f"{n} {unit}"
+        unit = "day" if abs(d - 1.0) < 1e-6 else "days"
+        return f"{d:.1f} {unit}"
+
+    @http.route(
+        ["/hrmis/leave/<int:leave_id>/attachment/<int:att_id>"],
+        type="http",
+        auth="user",
+        website=True,
+        methods=["GET"],
+        csrf=False,
+    )
+    def hrmis_leave_attachment(self, leave_id: int, att_id: int, download: str = "0", **kw):
+        """
+        Serve supporting-doc attachments to approvers/section officers.
+
+        We can't rely on `/web/content/<id>` because `ir.attachment` rules often
+        block access for non-owners. Here we verify the user can access the leave,
+        then stream the attachment with sudo.
+        """
+        lv = request.env["hr.leave"].sudo().browse(leave_id).exists()
+        if not lv:
+            return request.not_found()
+
+        is_hr = bool(
+            request.env.user.has_group("hr_holidays.group_hr_holidays_user")
+            or request.env.user.has_group("hr_holidays.group_hr_holidays_manager")
+        )
+        if not is_hr:
+            try:
+                is_pending_for_me = leave_pending_for_current_user(lv)
+                is_managed = self._is_record_managed_by_current_user(lv)
+            except Exception:
+                is_pending_for_me = False
+                is_managed = False
+            if not (is_pending_for_me or is_managed):
+                return request.not_found()
+
+        att = request.env["ir.attachment"].sudo().browse(att_id).exists()
+        if not att or (att.res_model != "hr.leave") or (int(att.res_id or 0) != int(lv.id)):
+            return request.not_found()
+
+        try:
+            raw = base64.b64decode(att.datas or b"")
+        except Exception:
+            raw = b""
+
+        is_download = str(download or "0").strip().lower() in ("1", "true", "yes", "y")
+        dispo = "attachment" if is_download else "inline"
+
+        cd = content_disposition(att.name or "document")
+        if dispo == "inline" and cd.startswith("attachment"):
+            cd = "inline" + cd[len("attachment") :]
+
+        headers = [
+            ("Content-Type", att.mimetype or "application/octet-stream"),
+            ("Content-Length", str(len(raw))),
+            ("Content-Disposition", cd),
+        ]
+        return request.make_response(raw, headers)
     def _section_officer_employee_ids(self):
         """Return hr.employee ids linked to current user.
 
@@ -635,6 +758,8 @@ class HrmisSectionOfficerManageRequestsController(http.Controller):
         leaves = []
         leave_history = []
         leave_taken_by_leave_id = {}
+        leave_duration_days_by_leave_id = {}
+        leave_duration_text_by_leave_id = {}
         is_last_approver_by_leave = {}
         transfer_requests = request.env["hrmis.transfer.request"].browse([])
         vacancy_by_transfer_id = {}
@@ -709,11 +834,31 @@ class HrmisSectionOfficerManageRequestsController(http.Controller):
                             taken_by_root_type.get((root_id, lt_id), 0.0)
                         )
 
+                        # Duration shown in the SO table: align with HRMIS Sunday-only policy.
+                        try:
+                            dur = float(self._leave_days_for_duration_display(lv) or 0.0)
+                        except Exception:
+                            dur = 0.0
+                        leave_duration_days_by_leave_id[lv.id] = dur
+                        leave_duration_text_by_leave_id[lv.id] = self._format_days(dur)
+
             except Exception:
                 _logger.exception("Failed preparing Manage Requests UI data")
 
         elif tab == "history":
             leave_history = leave_request_history_for_user(uid)
+            # Compute effective duration display for history rows too.
+            try:
+                if leave_history:
+                    for lv in leave_history:
+                        try:
+                            dur = float(self._leave_days_for_duration_display(lv) or 0.0)
+                        except Exception:
+                            dur = 0.0
+                        leave_duration_days_by_leave_id[lv.id] = dur
+                        leave_duration_text_by_leave_id[lv.id] = self._format_days(dur)
+            except Exception:
+                _logger.exception("Failed preparing Leave History duration display")
 
         elif tab == "transfer_requests":
             Transfer = request.env["hrmis.transfer.request"].sudo()
@@ -1045,6 +1190,8 @@ class HrmisSectionOfficerManageRequestsController(http.Controller):
                 leaves=leaves,
                 leave_history=leave_history,
                 leave_taken_by_leave_id=leave_taken_by_leave_id,
+                leave_duration_days_by_leave_id=leave_duration_days_by_leave_id,
+                leave_duration_text_by_leave_id=leave_duration_text_by_leave_id,
                 is_last_approver_by_leave=is_last_approver_by_leave,
                 transfer_requests=transfer_requests,
                 vacancy_by_transfer_id=vacancy_by_transfer_id,

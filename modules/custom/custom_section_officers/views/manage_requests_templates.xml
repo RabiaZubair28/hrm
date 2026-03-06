@@ -185,15 +185,12 @@
                                     <div class="hrmis-leave-row__cell" style="text-wrap: wrap;">
                                         <t t-set="d_from" t-value="lv.request_date_from"/>
                                         <t t-set="d_to" t-value="lv.request_date_to"/>
-                                        <t t-set="days_count" t-value="(d_to and d_from and ((d_to - d_from).days + 1)) or 0"/>
-                                        <t t-set="from_txt" t-value="(d_from and ('%s-%s-%s' % (d_from.day, d_from.month, d_from.year))) or ''"/>
-                                        <t t-set="to_txt" t-value="(d_to and ('%s-%s-%s' % (d_to.day, d_to.month, d_to.year))) or ''"/>
-                                        <t t-esc="from_txt"/> to
-                                        <t t-esc="to_txt"/>
+                                        <t t-set="days_count" t-value="(leave_duration_days_by_leave_id.get(lv.id) if leave_duration_days_by_leave_id else 0) or 0"/>
+                                        <t t-set="from_txt" t-value="(d_from and ('%02d-%02d-%04d' % (d_from.day, d_from.month, d_from.year))) or ''"/>
+                                        <t t-set="to_txt" t-value="(d_to and ('%02d-%02d-%04d' % (d_to.day, d_to.month, d_to.year))) or ''"/>
+                                        <t t-esc="from_txt"/> to <t t-esc="to_txt"/>
                                         <t t-if="days_count">
-                                            (
-                                            <t t-esc="days_count"/>
-                                            <t t-esc="'day' if days_count == 1 else 'days'"/>)
+                                            (<t t-esc="(leave_duration_text_by_leave_id.get(lv.id) if leave_duration_text_by_leave_id else '') or ''"/>)
                                         </t>
                                     </div>
                                     <!-- COMMENTS + ACTIONS -->
@@ -278,11 +275,13 @@
                                                         <div style="display:flex; gap:8px; align-items:center;">
                                                             <a class="hrmis-btn hrmis-btn--outline"
                                                                style="padding:6px 10px;"
-                                                               t-att-href="'/web/content/%s' % att.id"
+                                                               t-att-href="'/hrmis/leave/%s/attachment/%s?download=0' % (lv.id, att.id)"
+                                                               onclick="event.stopPropagation();"
                                                                target="_blank">View</a>
                                                             <a class="hrmis-btn hrmis-btn--outline"
                                                                style="padding:6px 10px;"
-                                                               t-att-href="'/web/content/%s?download=true' % att.id"
+                                                               t-att-href="'/hrmis/leave/%s/attachment/%s?download=1' % (lv.id, att.id)"
+                                                               onclick="event.stopPropagation();"
                                                                target="_blank">Download</a>
                                                         </div>
                                                     </div>
@@ -317,6 +316,16 @@
                                             <input type="hidden" name="action" value="approve"/>
                                             <div class="hrmis-modal__field hrmis-date-range">
                                                 <div class="hrmis-modal__label">Leave Dates</div>
+                                                <t t-set="dur_txt" t-value="(leave_duration_text_by_leave_id.get(lv.id) if leave_duration_text_by_leave_id else '') or ''"/>
+                                                <t t-if="dur_txt">
+                                                    <t t-set="d_from_m" t-value="lv.request_date_from"/>
+                                                    <t t-set="d_to_m" t-value="lv.request_date_to"/>
+                                                    <t t-set="from_txt_m" t-value="(d_from_m and ('%02d-%02d-%04d' % (d_from_m.day, d_from_m.month, d_from_m.year))) or ''"/>
+                                                    <t t-set="to_txt_m" t-value="(d_to_m and ('%02d-%02d-%04d' % (d_to_m.day, d_to_m.month, d_to_m.year))) or ''"/>
+                                                    <div class="hrmis-modal__value" style="margin-top:4px;">
+                                                        <t t-esc="from_txt_m"/> to <t t-esc="to_txt_m"/> (<t t-esc="dur_txt"/>)
+                                                    </div>
+                                                </t>
                                                 <div class="hrmis-date-range__inputs">
                                                     <div class="hrmis-date-range__input-wrapper">
                                                         <div class="hrmis-date-range__label">From</div>
@@ -1208,8 +1217,15 @@
                                             <t t-esc="lv.holiday_status_id.name" style="text-wrap: wrap"/>
                                         </div>
                                         <div style="text-wrap: wrap">
-                                            <t t-esc="lv.request_date_from" style="text-wrap: wrap" /> →
-                                            <t t-esc="lv.request_date_to" style="text-wrap: wrap"/>
+                                            <t t-set="d_from_h" t-value="lv.request_date_from"/>
+                                            <t t-set="d_to_h" t-value="lv.request_date_to"/>
+                                            <t t-set="from_txt_h" t-value="(d_from_h and ('%02d-%02d-%04d' % (d_from_h.day, d_from_h.month, d_from_h.year))) or ''"/>
+                                            <t t-set="to_txt_h" t-value="(d_to_h and ('%02d-%02d-%04d' % (d_to_h.day, d_to_h.month, d_to_h.year))) or ''"/>
+                                            <t t-esc="from_txt_h"/> to <t t-esc="to_txt_h"/>
+                                            <t t-set="dur_txt" t-value="(leave_duration_text_by_leave_id.get(lv.id) if leave_duration_text_by_leave_id else '') or ''"/>
+                                            <t t-if="dur_txt">
+                                                (<t t-esc="dur_txt"/>)
+                                            </t>
                                         </div>
                                         <div style="text-wrap: wrap">
                                             <t t-if="lv.state == 'confirm'">Pending</t>

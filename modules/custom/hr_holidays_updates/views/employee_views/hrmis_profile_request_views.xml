@@ -70,7 +70,7 @@
             </t>
             <t t-set="is_draft" t-value="req and (req.state == 'draft')" />
             <form
-            t-att-class="'hrmis-form' + ('is-draft' if req.state == 'draft' else 'is-submitted')"
+            t-att-class="'hrmis-form ' + ('is-draft' if req.state == 'draft' else 'is-submitted')"
             id="profile_update_form" method="post" enctype="multipart/form-data"
             action="/hrmis/profile/request/submit"
             t-att-onsubmit="'return false;' if req.state != 'draft' else None">
@@ -415,6 +415,132 @@
                               </div>
                             </div>
                           </div>
+                          <!-- ================= CURRENTLY POSTED BOX (HIDDEN BY DEFAULT) ================= -->
+                          <!-- Substantive Posting should ONLY appear when status = currently_posted -->
+                          <div id="current_posting_box" class="js-status-box" data-status="currently_posted" style="display:none;">
+                            <!-- ================= Substantive Posting (shared) ================= -->
+                            <!-- Keep these fields ONLY ONCE in the form so the existing JS can bind correctly. -->
+                            <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
+                        style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
+                            <div class="hrmis-card p-3"
+                          style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
+                              <div
+                            style="font-weight:800; font-size:18px; margin-bottom:3px; border-bottom: 1px solid black;">
+                            Substantive Posting </div>
+                              <div class="hrmis-form__grid pt-3 pb-2"
+                            style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
+                                <!--  District  -->
+                                <div class="hrmis-field" style="grid-column: span 6;">
+                                  <label> Substantive Posting District
+                                    <span class="req">*</span>
+                                  </label>
+                                  <select class="hrmis-input js-hrmis-district js-current-district" name="district_id"
+                                t-att-required="'required' if is_draft else None">
+                                    <option value="" disabled="disabled" hidden="hidden"
+                                  t-att-selected="not (req.district_id or current_employee.district_id)">
+                                  Select District </option>
+                                    <t t-foreach="districts" t-as="d">
+                                      <option t-att-value="d.id"
+                                    t-att-selected="(req.district_id and req.district_id.id == d.id) or (current_employee.district_id and current_employee.district_id.id == d.id)">
+                                        <t t-esc="d.name" />
+                                      </option>
+                                    </t>
+                                  </select>
+                                  <div style="font-size:12px; color:#888; margin-top:4px;">Select Karachi if you are from Secondary/Tertiary facility, otherwise select Karachi East, West, Etc</div>
+                                </div>
+                                <!--  Facility  -->
+                                <div class="hrmis-field" style="grid-column: span 6;">
+                                  <label> Substantive Posting Facility
+                                    <span class="req">*</span>
+                                  </label>
+                                  <select class="hrmis-input js-current-facility js-other-select"
+                                name="facility_id" data-enable-search="1"
+                                data-other-name="facility_other_name"
+                                t-att-required="'required' if is_draft else None">
+                                    <option value="" selected="selected">Select Facility</option>
+                                    <t t-foreach="facilities" t-as="f">
+                                      <option t-att-value="f.id"
+                                    t-att-data-district-id="f.district_id.id if f.district_id else ''"
+                                    t-att-selected="(req.facility_id and req.facility_id.id == f.id) or (current_employee.facility_id and current_employee.facility_id.id == f.id)">
+                                        <t t-esc="f.name" />
+                                      </option>
+                                    </t>
+                                    <option value="__other__" data-district-id="">Other</option>
+                                  </select>
+                                  <div class="js-other-wrap js-current-facility-other-wrap"
+                                style="display:none; margin-top:6px;">
+                                    <input
+                                  class="hrmis-input js-other-input js-current-facility-other"
+                                  type="text" name="facility_other_name"
+                                  placeholder="Enter Facility Name" />
+                                  </div>
+                                </div>
+
+                                <!--   Designation   -->
+                                <div class="hrmis-field" style="grid-column: span 6;">
+                                  <label> Designation
+                                    <span class="req">*</span>
+                                  </label>
+                                  <select class="hrmis-input js-other-select"
+                                      name="hrmis_designation"
+                                      data-enable-search="1"
+                                      data-other-name="hrmis_designation_other_name"
+                                      t-att-required="'required' if is_draft else None">
+                                    <option value="" disabled="disabled" hidden="hidden"
+                                        t-att-selected="not (req.hrmis_designation or current_employee.hrmis_designation)">
+                                  Select Designation
+                                </option>
+                                    <t t-foreach="designations_unique" t-as="des">
+                                      <t t-set="des_fac_id" t-value="''" />
+                                      <t t-if="'facility_id' in des._fields and des.facility_id">
+                                        <t t-set="des_fac_id" t-value="des.facility_id.id" />
+                                  </t>
+                                      <option t-att-value="des.id"
+                                          t-att-data-bps="des.post_BPS or ''"
+                                          t-att-data-facility-id="des_fac_id"
+                                          t-att-selected="(req.hrmis_designation and req.hrmis_designation.id == des.id) or (current_employee.hrmis_designation and current_employee.hrmis_designation.id == des.id)">
+                                        <t t-esc="des.name" />
+                                      </option>
+                                    </t>
+                                    <option value="__other__">Other</option>
+                                  </select>
+                                  <div class="js-other-wrap" style="display:none; margin-top:6px;">
+                                    <input class="hrmis-input js-other-input"
+                                      type="text"
+                                      name="hrmis_designation_other_name"
+                                      placeholder="Enter Designation" />
+                                  </div>
+                                </div>
+
+                                <!--  Current Posting Start Month  -->
+                                <div class="hrmis-field" style="grid-column: span 6;">
+                                  <label> Posting Start (Month/Year)
+                                    <span class="req">*</span>
+                                  </label>
+                                  <t t-set="cps_val" t-value="''" />
+                                  <t t-if="req and ('current_posting_start' in req._fields)">
+                                    <t t-set="cps_val" t-value="req.current_posting_start or ''" />
+                              </t>
+                                  <input class="hrmis-input js-current-post-start" type="month"
+                                name="current_posting_start"
+                                t-att-required="'required' if is_draft else None"
+                                t-att-value="cps_val" />
+                                </div>
+
+                                <!--  Allowed To Work Checkbox  -->
+                                <div class="hrmis-field" style="grid-column: span 6; display: flex">
+                                  <div
+                                style="display:flex; align-items:center; justify-content:center; margin-top:10px; gap: 12px">
+                                    <input type="checkbox" name="allowed_to_work" value="1"
+                                  class="form-check-input js-allowed-to-work-toggle" id="allowed_to_work_checkbox"
+                                  data-target="#allowed_to_work_box" />
+                                    <label for="allowed_to_work_checkbox" style="margin:0; font-weight:600; gap: 12px" >Allowed to Work</label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          </div>
                           <!--   Your status boxes here (suspension_box, on_leave_box, eol_box, etc.)
                            KEEP THEM INSIDE Posting History fieldset (one copy only)   -->
                           <!--   ================= SUSPENSION BOX (HIDDEN BY DEFAULT) =================   -->
@@ -654,9 +780,9 @@
                                       <span class="req">*</span>
                                     </label>
                                     <select class="hrmis-input js-other-select"
-                        name="hrmis_designation"
+                        name="frontend_onleave_designation_id"
                         data-enable-search="1"
-                        data-other-name="hrmis_designation_other_name"
+                        data-other-name="frontend_onleave_designation_other_name"
                         required="required">
                                       <option value="" disabled="disabled" hidden="hidden"
                           t-att-selected="not (req.hrmis_designation or current_employee.hrmis_designation)">
@@ -694,7 +820,7 @@
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input"
                         type="text"
-                        name="hrmis_designation_other_name"
+                        name="frontend_onleave_designation_other_name"
                         placeholder="Enter Designation"/>
                                     </div>
                                   </div>
@@ -941,258 +1067,6 @@
                                     <label>Ending Date</label>
                                     <input type="date" class="hrmis-input" name="frontend_eol_end" />
                                   </div>
-                                  <!--  District  -->
-                                  <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label> Substantive Posting District
-                                      <span class="req">*</span>
-                                    </label>
-                                    <select class="hrmis-input js-hrmis-district js-current-district" name="district_id"
-                                  required="required">
-                                      <option value="" disabled="disabled" hidden="hidden"
-                                    t-att-selected="not (req.district_id or current_employee.district_id)">
-                                    Select District </option>
-                                      <t t-foreach="districts" t-as="d">
-                                        <option t-att-value="d.id"
-                                      t-att-selected="(req.district_id and req.district_id.id == d.id) or (current_employee.district_id and current_employee.district_id.id == d.id)">
-                                          <t t-esc="d.name" />
-                                        </option>
-                                      </t>
-                                    </select>
-                                    <div style="font-size:12px; color:#888; margin-top:4px;">Select Karachi if you are from Secondary/Tertiary facility, otherwise select Karachi East, West, Etc</div>
-                                  </div>
-                                  <!--  Facility  -->
-                                  <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label> Substantive Posting Facility
-                                      <span class="req">*</span>
-                                    </label>
-                                    <select class="hrmis-input js-current-facility js-other-select"
-                                  name="facility_id" data-enable-search="1"
-                                  data-other-name="facility_other_name" required="required">
-                                      <option value="" selected="selected">Select Facility</option>
-                                      <t t-foreach="facilities" t-as="f">
-                                        <option t-att-value="f.id"
-                                      t-att-data-district-id="f.district_id.id if f.district_id else ''"
-                                      t-att-selected="(req.facility_id and req.facility_id.id == f.id) or (current_employee.facility_id and current_employee.facility_id.id == f.id)">
-                                          <t t-esc="f.name" />
-                                        </option>
-                                      </t>
-                                      <option value="__other__" data-district-id="">Other</option>
-                                    </select>
-                                    <div class="js-other-wrap js-current-facility-other-wrap"
-                                  style="display:none; margin-top:6px;">
-                                      <input
-                                    class="hrmis-input js-other-input js-current-facility-other"
-                                    type="text" name="facility_other_name"
-                                    placeholder="Enter Facility Name" />
-                                    </div>
-                                  </div>
-                                  <!--   BPS   -->
-                                  <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label> BPS
-                                      <span class="req">*</span>
-                                    </label>
-                                    <input class="hrmis-input js-hrmis-bps"
-                                      type="number" min="1" max="22"
-                                      name="hrmis_bps" required="required"
-                                      t-att-value="req.hrmis_bps or current_employee.hrmis_bps or ''" />
-                                  </div>
-                                  <!--   Designation   -->
-                                  <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label> Designation
-                                      <span class="req">*</span>
-                                    </label>
-                                    <select class="hrmis-input js-other-select"
-                                        name="hrmis_designation"
-                                        data-enable-search="1"
-                                        data-other-name="hrmis_designation_other_name"
-                                        required="required">
-                                      <option value="" disabled="disabled" hidden="hidden"
-                                          t-att-selected="not (req.hrmis_designation or current_employee.hrmis_designation)">
-                                    Select Designation
-                                  </option>
-                                      <t t-foreach="designations_unique" t-as="des">
-                                        <!-- BPS comes from hrmis.designation.post_BPS -->
-                                        <t t-set="des_bps"
-                                      t-value="des.post_BPS if 'post_BPS' in des._fields and des.post_BPS else ''" />
-                                        <t t-set="des_fac_id" t-value="''" />
-                                        <t t-if="'facility_id' in des._fields and des.facility_id">
-                                          <t t-set="des_fac_id" t-value="des.facility_id.id" />
-                                    </t>
-                                        <option t-att-value="des.id"
-                                            t-att-data-bps="des.post_BPS or ''"
-                                            t-att-data-facility-id="des_fac_id"
-                                            t-att-selected="(req.hrmis_designation and req.hrmis_designation.id == des.id) or (current_employee.hrmis_designation and current_employee.hrmis_designation.id == des.id)">
-                                          <t t-esc="des.name" />
-                                        </option>
-                                      </t>
-                                      <option value="__other__">Other</option>
-                                    </select>
-                                    <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input"
-                                        type="text"
-                                        name="hrmis_designation_other_name"
-                                        placeholder="Enter Designation" />
-                                    </div>
-                                  </div>
-                                  <!--  Current Posting Start Month  -->
-                                  <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label> Posting Start (Month/Year)
-                                      <span class="req">*</span>
-                                    </label>
-                                    <t t-set="cps_val" t-value="''" />
-                                    <t t-if="req and ('current_posting_start' in req._fields)">
-                                      <t t-set="cps_val" t-value="req.current_posting_start or ''" />
-                                </t>
-                                    <input class="hrmis-input js-current-post-start" type="month"
-                                  name="current_posting_start" required="required"
-                                  t-att-value="cps_val" />
-                                  </div>
-                                  <!--  Allowed To Work Checkbox  -->
-                                  <div class="hrmis-field" style="grid-column: span 6; display: flex">
-                                    <div
-                                  style="display:flex; align-items:center; justify-content:center; margin-top:10px; gap: 12px">
-                                      <!--  <input type="checkbox"
-                          class="form-check-input js-allowed-to-work-toggle"
-                          data-target="#allowed_to_work_box"/>  -->
-                                      <input type="checkbox" name="allowed_to_work" value="1"
-                                    class="form-check-input js-allowed-to-work-toggle" id="allowed_to_work_checkbox"
-                                    data-target="#allowed_to_work_box" />
-                                      <label for="allowed_to_work_checkbox" style="margin:0; font-weight:600; gap: 12px" >Allowed to Work</label>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <!--  Current Posting  -->
-                          <div id="current_posting_box" class="js-status-box"
-                        data-status="currently_posted" style="display:none;">
-                            <div class="hrmis-leave-row-wrap d-flex align-items-stretch"
-                          style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
-                              <div class="hrmis-card p-3"
-                            style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
-                                <div
-                              style="font-weight:800; font-size:18px; margin-bottom:3px; border-bottom: 1px solid black;">
-                              Substantive Posting </div>
-                                <div class="hrmis-form__grid pt-3 pb-2"
-                              style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
-                                  <!--  District  -->
-                                  <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label> Substantive Posting District
-                                      <span class="req">*</span>
-                                    </label>
-                                    <select class="hrmis-input js-hrmis-district js-current-district" name="district_id"
-                                  required="required">
-                                      <option value="" disabled="disabled" hidden="hidden"
-                                    t-att-selected="not (req.district_id or current_employee.district_id)">
-                                    Select District </option>
-                                      <t t-foreach="districts" t-as="d">
-                                        <option t-att-value="d.id"
-                                      t-att-selected="(req.district_id and req.district_id.id == d.id) or (current_employee.district_id and current_employee.district_id.id == d.id)">
-                                          <t t-esc="d.name" />
-                                        </option>
-                                      </t>
-                                    </select>
-                                    <div style="font-size:12px; color:#888; margin-top:4px;">Select Karachi if you are from Secondary/Tertiary facility, otherwise select Karachi East, West, Etc</div>
-                                  </div>
-                                  <!--  Facility  -->
-                                  <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label> Substantive Posting Facility
-                                      <span class="req">*</span>
-                                    </label>
-                                    <select class="hrmis-input js-hrmis-facility js-current-facility js-other-select"
-                                  name="posting_facility_id[]" data-enable-search="1"
-                                  data-other-name="facility_other_name" required="required">
-                                      <option value="" selected="selected">Select Facility</option>
-                                      <t t-foreach="facilities" t-as="f">
-                                        <option t-att-value="f.id"
-                                      t-att-data-district-id="f.district_id.id if f.district_id else ''"
-                                      t-att-selected="(req.facility_id and req.facility_id.id == f.id) or (current_employee.facility_id and current_employee.facility_id.id == f.id)">
-                                          <t t-esc="f.name" />
-                                        </option>
-                                      </t>
-                                      <option value="__other__" data-district-id="">Other</option>
-                                    </select>
-                                    <div class="js-other-wrap js-current-facility-other-wrap"
-                                  style="display:none; margin-top:6px;">
-                                      <input
-                                    class="hrmis-input js-other-input js-current-facility-other"
-                                    type="text" name="facility_other_name"
-                                    placeholder="Enter Facility Name" />
-                                    </div>
-                                  </div>
-                                  <!--   BPS   -->
-                                  <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label> BPS
-                                      <span class="req">*</span>
-                                    </label>
-                                    <input class="hrmis-input js-hrmis-bps"
-                                      type="number" min="1" max="22"
-                                      name="hrmis_bps" required="required"
-                                      t-att-value="req.hrmis_bps or current_employee.hrmis_bps or ''" />
-                                  </div>
-                                  <!--   Designation   -->
-                                  <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label> Designation
-                                      <span class="req">*</span>
-                                    </label>
-                                    <select class="hrmis-input js-other-select"
-                                        name="hrmis_designation"
-                                        data-enable-search="1"
-                                        data-other-name="hrmis_designation_other_name"
-                                        required="required">
-                                      <option value="" disabled="disabled" hidden="hidden"
-                                          t-att-selected="not (req.hrmis_designation or current_employee.hrmis_designation)">
-                                    Select Designation
-                                  </option>
-                                      <t t-foreach="designations_unique" t-as="des">
-                                        <t t-set="des_fac_id" t-value="''" />
-                                        <t t-if="'facility_id' in des._fields and des.facility_id">
-                                          <t t-set="des_fac_id" t-value="des.facility_id.id" />
-                                    </t>
-                                        <option t-att-value="des.id"
-                                            t-att-data-bps="des.post_BPS or ''"
-                                            t-data-test-xyz="abc"
-                                            t-att-data-facility-id="des_fac_id"
-                                            t-att-selected="(req.hrmis_designation and req.hrmis_designation.id == des.id) or (current_employee.hrmis_designation and current_employee.hrmis_designation.id == des.id)">
-                                          <t t-esc="des.name" />
-                                        </option>
-                                      </t>
-                                      <option value="__other__">Other</option>
-                                    </select>
-                                    <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input"
-                                        type="text"
-                                        name="hrmis_designation_other_name"
-                                        placeholder="Enter Designation" />
-                                    </div>
-                                  </div>
-                                  <!--  Current Posting Start Month  -->
-                                  <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label> Start (Month/Year)
-                                      <span class="req">*</span>
-                                    </label>
-                                    <t t-set="cps_val" t-value="''" />
-                                    <t t-if="req and ('current_posting_start' in req._fields)">
-                                      <t t-set="cps_val" t-value="req.current_posting_start or ''" />
-                                </t>
-                                    <input class="hrmis-input js-current-post-start" type="month"
-                                  name="current_posting_start" required="required"
-                                  t-att-value="cps_val" />
-                                  </div>
-                                  <!--  Allowed To Work Checkbox  -->
-                                  <div class="hrmis-field" style="grid-column: span 6; display: flex">
-                                    <div
-                                  style="display:flex; align-items:center; justify-content:center; margin-top:10px; gap: 12px">
-                                      <!--  <input type="checkbox"
-                          class="form-check-input js-allowed-to-work-toggle"
-                          data-target="#allowed_to_work_box"/>  -->
-                                      <input type="checkbox" name="allowed_to_work" value="1"
-                                    class="form-check-input js-allowed-to-work-toggle" id="allowed_to_work_checkbox"
-                                    data-target="#allowed_to_work_box" />
-                                      <label for="allowed_to_work_checkbox" style="margin:0; font-weight:600; gap: 12px" >Allowed to Work</label>
-                                    </div>
-                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -1310,9 +1184,9 @@
                                       <span class="req">*</span>
                                     </label>
                                     <select class="hrmis-input js-other-select"
-                                        name="hrmis_designation"
+                                        name="frontend_reported_designation_id"
                                         data-enable-search="1"
-                                        data-other-name="hrmis_designation_other_name"
+                                        data-other-name="frontend_reported_designation_other_name"
                                         required="required">
                                       <option value="" disabled="disabled" hidden="hidden"
                                           t-att-selected="not (req.hrmis_designation or current_employee.hrmis_designation)">
@@ -1331,7 +1205,7 @@
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input"
                                         type="text"
-                                        name="hrmis_designation_other_name"
+                                        name="frontend_reported_designation_other_name"
                                         placeholder="Enter Designation"/>
                                     </div>
                                   </div>
@@ -2237,26 +2111,69 @@
                       </div>
                     </div>
                   </div>
+                  <!--   ===================== Tab Actions =====================   -->
+                  <!-- Keep a single actions row, but switch Next/Submit based on active tab -->
+                  <style>
+                    .hrmis-tab-actions__switch { display: none; }
+                    #hrmis_pr_employee_info.active ~ .hrmis-tab-actions .hrmis-tab-actions__next--employee { display: inline-flex; }
+                    #hrmis_pr_current_posting.active ~ .hrmis-tab-actions .hrmis-tab-actions__next--current { display: inline-flex; }
+                    #hrmis_pr_posting_history.active ~ .hrmis-tab-actions .hrmis-tab-actions__next--posting { display: inline-flex; }
+                    #hrmis_pr_qualification_history.active ~ .hrmis-tab-actions .hrmis-tab-actions__next--qualification { display: inline-flex; }
+                    #hrmis_pr_promotion_history.active ~ .hrmis-tab-actions .hrmis-tab-actions__next--promotion { display: inline-flex; }
+                    #hrmis_pr_leave_history.active ~ .hrmis-tab-actions .hrmis-tab-actions__submit { display: inline-flex; }
+                  </style>
+                  <t t-if="req.state == 'draft'">
+                    <div class="hrmis-form__actions hrmis-tab-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
+                      <!-- Save Draft (unchanged) -->
+                      <button class="hrmis-btn hrmis-btn--secondary hrmis-btn--lg" type="button"
+                              id="btn_save_draft">
+                        Save
+                      </button>
+
+                      <!-- Next buttons (one per tab) -->
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__next--employee"
+                              type="button"
+                              onclick="document.getElementById('hrmis_pr_tab_current_posting')?.click();">
+                        Next
+                      </button>
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__next--current"
+                              type="button"
+                              onclick="document.getElementById('hrmis_pr_tab_posting_history')?.click();">
+                        Next
+                      </button>
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__next--posting"
+                              type="button"
+                              onclick="document.getElementById('hrmis_pr_tab_qualification')?.click();">
+                        Next
+                      </button>
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__next--qualification"
+                              type="button"
+                              onclick="document.getElementById('hrmis_pr_tab_promotion')?.click();">
+                        Next
+                      </button>
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__next--promotion"
+                              type="button"
+                              onclick="document.getElementById('hrmis_pr_tab_leave')?.click();">
+                        Next
+                      </button>
+
+                      <!-- Submit (only on last tab) -->
+                      <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-tab-actions__switch hrmis-tab-actions__submit"
+                              type="button"
+                              id="btn_open_confirm_modal">
+                        Submit Request
+                      </button>
+                    </div>
+                    <div id="draft_save_msg" class="hrmis-help" style="margin-top:10px; display:none;"></div>
+                  </t>
                 </div>
               </div>
               <!--   /.hrmis-form__grid   -->
-              <t t-if="req.state == 'draft'">
-                <div class="hrmis-form__actions" style="display:flex; gap:10px; flex-wrap:wrap;">
-                  <!-- NEW: Save Draft -->
-                  <button class="hrmis-btn hrmis-btn--secondary hrmis-btn--lg" type="button"
-                  id="btn_save_draft">
-                  Save
-                </button>
-                  <!-- Existing: Submit Request (UNCHANGED) -->
-                  <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg" type="button"
-                  id="btn_open_confirm_modal">
-                  Submit Request
-                </button>
-                </div>
-                <!-- NEW: small inline message area (optional but nice) -->
-                <div id="draft_save_msg" class="hrmis-help" style="margin-top:10px; display:none;"></div>
-              </t>
             </form>
+            <!-- Load picker auto-open + label caps (separate file) -->
+            <script type="text/javascript" src="/hr_holidays_updates/static/src/js/hrmis_picker_autopen.js"></script>
+            <!-- Leaves taken auto-calc aligned with Sunday-only policy -->
+            <script type="text/javascript" src="/hr_holidays_updates/static/src/js/hrmis_leaves_taken_policy.js"></script>
           </div>
           <!--   /.hrmis-panel__body   -->
         </div>

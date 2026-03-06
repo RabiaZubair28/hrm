@@ -78,87 +78,74 @@ class HrLeave(models.Model):
 
     def _hrmis_sandwich_weekend_days(self, day_from: date, day_to: date) -> int:
         """
-        "Sandwich rule" for weekends:
+        "Sandwich rule" for weekly off days (HRMIS):
 
-        Count Sat/Sun that fall strictly between the first and last weekday (Mon-Fri)
-        inside the requested period. This means weekend days at the edges of the
-        request are NOT counted, only the weekend(s) "in the middle".
+        - Only **Sunday** is off.
+        - Count Sunday(s) that fall strictly between the first and last working day
+          (Mon–Sat) inside the requested period.
+
+        This means off days at the edges of the request are NOT counted; only the
+        Sunday(s) "in the middle" are counted (sandwich).
         """
         if not day_from or not day_to or day_to <= day_from:
             return 0
 
-        # Find first/last weekday in the range (Mon-Fri).
+        # Find first/last working day in the range (Mon–Sat). Sunday is off.
         cur = day_from
-        first_weekday = None
+        first_workday = None
         while cur <= day_to:
-            if cur.weekday() < 5:
-                first_weekday = cur
+            if cur.weekday() != 6:
+                first_workday = cur
                 break
             cur = cur + relativedelta(days=1)
 
         cur = day_to
-        last_weekday = None
+        last_workday = None
         while cur >= day_from:
-            if cur.weekday() < 5:
-                last_weekday = cur
+            if cur.weekday() != 6:
+                last_workday = cur
                 break
             cur = cur - relativedelta(days=1)
 
-        if not first_weekday or not last_weekday or first_weekday >= last_weekday:
+        if not first_workday or not last_workday or first_workday >= last_workday:
             return 0
 
-        # Count weekend days strictly between first_weekday and last_weekday.
+        # Count Sunday(s) strictly between first_workday and last_workday.
         total = 0
-        cur = first_weekday + relativedelta(days=1)
-        while cur < last_weekday:
-            if cur.weekday() >= 5:
+        cur = first_workday + relativedelta(days=1)
+        while cur < last_workday:
+            if cur.weekday() == 6:
                 total += 1
             cur = cur + relativedelta(days=1)
         return int(total)
 
     def _hrmis_effective_days(self, employee, day_from: date, day_to: date) -> float:
         """
-        Effective leave days, excluding weekends/holidays where possible,
-        but applying the "sandwich rule" for weekends.
+        Effective leave days for HRMIS:
 
-        Uses Odoo's calendar-based computation when available, so public holidays
-        and non-working days are excluded. Falls back to counting Mon-Fri.
+        - Only **Sunday** is considered weekly off.
+        - Apply the "sandwich rule" for Sunday(s) that fall strictly between
+          working days (Mon–Sat) in the requested range.
+
+        Note: we intentionally do NOT treat Saturday as off, even if the resource
+        calendar marks it as non-working.
         """
         if not employee or not day_from or not day_to:
             return 0.0
         if day_to < day_from:
             return 0.0
 
-        dt_from = datetime.combine(day_from, time.min)
-        dt_to = datetime.combine(day_to, time.max)
+        # Base days: count all days except Sunday (Mon–Sat are working days).
+        cur = day_from
+        total = 0
+        while cur <= day_to:
+            if cur.weekday() != 6:
+                total += 1
+            cur = cur + relativedelta(days=1)
+        base_days = float(total)
 
-        base_days = 0.0
-
-        get_days = getattr(self, "_get_number_of_days", None)
-        if callable(get_days):
-            try:
-                days = get_days(dt_from, dt_to, employee.id)
-                base_days = float(days or 0.0)
-            except TypeError:
-                try:
-                    days = get_days(dt_from, dt_to, employee)
-                    base_days = float(days or 0.0)
-                except Exception:
-                    pass
-            except Exception:
-                pass
-
-        if not base_days:
-            cur = day_from
-            total = 0
-            while cur <= day_to:
-                if cur.weekday() < 5:
-                    total += 1
-                cur = cur + relativedelta(days=1)
-            base_days = float(total)
-
-        # Sandwich rule: if the leave spans across a weekend (Sat/Sun) that is
-        # strictly between weekdays inside the request, count those weekend days too.
+        # Sandwich rule: if the leave spans across Sunday(s) that are strictly
+        # between working days inside the request, count those Sunday day(s) too.
         sandwich = 0
         # Avoid applying the sandwich rule to partial-day durations.
         if abs(base_days - round(base_days)) < 1e-6:

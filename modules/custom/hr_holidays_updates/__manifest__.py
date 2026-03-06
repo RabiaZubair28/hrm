@@ -29,12 +29,14 @@
     'assets': {
         'web.assets_frontend': [
             'hr_holidays_updates/static/src/scss/hrmis_leave_frontend.scss',
+            'hr_holidays_updates/static/src/js/hrmis_page_loader.js',
             'hr_holidays_updates/static/src/js/hrmis_leave_frontend.js',
             'hr_holidays_updates/static/src/js/hrmis_nav_drawer.js',
             'hr_holidays_updates/static/src/js/hrmis_notifications.js',
             'hr_holidays_updates/static/src/js/hrmis_pending_badges.js',
             'hr_holidays_updates/static/src/js/hrmis_leave_filters.js',
             'hr_holidays_updates/static/src/js/hrmis_profile_draft_save.js',
+            'hr_holidays_updates/static/src/js/hrmis_picker_autopen.js',
             
             # 'hr_holidays_updates/static/src/js/hrmis_profile_request_facility_filter.js',
             

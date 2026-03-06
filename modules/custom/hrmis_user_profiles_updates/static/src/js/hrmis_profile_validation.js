@@ -800,6 +800,70 @@ function _validateJoiningCommission(form) {
 }
 
 /* ---------------------------------------------------------
+ * DOB vs Commission year rule
+ *  - Commission is month-proxy (YYYY-MM) stored as YYYY-MM-01
+ *  - Requirement: Commission year cannot be before Date of Birth year
+ * --------------------------------------------------------- */
+function _validateDobCommission(form) {
+  const dob = _qs(form, '[name="birthday"]'); // date YYYY-MM-DD
+  const commission = _qs(form, '[name="hrmis_commission_date"]'); // hidden date YYYY-MM-DD
+  if (!dob || !commission) return true;
+
+  const commissionUI = commission._hrmisMonthProxy || null;
+  const cErrTarget = commissionUI || commission;
+
+  _clearError(cErrTarget);
+
+  const dobVal = (dob.value || "").trim();
+  const cv = (commission.value || "").trim();
+  if (_isEmpty(dobVal) || _isEmpty(cv)) return true;
+
+  // Commission is month-granular; enforce month >= DOB month.
+  const minMonth = dobVal.length >= 7 ? dobVal.slice(0, 7) : "";
+  const commMonth = cv.length >= 7 ? cv.slice(0, 7) : "";
+  if (!_isValidMonth(minMonth) || !_isValidMonth(commMonth)) return true;
+
+  if (_monthToIndex(commMonth) < _monthToIndex(minMonth)) {
+    _showError(
+      cErrTarget,
+      "Commission month cannot be before Date of Birth",
+    );
+    return false;
+  }
+  return true;
+}
+
+function _syncCommissionMinFromDob(form) {
+  const dob = _qs(form, '[name="birthday"]'); // date YYYY-MM-DD
+  const commission = _qs(form, '[name="hrmis_commission_date"]'); // hidden date YYYY-MM-DD
+  if (!dob || !commission) return;
+
+  const dobVal = (dob.value || "").trim();
+  const minMonth = dobVal.length >= 7 ? dobVal.slice(0, 7) : "";
+
+  const commissionUI = commission._hrmisMonthProxy || null;
+  const cUi = commissionUI || null;
+
+  if (_isValidMonth(minMonth)) {
+    if (cUi) cUi.setAttribute("min", minMonth);
+    commission.setAttribute("min", `${minMonth}-01`);
+  } else {
+    if (cUi) cUi.removeAttribute("min");
+    commission.removeAttribute("min");
+    return;
+  }
+
+  // Clamp existing value into min range.
+  const curMonth =
+    (cUi && (cUi.value || "").trim()) ||
+    ((commission.value || "").trim().slice(0, 7) || "");
+  if (_isValidMonth(curMonth) && _monthToIndex(curMonth) < _monthToIndex(minMonth)) {
+    if (cUi) cUi.value = minMonth;
+    commission.value = `${minMonth}-01`;
+  }
+}
+
+/* ---------------------------------------------------------
  * CNIC strict formatter: #####-#######-#
  * --------------------------------------------------------- */
 function _initCNIC(form) {
@@ -1693,6 +1757,15 @@ function _initProfileDatePickers(form) {
   const dob = _qs(form, '[name="birthday"]');
   if (dob) {
     _ensureNativeDateInput(dob);
+    // Keep Commission-vs-DOB validation in sync.
+    dob.addEventListener("change", () => {
+      _syncCommissionMinFromDob(form);
+      _validateDobCommission(form);
+    });
+    dob.addEventListener("blur", () => {
+      _syncCommissionMinFromDob(form);
+      _validateDobCommission(form);
+    });
   }
 }
 
@@ -2828,6 +2901,7 @@ function _initHRMISValidations() {
       toggle();
       _validateCurrentPostingStart(form);
       _validateJoiningCommission(form);
+      _validateDobCommission(form);
       _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
       _syncPostingBpsConstraints(form);
     });
@@ -2845,6 +2919,9 @@ function _initHRMISValidations() {
     const syncMinMax = () => {
       const jmv = (joiningUI.value || "").trim(); // YYYY-MM
       const cmv = (commissionUI.value || "").trim(); // YYYY-MM
+
+      // DOB constraint: commission >= DOB month
+      _syncCommissionMinFromDob(form);
 
       commissionUI.setAttribute("max", _todayMonth());
       commissionInput.setAttribute("max", _todayLocalYmd());
@@ -2881,6 +2958,7 @@ function _initHRMISValidations() {
       }
 
       _validateJoiningCommission(form);
+      _validateDobCommission(form);
     };
 
     commissionUI.addEventListener("change", syncMinMax);
@@ -2977,6 +3055,7 @@ function _initHRMISValidations() {
 
     if (!_validateCurrentPostingStart(form)) hasError = true;
     if (!_validateJoiningCommission(form)) hasError = true;
+    if (!_validateDobCommission(form)) hasError = true;
 
     if (_validateRepeatables(form)) hasError = true;
     if (form._hrmisValidateCnicFiles && !form._hrmisValidateCnicFiles())
