@@ -137,8 +137,12 @@ function _wireLeavesTakenPolicy() {
   const form = document.querySelector("#profile_update_form");
   if (!form) return;
 
-  // Run once on load.
+  // Always recalc on entry (safe + cheap).
   _recalcLeavesTakenPolicy(form);
+
+  // Prevent double-binding (BFCache/pageshow or repeated script eval).
+  if (form.dataset.hrmisLeavesTakenPolicyInit === "1") return;
+  form.dataset.hrmisLeavesTakenPolicyInit = "1";
 
   function scheduleRecalc() {
     // Let other handlers (existing profile_validation.js) run first.
@@ -180,5 +184,9 @@ if (document.readyState === "loading") {
 }
 
 // BFCache restore
-window.addEventListener("pageshow", () => _wireLeavesTakenPolicy());
+window.addEventListener("pageshow", () => {
+  const form = document.querySelector("#profile_update_form");
+  if (!form) return;
+  _recalcLeavesTakenPolicy(form);
+});
 

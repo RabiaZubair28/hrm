@@ -1757,6 +1757,9 @@ function _initProfileDatePickers(form) {
   const dob = _qs(form, '[name="birthday"]');
   if (dob) {
     _ensureNativeDateInput(dob);
+    // Avoid double-binding on BFCache / repeated init.
+    if (dob.dataset.hrmisDobCommissionBound === "1") return;
+    dob.dataset.hrmisDobCommissionBound = "1";
     // Keep Commission-vs-DOB validation in sync.
     dob.addEventListener("change", () => {
       _syncCommissionMinFromDob(form);
