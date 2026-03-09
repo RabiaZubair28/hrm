@@ -64,6 +64,7 @@ function _normInt(v) {
  * Error helpers (combobox-safe)
  * --------------------------------------------------------- */
 function _visualErrorTarget(el) {
+  if (el && el._hrmisMonthProxy) return el._hrmisMonthProxy;
   // If this is a hidden select that has a visible combobox input, use that.
   if (el && el.tagName === "SELECT" && el._hrmisComboboxInput)
     return el._hrmisComboboxInput;
@@ -111,7 +112,7 @@ function _syncPostingRowDateConstraints(form, row) {
   if (!startInp || !endInp) return;
 
   const jm = _joiningMonthValue(form); // YYYY-MM
-  const cm = (_qs(form, '[name="current_posting_start"]')?.value || "").trim(); // YYYY-MM
+  const cm = (_getRelevantCurrentPostingStart(form)?.value || "").trim(); // YYYY-MM
 
   // Upper bound is the month BEFORE current posting start (strictly before cm)
   const upper = _isValidMonth(cm) ? _prevMonth(cm) : "";
@@ -850,10 +851,164 @@ function _cloneFromTemplate(tplSelector, containerSelector) {
 /* ---------------------------------------------------------
  * Current Posting Start validation
  * --------------------------------------------------------- */
+function _isExplicitlyHiddenForSubmit(el, stopAt = null) {
+  let cur = el;
+  while (cur && cur !== stopAt) {
+    if (cur.hidden) return true;
+    if (cur.classList?.contains("d-none")) return true;
+    if (cur.style?.display === "none") return true;
+    cur = cur.parentElement;
+  }
+  return false;
+}
+
+function _hasRequiredStarLabel(form, el) {
+  let cur = el;
+  while (cur && cur !== form) {
+    if (cur.classList?.contains("hrmis-field")) {
+      const hasVisibleStar = _qsa(cur, "label .req").some(
+        (star) => !_isExplicitlyHiddenForSubmit(star, cur),
+      );
+      if (hasVisibleStar) return true;
+    }
+    cur = cur.parentElement;
+  }
+  return false;
+}
+
+function _isSubmitRelevantField(form, input) {
+  if (!input || input.disabled) return false;
+  if (_inputTypeLower(input) === "hidden") return false;
+
+  const target = _visualErrorTarget(input) || input;
+  if (_isExplicitlyHiddenForSubmit(target, form)) return false;
+
+  return (
+    _hasRequiredStarLabel(form, target) || _hasRequiredStarLabel(form, input)
+  );
+}
+
+function _isEmptyFieldValue(form, input) {
+  if (!input) return true;
+
+  const type = _inputTypeLower(input);
+  if (type === "file") {
+    return !(input.files && input.files.length) && _isEmpty(input.value);
+  }
+  if (type === "checkbox") return !input.checked;
+  if (type === "radio") {
+    const name = (input.name || "").trim();
+    if (!name) return !input.checked;
+    const escapedName =
+      window.CSS && CSS.escape ? CSS.escape(name) : name.replace(/"/g, '\\"');
+    return !_qsa(
+      form,
+      `input[type="radio"][name="${escapedName}"]`,
+    ).some((radio) => radio.checked);
+  }
+  return _isEmpty(input.value);
+}
+
+function _getRelevantCurrentPostingStart(form) {
+  const inputs = _qsa(form, '[name="current_posting_start"]');
+  return (
+    inputs.find(
+      (input) =>
+        !input.disabled &&
+        !_isExplicitlyHiddenForSubmit(_visualErrorTarget(input) || input, form),
+    ) ||
+    inputs.find((input) => !input.disabled) ||
+    null
+  );
+}
+
+function _setSubmitValidationWarning(form, message) {
+  const msgEl =
+    document.getElementById("draft_save_msg") || _qs(form, "#draft_save_msg");
+  if (!msgEl) return;
+
+  if (_isEmpty(message)) {
+    msgEl.style.display = "none";
+    msgEl.textContent = "";
+    return;
+  }
+
+  msgEl.style.display = "block";
+  msgEl.style.padding = "10px 12px";
+  msgEl.style.borderRadius = "10px";
+  msgEl.style.fontWeight = "600";
+  msgEl.style.marginTop = "10px";
+  msgEl.style.background = "#fff1f2";
+  msgEl.style.border = "1px solid #fecdd3";
+  msgEl.style.color = "#9f1239";
+  msgEl.textContent = message;
+}
+
+function _runSubmitValidation(form) {
+  let hasError = false;
+  let firstVisibleError = null;
+
+  _setSubmitValidationWarning(form, "");
+  _syncPmdcRequiredByCadre(form);
+
+  const allInputs = _qsa(form, "input, select, textarea").filter(
+    (input) => input && !input.disabled && _inputTypeLower(input) !== "hidden",
+  );
+
+  allInputs.forEach((input) => _clearError(input));
+
+  allInputs.forEach((input) => {
+    const target = _visualErrorTarget(input) || input;
+    const isExplicitlyHidden = _isExplicitlyHiddenForSubmit(target, form);
+    const isRequiredField = _isSubmitRelevantField(form, input);
+
+    if (isRequiredField && _isEmptyFieldValue(form, input)) {
+      _showError(input, "This field is required");
+      hasError = true;
+    } else if (!isExplicitlyHidden && input.willValidate && !input.checkValidity()) {
+      _showError(input, input.validationMessage || "Invalid value");
+      hasError = true;
+    }
+
+    if (
+      !firstVisibleError &&
+      target &&
+      !_isExplicitlyHiddenForSubmit(target, form) &&
+      (target.offsetWidth || target.offsetHeight || target.getClientRects().length)
+    ) {
+      const hasFieldError = !!target.parentElement?.querySelector?.(".hrmis-error");
+      if (hasFieldError) firstVisibleError = target;
+    }
+  });
+
+  if (!_validateCurrentPostingStart(form)) hasError = true;
+  if (!_validateJoiningCommission(form)) hasError = true;
+  if (!_validateDobCommission(form)) hasError = true;
+  if (_validateRepeatables(form)) hasError = true;
+  if (form._hrmisValidateCnicFiles && !form._hrmisValidateCnicFiles())
+    hasError = true;
+
+  if (hasError) {
+    _setSubmitValidationWarning(form, "There are some missing / incorrect fields");
+    if (firstVisibleError) {
+      firstVisibleError.scrollIntoView({ behavior: "smooth", block: "center" });
+      try {
+        firstVisibleError.focus({ preventScroll: true });
+      } catch {
+        firstVisibleError.focus?.();
+      }
+    }
+    return false;
+  }
+
+  _setSubmitValidationWarning(form, "");
+  return true;
+}
+
 function _validateCurrentPostingStart(form) {
   const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date
-  const currentStart = _qs(form, '[name="current_posting_start"]'); // YYYY-MM
-  if (!joining || !currentStart) return true;
+  const currentStart = _getRelevantCurrentPostingStart(form); // YYYY-MM
+  if (!joining || !currentStart || currentStart.disabled) return true;
 
   _clearError(currentStart);
 
@@ -1941,11 +2096,13 @@ function _initPostingPrevChain(form) {
 
   // resync bounds whenever relevant inputs change
   const joining = _qs(form, '[name="hrmis_joining_date"]');
-  const currentStart = _qs(form, '[name="current_posting_start"]');
+  const currentStarts = _qsa(form, '[name="current_posting_start"]');
   const bps = _qs(form, '[name="hrmis_bps"]');
 
   joining?.addEventListener("change", resync);
-  currentStart?.addEventListener("change", resync);
+  currentStarts.forEach((currentStart) => {
+    currentStart?.addEventListener("change", resync);
+  });
   bps?.addEventListener("input", resync);
   bps?.addEventListener("change", resync);
 
@@ -2443,7 +2600,8 @@ function _validateRepeatables(form) {
 
   // previous posting strict chain (only when jm != cm)
   const joiningVal = _qs(form, '[name="hrmis_joining_date"]')?.value || "";
-  const currentVal = _qs(form, '[name="current_posting_start"]')?.value || "";
+  const currentPostingStart = _getRelevantCurrentPostingStart(form);
+  const currentVal = currentPostingStart?.value || "";
 
   const jm = joiningVal ? joiningVal.slice(0, 7) : "";
   const cm = (currentVal || "").trim();
@@ -2452,7 +2610,7 @@ function _validateRepeatables(form) {
   if (_isValidMonth(jm) && _isValidMonth(cm)) {
     if (_monthToIndex(cm) < _monthToIndex(jm)) {
       _showError(
-        _qs(form, '[name="current_posting_start"]'),
+        currentPostingStart,
         "Current Posting Start cannot be before Joining Month",
       );
       hasError = true;
@@ -3111,63 +3269,8 @@ function _initHRMISValidations() {
     return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
   }
 
-  form.addEventListener("submit", function (e) {
-    let hasError = false;
-
-    // Ensure conditional required flags are in sync right before validation
-    const needsPmdc = _syncPmdcRequiredByCadre(form);
-
-    if (needsPmdc) {
-      [
-        { name: "hrmis_pmdc_no", msg: "PMDC No. is required" },
-        { name: "hrmis_pmdc_issue_date", msg: "PMDC Issue Date is required" },
-        { name: "hrmis_pmdc_expiry_date", msg: "PMDC Expiry Date is required" },
-      ].forEach((f) => {
-        const inp = _qs(form, `[name="${f.name}"]`);
-        if (!inp || inp.disabled) return;
-        if (_isEmpty(inp.value)) {
-          _showError(inp, f.msg);
-          hasError = true;
-        }
-      });
-    }
-
-    // Validate all visible enabled required fields, including active Status box fields.
-    _qsa(form, "input[required], select[required], textarea[required]").forEach(
-      (input) => {
-        if (!input) return;
-        if (input.disabled) return;
-
-        const box = input.closest(".js-status-box");
-        if (box && (box.style.display === "none" || box.hidden)) return;
-
-        const wrap = input.closest("[style*='display: none'], .d-none");
-        if (wrap) return;
-
-        if (!_isActuallyVisible(input) && !input.closest(".js-status-box"))
-          return;
-
-        if (_isEmpty(input.value)) {
-          if (
-            input.name === "hrmis_joining_date" &&
-            joiningInput?._hrmisMonthProxy
-          ) {
-            _showError(joiningInput._hrmisMonthProxy, "This field is required");
-          } else if (
-            input.name === "hrmis_commission_date" &&
-            commissionInput?._hrmisMonthProxy
-          ) {
-            _showError(
-              commissionInput._hrmisMonthProxy,
-              "This field is required",
-            );
-          } else {
-            _showError(input, "This field is required");
-          }
-          hasError = true;
-        }
-      },
-    );
+  form._hrmisRunSubmitValidation = () => {
+    let hasError = !_runSubmitValidation(form);
 
     // DOB 18+
     const dobVal = _qs(form, '[name="birthday"]')?.value;
@@ -3182,19 +3285,19 @@ function _initHRMISValidations() {
           _qs(form, '[name="birthday"]'),
           "Employee must be at least 18 years old",
         );
+        _setSubmitValidationWarning(
+          form,
+          "There are some missing / incorrect fields",
+        );
         hasError = true;
       }
     }
 
-    if (!_validateCurrentPostingStart(form)) hasError = true;
-    if (!_validateJoiningCommission(form)) hasError = true;
-    if (!_validateDobCommission(form)) hasError = true;
+    return !hasError;
+  };
 
-    if (_validateRepeatables(form)) hasError = true;
-    if (form._hrmisValidateCnicFiles && !form._hrmisValidateCnicFiles())
-      hasError = true;
-
-    if (hasError) {
+  form.addEventListener("submit", function (e) {
+    if (!form._hrmisRunSubmitValidation()) {
       e.preventDefault();
       e.stopPropagation();
     }

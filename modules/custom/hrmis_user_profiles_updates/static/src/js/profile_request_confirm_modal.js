@@ -601,9 +601,12 @@ function _initConfirmModal() {
 
   openBtn.addEventListener("click", (ev) => {
     ev.preventDefault();
-    
 
-    if (!form.reportValidity()) {
+    const canOpen =
+      typeof form._hrmisRunSubmitValidation === "function"
+        ? form._hrmisRunSubmitValidation()
+        : form.reportValidity();
+    if (!canOpen) {
       console.log("[HRMIS ConfirmModal] form validation failed; not opening modal");
       return;
     }
@@ -616,7 +619,8 @@ function _initConfirmModal() {
     ev.preventDefault();
     console.log("[HRMIS ConfirmModal] confirm clicked -> submitting form");
     confirmBtn.disabled = true;
-    form.submit();
+    if (typeof form.requestSubmit === "function") form.requestSubmit();
+    else form.submit();
   });
 }
 
