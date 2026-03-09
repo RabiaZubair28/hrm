@@ -67,7 +67,30 @@ function _visualErrorTarget(el) {
   // If this is a hidden select that has a visible combobox input, use that.
   if (el && el.tagName === "SELECT" && el._hrmisComboboxInput)
     return el._hrmisComboboxInput;
+  if (
+    el &&
+    el._hrmisMonthProxy &&
+    (el.name === "hrmis_joining_date" || el.name === "hrmis_commission_date")
+  ) {
+    return el._hrmisMonthProxy;
+  }
   return el;
+}
+
+function _applyErrorStyle(target) {
+  if (!target) return;
+  target.classList.add("has-error");
+  target.style.border = "1px solid #d9534f";
+  target.style.borderColor = "#d9534f";
+  target.style.backgroundColor = "#fff5f5";
+}
+
+function _clearErrorStyle(target) {
+  if (!target) return;
+  target.classList.remove("has-error");
+  target.style.border = "";
+  target.style.borderColor = "";
+  target.style.backgroundColor = "";
 }
 
 function _showError(input, message) {
@@ -82,8 +105,7 @@ function _showError(input, message) {
   }
   error.textContent = message;
 
-  target.classList.add("has-error");
-  target.style.borderColor = "#dc3545";
+  _applyErrorStyle(target);
 
   // Also mark original element if different (e.g., select)
   if (target !== input && input) {
@@ -98,8 +120,7 @@ function _clearError(input) {
   const error = target.parentElement?.querySelector?.(".hrmis-error");
   if (error) error.remove();
 
-  target.classList.remove("has-error");
-  target.style.borderColor = "";
+  _clearErrorStyle(target);
 
   if (target !== input && input) {
     input.classList.remove("has-error");
@@ -3065,17 +3086,14 @@ function _initHRMISValidations() {
             input.name === "hrmis_joining_date" &&
             joiningInput?._hrmisMonthProxy
           ) {
-            _showError(joiningInput._hrmisMonthProxy, "This field is required");
+            _showError(joiningInput, "This field is mandatory");
           } else if (
             input.name === "hrmis_commission_date" &&
             commissionInput?._hrmisMonthProxy
           ) {
-            _showError(
-              commissionInput._hrmisMonthProxy,
-              "This field is required",
-            );
+            _showError(commissionInput, "This field is mandatory");
           } else {
-            _showError(input, "This field is required");
+            _showError(input, "This field is mandatory");
           }
           hasError = true;
         }

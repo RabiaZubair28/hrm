@@ -19,6 +19,14 @@ function _qsa(root, sel) {
 function _visualControlTarget(control) {
   if (control && control.tagName === "SELECT" && control._hrmisComboboxInput)
     return control._hrmisComboboxInput;
+  if (
+    control &&
+    control._hrmisMonthProxy &&
+    (control.name === "hrmis_joining_date" ||
+      control.name === "hrmis_commission_date")
+  ) {
+    return control._hrmisMonthProxy;
+  }
   return control;
 }
 
@@ -26,7 +34,11 @@ function _clearControlHighlight(control) {
   if (!control) return;
   const target = _visualControlTarget(control);
   target?.classList?.remove("has-error");
-  if (target) target.style.borderColor = "";
+  if (target) {
+    target.style.border = "";
+    target.style.borderColor = "";
+    target.style.backgroundColor = "";
+  }
   if (target !== control && control) control.classList.remove("has-error");
 }
 
@@ -34,7 +46,11 @@ function _markInvalidControl(control) {
   if (!control) return;
   const target = _visualControlTarget(control);
   target?.classList?.add("has-error");
-  if (target) target.style.borderColor = "#dc3545";
+  if (target) {
+    target.style.border = "1px solid #d9534f";
+    target.style.borderColor = "#d9534f";
+    target.style.backgroundColor = "#fff5f5";
+  }
   if (target !== control && control) control.classList.add("has-error");
 }
 
