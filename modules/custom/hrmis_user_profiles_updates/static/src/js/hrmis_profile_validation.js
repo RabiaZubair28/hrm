@@ -893,18 +893,25 @@ function _hasRequiredStarLabel(form, el) {
   return false;
 }
 
+function _isWithinRepeatableRow(input) {
+  return !!input?.closest?.(".hrmis-repeat-row");
+}
+
 function _isSubmitRelevantField(form, input) {
   if (!input || input.disabled) return false;
   if (_inputTypeLower(input) === "hidden") return false;
-  if (_inputTypeLower(input) === "file" && !input.required && _isFileFieldAlreadySatisfied(input))
+  if (_isWithinRepeatableRow(input)) return false;
+  if (
+    _inputTypeLower(input) === "file" &&
+    !input.required &&
+    _isFileFieldAlreadySatisfied(input)
+  )
     return false;
 
   const target = _visualErrorTarget(input) || input;
   if (_isExplicitlyHiddenForSubmit(target, form)) return false;
 
-  return (
-    _hasRequiredStarLabel(form, target) || _hasRequiredStarLabel(form, input)
-  );
+  return !!input.required;
 }
 
 function _isEmptyFieldValue(form, input) {

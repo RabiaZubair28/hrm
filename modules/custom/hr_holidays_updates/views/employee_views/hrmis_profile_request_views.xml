@@ -812,7 +812,7 @@ START (MONTH/YEAR)
 ALLOWED TO WORK DISTRICT
                                       <span class="req">*</span>
                                     </label>
-                                    <select class="hrmis-input js-hrmis-district js-current-district" name="allowed_district_id">
+                                    <select class="hrmis-input js-hrmis-district js-current-district" name="allowed_district_id" required="required">
                                       <option value="">Select District</option>
                                       <t t-foreach="districts" t-as="d">
                                             <option t-att-value="d.get('id')">
@@ -846,7 +846,7 @@ ALLOWED TO WORK DISTRICT
 DESIGNATION
                                       <span class="req">*</span>
                                     </label>
-                                    <select class="hrmis-input js-other-select" name="allowed_designation_id" data-enable-search="1" data-other-name="allowed_work_designation_other_name">
+                                    <select class="hrmis-input js-other-select" name="allowed_designation_id" data-enable-search="1" data-other-name="allowed_work_designation_other_name" required="required">
                                       <option value="">Select Designation</option>
                                       <t t-foreach="designations_unique" t-as="des">
                                         <t t-set="des_fac_id" t-value="''"/>
