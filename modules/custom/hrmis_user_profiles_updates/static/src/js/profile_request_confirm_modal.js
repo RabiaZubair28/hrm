@@ -16,6 +16,66 @@ function _qsa(root, sel) {
   return root ? Array.from(root.querySelectorAll(sel)) : [];
 }
 
+function _visualControlTarget(control) {
+  if (control && control.tagName === "SELECT" && control._hrmisComboboxInput)
+    return control._hrmisComboboxInput;
+  return control;
+}
+
+function _clearControlHighlight(control) {
+  if (!control) return;
+  const target = _visualControlTarget(control);
+  target?.classList?.remove("has-error");
+  if (target) target.style.borderColor = "";
+  if (target !== control && control) control.classList.remove("has-error");
+}
+
+function _markInvalidControl(control) {
+  if (!control) return;
+  const target = _visualControlTarget(control);
+  target?.classList?.add("has-error");
+  if (target) target.style.borderColor = "#dc3545";
+  if (target !== control && control) control.classList.add("has-error");
+}
+
+function _warningRefs(form) {
+  return {
+    warning:
+      _qs(form, "#profile_submit_warning") ||
+      _qs(document, "#profile_submit_warning"),
+  };
+}
+
+function _hideSubmitWarning(form) {
+  const { warning } = _warningRefs(form);
+  if (warning) warning.style.display = "none";
+}
+
+function _showSubmitWarning(form) {
+  const { warning } = _warningRefs(form);
+  if (!warning) return;
+  warning.style.display = "";
+  warning.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function _isHiddenStatusControl(control) {
+  const box = control?.closest?.(".js-status-box");
+  if (!box) return false;
+  const style = window.getComputedStyle(box);
+  return box.hidden || style.display === "none" || style.visibility === "hidden";
+}
+
+function _highlightInvalidFields(form) {
+  Array.from(form.elements || []).forEach((control) => {
+    if (!control || !control.matches?.("input, select, textarea")) return;
+    if (control.disabled || _isHiddenStatusControl(control)) return;
+
+    if (typeof control.checkValidity === "function" && !control.checkValidity()) {
+      _markInvalidControl(control);
+    }
+  });
+}
+
 function _getSelectedText(selectEl) {
   if (!selectEl) return "";
 
@@ -595,12 +655,34 @@ function _initConfirmModal() {
     if (ev.target === modalEl) _hideModal(modalEl);
   });
 
+  const clearWarningAndResolvedHighlight = (ev) => {
+    const control = ev.target;
+    if (!control || !control.matches?.("input, select, textarea")) return;
+    _hideSubmitWarning(form);
+    if (typeof control.checkValidity === "function" && control.checkValidity()) {
+      _clearControlHighlight(control);
+    }
+  };
+
+  form.addEventListener("input", clearWarningAndResolvedHighlight, true);
+  form.addEventListener("change", clearWarningAndResolvedHighlight, true);
+
   openBtn.addEventListener("click", (ev) => {
     ev.preventDefault();
     console.log("[HRMIS ConfirmModal] open clicked");
 
-    if (!form.reportValidity()) {
+    _hideSubmitWarning(form);
+
+    const customOk =
+      typeof form._hrmisRunSubmitValidation === "function"
+        ? form._hrmisRunSubmitValidation()
+        : true;
+    const nativeOk = form.checkValidity();
+
+    if (!customOk || !nativeOk) {
       console.warn("[HRMIS ConfirmModal] form validation failed");
+      _highlightInvalidFields(form);
+      _showSubmitWarning(form);
       return;
     }
 
@@ -612,7 +694,8 @@ function _initConfirmModal() {
     ev.preventDefault();
     console.log("[HRMIS ConfirmModal] confirm clicked -> submitting form");
     confirmBtn.disabled = true;
-    form.submit();
+    if (typeof form.requestSubmit === "function") form.requestSubmit();
+    else form.submit();
   });
 }
 

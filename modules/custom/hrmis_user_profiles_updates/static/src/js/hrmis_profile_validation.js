@@ -91,6 +91,16 @@ function _showError(input, message) {
   }
 }
 
+function _markErrorOnly(input) {
+  if (!input) return;
+  const target = _visualErrorTarget(input);
+  target.classList.add("has-error");
+  target.style.borderColor = "#dc3545";
+  if (target !== input && input) {
+    input.classList.add("has-error");
+  }
+}
+
 function _clearError(input) {
   if (!input) return;
   const target = _visualErrorTarget(input);
@@ -3024,7 +3034,7 @@ function _initHRMISValidations() {
     return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
   }
 
-  form.addEventListener("submit", function (e) {
+  form._hrmisRunSubmitValidation = function () {
     let hasError = false;
 
     // Ensure conditional required flags are in sync right before validation
@@ -3039,7 +3049,7 @@ function _initHRMISValidations() {
         const inp = _qs(form, `[name="${f.name}"]`);
         if (!inp || inp.disabled) return;
         if (_isEmpty(inp.value)) {
-          _showError(inp, f.msg);
+          _markErrorOnly(inp);
           hasError = true;
         }
       });
@@ -3065,17 +3075,14 @@ function _initHRMISValidations() {
             input.name === "hrmis_joining_date" &&
             joiningInput?._hrmisMonthProxy
           ) {
-            _showError(joiningInput._hrmisMonthProxy, "This field is required");
+            _markErrorOnly(joiningInput._hrmisMonthProxy);
           } else if (
             input.name === "hrmis_commission_date" &&
             commissionInput?._hrmisMonthProxy
           ) {
-            _showError(
-              commissionInput._hrmisMonthProxy,
-              "This field is required",
-            );
+            _markErrorOnly(commissionInput._hrmisMonthProxy);
           } else {
-            _showError(input, "This field is required");
+            _markErrorOnly(input);
           }
           hasError = true;
         }
@@ -3107,7 +3114,12 @@ function _initHRMISValidations() {
     if (form._hrmisValidateCnicFiles && !form._hrmisValidateCnicFiles())
       hasError = true;
 
-    if (hasError) {
+    return !hasError;
+  };
+
+  form.addEventListener("submit", function (e) {
+    const isValid = form._hrmisRunSubmitValidation();
+    if (!isValid) {
       e.preventDefault();
       e.stopPropagation();
     }
