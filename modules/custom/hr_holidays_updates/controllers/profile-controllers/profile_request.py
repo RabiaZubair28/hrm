@@ -2,16 +2,6 @@ from odoo import http
 from odoo.http import request
 
 
-class _QWebCompatItem:
-    """Support both attribute access and dict-style .get() in QWeb."""
-
-    def __init__(self, **values):
-        self.__dict__.update(values)
-
-    def get(self, key, default=None):
-        return getattr(self, key, default)
-
-
 class HRMISProfileRequest(http.Controller):
 
     # @http.route('/hrmis/profile/request', type='http', auth='user', website=True)
@@ -153,17 +143,12 @@ class HRMISProfileRequest(http.Controller):
     
    
     def _render_profile_form(self, employee, req, error=None, success=None):
-        district_records = request.env['hrmis.district.master'].sudo().search([])
-        districts = [
-            _QWebCompatItem(id=d.id, name=d.name or '')
-            for d in district_records
-        ]
         return request.render(
             'hr_holidays_updates.hrmis_profile_request_form',
             {
                 'employee': employee,
                 'req': req,
-                'districts': districts,
+                'districts': request.env['hrmis.district.master'].sudo().search([]),
                 'facilities': request.env['hrmis.facility.type'].sudo().search([]),
                 'active_menu': 'user_profile',
                 'current_employee': employee,
