@@ -85,12 +85,21 @@ DATE OF BIRTH
 DOMICILE
                                 <span class="req">*</span>
                               </label>
-                              <select class="hrmis-input" name="hrmis_domicile" t-att-required="'required' if is_draft else None" t-att-disabled="'disabled' if not is_draft else None">
-                                <option value="" disabled="disabled" hidden="hidden" t-att-selected="not (req.hrmis_domicile or current_employee.hrmis_domicile)"> Select Domicile </option>
+                              <select class="hrmis-input" 
+			      name="hrmis_domicile" 
+			      t-att-required="'required' if is_draft else None" 
+			      t-att-disabled="'disabled' if not is_draft else None">
+                                <option value="" 
+				disabled="disabled" 
+				hidden="hidden" 
+				t-att-selected="not (req.hrmis_domicile or current_employee.hrmis_domicile)"> 
+				Select Domicile 
+				</option>
                                 <t t-foreach="districts" t-as="d">
-                                  <t t-if="d.name and d.name.strip().lower() != 'karachi'">
-                                    <option t-att-value="d.name" t-att-selected="(req.hrmis_domicile == d.name) or (current_employee.hrmis_domicile == d.name)">
-                                      <t t-esc="d.name"/>
+                                      <t t-if="d.get('name') and d.get('name').strip().lower() != 'karachi'">
+                                          <option t-att-value="d.get('name')"
+                                                  t-att-selected="(req.hrmis_domicile == d.get('name')) or (current_employee.hrmis_domicile == d.get('name'))">
+                                              <t t-esc="d.get('name')"/>
                                     </option>
                                   </t>
                                 </t>
@@ -141,7 +150,14 @@ CADRE
 BPS
                                 <span class="req">*</span>
                               </label>
-                              <input class="hrmis-input" type="number" min="1" max="22" name="hrmis_bps" required="required" t-att-value="req.hrmis_bps or current_employee.hrmis_bps or ''"/>
+                              <input class="hrmis-input"
+                                      type="number"
+                                      min="16"
+                                      max="20"
+                                      name="hrmis_bps"
+                                      required="required"
+                                      oninput="if(this.value &gt; 20) this.value = 20; if(this.value &lt; 16) this.value = 16"
+                                      t-att-value="req.hrmis_bps or current_employee.hrmis_bps or ''"/>
                             </div>
                             <div class="hrmis-field">
                               <label>
@@ -268,7 +284,6 @@ PDF uploaded:
                   </div>
                   <!--       ===================== Posting Status =====================       -->
                   <!--       NOTE: removed the stray <div> and fixed missing closes above       -->
-                  <!--    ===================== Posting Status =====================    -->
                   <div id="hrmis_pr_current_posting" class="tab-pane fade hrmis-section" style="grid-column: 1 / -1;" role="tabpanel" aria-labelledby="hrmis_pr_tab_current_posting">
                     <div class="hrmis-panel mb-1">
                       <div class="px-3 pt-1 pb-1">
@@ -337,8 +352,8 @@ DESIGNATION
                                     <select class="hrmis-input js-hrmis-district js-suspension-district" name="frontend_reporting_district_id">
                                       <option value="" selected="selected" disabled="disabled" hidden="hidden">Select District</option>
                                       <t t-foreach="districts" t-as="d">
-                                        <option t-att-value="d.id">
-                                          <t t-esc="d.name"/>
+                                            <option t-att-value="d['id']">
+                                                <t t-esc="d['name']"/>
                                         </option>
                                       </t>
                                     </select>
@@ -347,17 +362,26 @@ DESIGNATION
                                   <div class="hrmis-field" id="frontend_reporting_facility_wrap" style="grid-column: span 6; display:none;">
                                     <label> FACILITY <span style="color: #c92222">*</span></label>
                                     <div class="hrmis-field">
-                                      <select class="hrmis-input js-suspension-facility js-other-select" name="frontend_reporting_facility_id" data-enable-search="1" data-other-name="frontend_reporting_facility_other_name">
+                                      <select class="hrmis-input js-suspension-facility js-other-select" 
+				      name="frontend_reporting_facility_id" 
+				      data-enable-search="1" 
+				      data-other-name="frontend_reporting_facility_other_name">
                                         <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Facility</option>
                                         <t t-foreach="facilities" t-as="f">
-                                          <option t-att-value="f.id" t-att-data-district-id="f.district_id.id or 0">
-                                            <t t-esc="f.name"/>
+                                                <option t-att-value="f['id']"
+                                                        t-att-data-district-id="f.get('district_id') or 0">
+                                                    <t t-esc="f['name']"/>
                                           </option>
                                         </t>
                                         <option value="__other__" data-district-id="">Other</option>
                                       </select>
                                       <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
-                                        <input class="hrmis-input js-other-input js-current-facility-other" type="text" name="frontend_reporting_facility_other_name" placeholder="Enter Facility Name" autocomplete="off" disabled="disabled"/>
+                                        <input class="hrmis-input js-other-input js-current-facility-other" 
+					type="text" 
+					name="frontend_reporting_facility_other_name" 
+					placeholder="Enter Facility Name" 
+					autocomplete="off" 
+					disabled="disabled"/>
                                       </div>
                                     </div>
                                   </div>
@@ -433,8 +457,8 @@ DESIGNATION
                                     <select class="hrmis-input js-hrmis-district js-onleave-district" name="frontend_onleave_district_id">
                                       <option value="" selected="selected" disabled="disabled" hidden="hidden">Select District</option>
                                       <t t-foreach="districts" t-as="d">
-                                        <option t-att-value="d.id">
-                                          <t t-esc="d.name"/>
+                                            <option t-att-value="d.get('id')">
+                                                <t t-esc="d.get('name')"/>
                                         </option>
                                       </t>
                                     </select>
@@ -442,15 +466,29 @@ DESIGNATION
                                   </div>
                                   <div class="hrmis-field" id="frontend_onleave_facility_wrap" style="grid-column: span 6; display:none;">
                                     <label> FACILITY <span style="color: #c92222">*</span></label>
-                                    <select class="hrmis-input js-hrmis-facility js-onleave-facility" name="frontend_onleave_facility_id">
+                                    <select class="hrmis-input js-hrmis-facility js-onleave-facility js-other-select" 
+                                            name="frontend_onleave_facility_id"
+                                            data-enable-search="1"
+                                            data-other-name="frontend_onleave_facility_other_name">
                                       <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Facility</option>
                                       <t t-foreach="facilities" t-as="f">
-                                        <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''">
-                                          <t t-esc="f.name"/>
+                                          <option t-att-value="f.get('id')"
+                                                  t-att-data-district-id="f.get('district_id') or ''">
+                                              <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
-                                    </select>
+                                      <option value="__other__" data-district-id="">Other</option>
+                                  </select>
+
+                                  <div class="js-other-wrap" style="display:none; margin-top:6px;">
+                                      <input class="hrmis-input js-other-input"
+                                            type="text"
+                                            name="frontend_onleave_facility_other_name"
+                                            placeholder="Enter Facility Name"
+                                            autocomplete="off"
+                                            disabled="disabled"/>
                                   </div>
+                                </div>
                                 </div>
                               </div>
                             </div>
@@ -587,10 +625,14 @@ SUSTANTIVE POSTING DISTRICT
                                       <span class="req">*</span>
                                     </label>
                                     <select class="hrmis-input js-hrmis-district js-current-district" name="district_id" required="required">
-                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not (req.district_id or current_employee.district_id)"> Select District </option>
+                                      <option value="" disabled="disabled" hidden="hidden" 
+				      t-att-selected="not (req.district_id or current_employee.district_id)"> 
+				      Select District 
+				      </option>
                                       <t t-foreach="districts" t-as="d">
-                                        <option t-att-value="d.id" t-att-selected="(req.district_id and req.district_id.id == d.id) or (current_employee.district_id and current_employee.district_id.id == d.id)">
-                                          <t t-esc="d.name"/>
+                                            <option t-att-value="d.get('id')"
+                                                    t-att-selected="(req.district_id and req.district_id == d.get('id')) or (current_employee.district_id and current_employee.district_id.id == d.get('id'))">
+                                                <t t-esc="d.get('name')"/>
                                         </option>
                                       </t>
                                     </select>
@@ -601,17 +643,26 @@ SUSTANTIVE POSTING DISTRICT
 SUSTANTIVE POSTING FACILITY
                                       <span class="req">*</span>
                                     </label>
-                                    <select class="hrmis-input js-current-facility js-other-select" name="facility_id" data-enable-search="1" data-other-name="facility_other_name" required="required">
+                                    <select class="hrmis-input js-current-facility js-other-select" 
+				    name="facility_id" 
+				    data-enable-search="1" 
+				    data-other-name="facility_other_name" 
+				    required="required">
                                       <option value="" selected="selected">Select Facility</option>
                                       <t t-foreach="facilities" t-as="f">
-                                        <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''" t-att-selected="(req.facility_id and req.facility_id.id == f.id) or (current_employee.facility_id and current_employee.facility_id.id == f.id)">
-                                          <t t-esc="f.name"/>
+                                            <option t-att-value="f.get('id')"
+                                                    t-att-data-district-id="f.get('district_id') or ''"
+                                                    t-att-selected="(req.facility_id and req.facility_id == f.get('id')) or (current_employee.facility_id and current_employee.facility_id.id == f.get('id'))">
+                                                <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
                                       <option value="__other__" data-district-id="">Other</option>
                                     </select>
                                     <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input js-current-facility-other" type="text" name="facility_other_name" placeholder="Enter Facility Name"/>
+                                      <input class="hrmis-input js-other-input js-current-facility-other" 
+				      type="text" 
+				      name="facility_other_name"
+				       placeholder="Enter Facility Name"/>
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
@@ -668,10 +719,14 @@ SUBSTANTIVE POSTING DISTRICT
                                       <span class="req">*</span>
                                     </label>
                                     <select class="hrmis-input js-hrmis-district js-current-district" name="district_id" required="required">
-                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not (req.district_id or current_employee.district_id)"> Select District </option>
+                                      <option value="" disabled="disabled" hidden="hidden" 
+				      t-att-selected="not (req.district_id or current_employee.district_id)"> 
+				      Select District 
+				      </option>
                                       <t t-foreach="districts" t-as="d">
-                                        <option t-att-value="d.id" t-att-selected="(req.district_id and req.district_id.id == d.id) or (current_employee.district_id and current_employee.district_id.id == d.id)">
-                                          <t t-esc="d.name"/>
+                                            <option t-att-value="d.get('id')"
+                                                    t-att-selected="(req.district_id and req.district_id == d.get('id')) or (current_employee.district_id and current_employee.district_id.id == d.get('id'))">
+                                                <t t-esc="d.get('name')"/>
                                         </option>
                                       </t>
                                     </select>
@@ -682,17 +737,26 @@ SUBSTANTIVE POSTING DISTRICT
 SUBSTANTIVE POSTING FACILITY
                                       <span class="req">*</span>
                                     </label>
-                                    <select class="hrmis-input js-hrmis-facility js-current-facility js-other-select" name="posting_facility_id[]" data-enable-search="1" data-other-name="facility_other_name" required="required">
+                                    <select class="hrmis-input js-hrmis-facility js-current-facility js-other-select" 
+                                            name="posting_facility_id"
+				    data-enable-search="1" 
+				    data-other-name="facility_other_name" 
+				    required="required">
                                       <option value="" selected="selected">Select Facility</option>
                                       <t t-foreach="facilities" t-as="f">
-                                        <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''" t-att-selected="(req.facility_id and req.facility_id.id == f.id) or (current_employee.facility_id and current_employee.facility_id.id == f.id)">
-                                          <t t-esc="f.name"/>
+                                            <option t-att-value="f.get('id')"
+                                                    t-att-data-district-id="f.get('district_id') or ''"
+                                                    t-att-selected="(req.facility_id and req.facility_id == f.get('id')) or (current_employee.facility_id and current_employee.facility_id.id == f.get('id'))">
+                                                <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
                                       <option value="__other__" data-district-id="">Other</option>
                                     </select>
                                     <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input js-current-facility-other" type="text" name="facility_other_name" placeholder="Enter Facility Name"/>
+                                      <input class="hrmis-input js-other-input js-current-facility-other" 
+				      type="text" 
+				      name="facility_other_name" 
+				      placeholder="Enter Facility Name"/>
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
@@ -730,8 +794,8 @@ START (MONTH/YEAR)
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6; display: flex">
                                     <div style="display:flex; align-items:center; justify-content:center; margin-top:10px; gap: 12px">
-                                      <input type="checkbox" name="allowed_to_work" value="1" class="form-check-input js-allowed-to-work-toggle" id="allowed_to_work_checkbox_current" data-target="#allowed_to_work_box"/>
-                                      <label for="allowed_to_work_checkbox_current" style="margin:0; font-weight:600; gap: 12px"> ALLOWED TO WORK </label>
+                                      <input type="checkbox" name="allowed_to_work" value="1" class="form-check-input js-allowed-to-work-toggle" id="allowed_to_work_checkbox" data-target="#allowed_to_work_box"/>
+                                      <label for="allowed_to_work_checkbox" style="margin:0; font-weight:600; gap: 12px">ALLOWED TO WORK</label>
                                     </div>
                                   </div>
                                 </div>
@@ -751,8 +815,8 @@ ALLOWED TO WORK DISTRICT
                                     <select class="hrmis-input js-hrmis-district js-current-district" name="allowed_district_id">
                                       <option value="">Select District</option>
                                       <t t-foreach="districts" t-as="d">
-                                        <option t-att-value="d.id">
-                                          <t t-esc="d.name"/>
+                                            <option t-att-value="d.get('id')">
+                                                <t t-esc="d.get('name')"/>
                                         </option>
                                       </t>
                                     </select>
@@ -763,14 +827,18 @@ ALLOWED TO WORK DISTRICT
                                     <select class="hrmis-input js-hrmis-facility js-current-facility js-other-select" name="allowed_facility_id" data-enable-search="1" data-other-name="allowed_work_facility_other_name" required="required">
                                       <option value="">Select Facility</option>
                                       <t t-foreach="facilities" t-as="f">
-                                        <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''">
-                                          <t t-esc="f.name"/>
+                                            <option t-att-value="f.get('id')"
+                                                    t-att-data-district-id="f.get('district_id') or ''">
+                                                <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
                                       <option value="__other__">Other</option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input" type="text" name="allowed_work_facility_other_name" placeholder="Enter Facility"/>
+                                      <input class="hrmis-input js-other-input" 
+				      type="text" 
+				      name="allowed_work_facility_other_name" 
+				      placeholder="Enter Facility"/>
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
@@ -796,9 +864,12 @@ DESIGNATION
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label>START (MONTH/YEAR)</label>
-                                    <input class="hrmis-input" type="month" name="allowed_start_month"/>
-                                  </div>
+    <label>
+        START (MONTH/YEAR)
+        <span class="req">*</span>
+    </label>
+    <input class="hrmis-input" type="month" name="allowed_start_month" required="required"/>
+</div>
                                 </div>
                               </div>
                             </div>
@@ -860,10 +931,14 @@ DISTRICT
                                     <span class="req">*</span>
                                   </label>
                                   <select class="hrmis-input js-post-district" name="posting_district_id[]" required="required">
-                                    <option value="" disabled="disabled" hidden="hidden" t-att-selected="not p.get('district_id')">Select District</option>
+                                    <option value="" disabled="disabled" hidden="hidden" 
+				    t-att-selected="not p.get('district_id')">
+				    Select District
+				    </option>
                                     <t t-foreach="districts" t-as="d">
-                                      <option t-att-value="d.id" t-att-selected="p.get('district_id') == d.id">
-                                        <t t-esc="d.name"/>
+                                      <option t-att-value="d.get('id')"
+                                              t-att-selected="p.get('district_id') == d.get('id')">
+                                        <t t-esc="d.get('name')"/>
                                       </option>
                                     </t>
                                   </select>
@@ -875,17 +950,35 @@ DISTRICT
 FACILITY
                                     <span class="req">*</span>
                                   </label>
-                                  <select class="hrmis-input js-other-select" name="posting_facility_id[]" data-enable-search="1" data-other-name="posting_facility_other_name[]" required="required">
-                                    <option value="" disabled="disabled" hidden="hidden" t-att-selected="not p.get('facility_id') and not (p.get('facility_other_name') or '').strip()"> Select Facility </option>
+                                  <select class="hrmis-input js-other-select" 
+				  name="posting_facility_id[]" 
+				  data-enable-search="1" 
+				  data-other-name="posting_facility_other_name[]" 
+				  required="required">
+                                    <option value="" disabled="disabled" hidden="hidden"
+                                            t-att-selected="not p.get('facility_id') and not (p.get('facility_other_name') or '').strip()">
+                                      Select Facility
+                                    </option>
                                     <t t-foreach="facilities" t-as="f">
-                                      <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''" t-att-selected="p.get('facility_id') == f.id">
-                                        <t t-esc="f.name"/>
+                                      <option t-att-value="f.get('id')"
+                                              t-att-data-district-id="f.get('district_id') or ''"
+                                              t-att-selected="p.get('facility_id') == f.get('id')">
+                                        <t t-esc="f.get('name')"/>
                                       </option>
                                     </t>
-                                    <option value="__other__" t-att-selected="(p.get('facility_other_name') or '').strip() and not p.get('facility_id')"> Other </option>
+
+                                    <option value="__other__"
+                                            t-att-selected="(p.get('facility_other_name') or '').strip() and not p.get('facility_id')">
+                                      Other
+                                    </option>
                                   </select>
                                   <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                    <input class="hrmis-input js-other-input" type="text" name="posting_facility_other_name[]" t-att-value="p.get('facility_other_name') or ''" placeholder="Enter Facility Name" disabled="disabled"/>
+                                    <input class="hrmis-input js-other-input" 
+				    type="text" 
+				    name="posting_facility_other_name[]" 
+				    t-att-value="p.get('facility_other_name') or ''" 
+				    placeholder="Enter Facility Name" 
+				    disabled="disabled"/>
                                   </div>
                                 </div>
                                 <div class="hrmis-field" style="grid-column: span 6;">
@@ -947,8 +1040,8 @@ DISTRICT
                                 <select class="hrmis-input js-post-district" name="posting_district_id[]" required="required">
                                   <option value="" disabled="disabled" selected="selected" hidden="hidden">Select District</option>
                                   <t t-foreach="districts" t-as="d">
-                                    <option t-att-value="d.id">
-                                      <t t-esc="d.name"/>
+                                    <option t-att-value="d.get('id')">
+                                      <t t-esc="d.get('name')"/>
                                     </option>
                                   </t>
                                 </select>
@@ -959,17 +1052,26 @@ DISTRICT
 FACILITY
                                   <span class="req">*</span>
                                 </label>
-                                <select class="hrmis-input js-other-select" name="posting_facility_id[]" data-enable-search="1" data-other-name="posting_facility_other_name[]" required="required">
+                                <select class="hrmis-input js-other-select" 
+				name="posting_facility_id[]" 
+				data-enable-search="1" 
+				data-other-name="posting_facility_other_name[]" 
+				required="required">
                                   <option value="" disabled="disabled" selected="selected" hidden="hidden">Select Facility</option>
                                   <t t-foreach="facilities" t-as="f">
-                                    <option t-att-value="f.id" t-att-data-district-id="f.district_id.id if f.district_id else ''">
-                                      <t t-esc="f.name"/>
+                                    <option t-att-value="f.get('id')"
+                                            t-att-data-district-id="f.get('district_id') or ''">
+                                      <t t-esc="f.get('name')"/>
                                     </option>
                                   </t>
                                   <option value="__other__">Other</option>
                                 </select>
                                 <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                  <input class="hrmis-input js-other-input" type="text" name="posting_facility_other_name[]" placeholder="Enter Facility Name" disabled="disabled"/>
+                                  <input class="hrmis-input js-other-input" 
+				  type="text" 
+				  name="posting_facility_other_name[]" 
+				  placeholder="Enter Facility Name" 
+				  disabled="disabled"/>
                                 </div>
                               </div>
                               <div class="hrmis-field" style="grid-column: span 6;">
@@ -1427,6 +1529,9 @@ PROMOTION DATE (MONTH/YEAR)
                   <div id="hrmis_pr_leave_history" class="tab-pane fade hrmis-section" style="grid-column: 1 / -1;" role="tabpanel" aria-labelledby="hrmis_pr_tab_leave">
                     <div class="hrmis-panel">
                       <div class="px-3 pt-1 pb-1">
+                            <!-- <div id="profile_submit_warning" role="alert" aria-live="assertive" style="display:none; margin:0 0 15px 0; padding:12px 14px; border:1px solid #f5c2c7; border-radius:12px; background:#fff5f5; color:#842029; font-weight:600;">
+                          There are some missing or incorrect fields.
+                        </div> -->
                         <div class="d-flex align-items-center justify-content-between" style="gap:12px; margin-bottom:15px;">
                           <div style="color:#dc3545; font-weight:400; margin:0; padding:0; font-size: 14px"> Kindly add only leaves that had a duration of one week or longer.</div>
                           <t t-if="is_draft">

@@ -16,6 +16,8 @@ function _qsa(root, sel) {
   return root ? Array.from(root.querySelectorAll(sel)) : [];
 }
 
+
+
 function _getSelectedText(selectEl) {
   if (!selectEl) return "";
 
@@ -595,12 +597,14 @@ function _initConfirmModal() {
     if (ev.target === modalEl) _hideModal(modalEl);
   });
 
+ 
+
   openBtn.addEventListener("click", (ev) => {
     ev.preventDefault();
-    console.log("[HRMIS ConfirmModal] open clicked");
+    
 
     if (!form.reportValidity()) {
-      console.warn("[HRMIS ConfirmModal] form validation failed");
+      console.log("[HRMIS ConfirmModal] form validation failed; not opening modal");
       return;
     }
 

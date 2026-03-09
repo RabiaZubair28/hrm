@@ -261,6 +261,9 @@
          style="width:20px; height:20px; display:block;" />
                                 </button>
                                 <div style="display: flex; flex-direction: column; ">
+                                    <div class="hrmis-warning-msg">
+    It is better to resign than to lie.
+</div>
                                     <div class="hrmis-panel__title hrmis-pr-title"> Welcome
                                         <t
                                             t-esc="request.env.user.name" /> !

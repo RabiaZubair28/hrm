@@ -18,6 +18,8 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.http import request
 
 import os
+from .helperControllers.emr_profile_data import EmrProfileDataMixin
+
 
 _MAX_UPLOAD_BYTES = 4 * 1024 * 1024  # 4 MB
 _ALLOWED_UPLOAD_EXTS = {"pdf", "jpg", "jpeg", "png", "svg"}
@@ -1282,7 +1284,7 @@ class HrmisLeaveFrontendController(http.Controller):
         )
 OTHER_TOKEN = "__other__"
 
-class HrmisProfileRequestController(http.Controller):
+class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
 
 
@@ -1375,6 +1377,19 @@ class HrmisProfileRequestController(http.Controller):
         pre_fill = self._build_prefill_dict(employee, req)
         designations_unique = self._get_unique_designations(env)
 
+        selected_district_id = (
+            (pre_fill.get("district_id") if isinstance(pre_fill, dict) else None)
+            or request.params.get("district_id")
+        )
+
+        districts, districts_error = self._get_emr_districts(env)
+        all_facilities, facilities_meta, facilities_error = self._get_all_emr_facilities(
+            env, page=1, limit=2500
+        )
+
+        emr_error = districts_error or facilities_error
+        error = error or emr_error
+        
         ctx = _base_ctx(
             "Profile Update Request",
             "user_profile",
@@ -1382,8 +1397,8 @@ class HrmisProfileRequestController(http.Controller):
             current_employee=employee,
             req=req,
             pre_fill=pre_fill,
-            districts=env["hrmis.district.master"].sudo().search([]),
-            facilities=env["hrmis.facility.type"].sudo().search([]),
+            districts=districts,
+            facilities=all_facilities,
             designations_unique=designations_unique,
             max_dob_str=max_dob_str,
             max_today_str=max_today_str,
@@ -1393,10 +1408,13 @@ class HrmisProfileRequestController(http.Controller):
             info=info,
         )
 
-        # ✅ This is the key: fill prefill_* rows
+        ctx["districts_json"] = json.dumps(districts)
+        ctx["facilities_json"] = json.dumps(all_facilities)
+        ctx["facilities_meta_json"] = json.dumps(facilities_meta)
+        ctx["selected_district_id"] = selected_district_id
+
         ctx = self._with_prefill_ctx(env, employee, ctx, prefer_draft=prefer_draft)
 
-        # ✅ Also include promo rows in JSON (and in ctx directly)
         ctx["hrmis_profile_prefill_json"] = json.dumps({
             "qual": ctx.get("prefill_qual_rows") or [],
             "post": ctx.get("prefill_post_rows") or [],
@@ -1405,16 +1423,22 @@ class HrmisProfileRequestController(http.Controller):
         })
 
         _logger.warning(
-            "[PROFILE][RENDER][0] emp_id=%s req_id=%s state=%s prefer_draft=%s counts={qual:%s post:%s promo:%s leave:%s}",
-            employee.id, req.id, req.state, prefer_draft,
+            "[PROFILE][RENDER] emp_id=%s req_id=%s state=%s prefer_draft=%s district_id=%s "
+            "counts={qual:%s post:%s promo:%s leave:%s} districts=%s facilities=%s",
+            employee.id,
+            req.id,
+            req.state,
+            prefer_draft,
+            selected_district_id,
             len(ctx.get("prefill_qual_rows") or []),
             len(ctx.get("prefill_post_rows") or []),
             len(ctx.get("prefill_promo_rows") or []),
             len(ctx.get("prefill_leave_rows") or []),
+            len(districts or []),
+            len(all_facilities or []),
         )
 
         return request.render("hr_holidays_updates.hrmis_profile_request_form", ctx)
-
 
 
     def _render_profile_form_error(self, employee, req, env, msg, *, prefer_draft=True):
@@ -1560,8 +1584,8 @@ class HrmisProfileRequestController(http.Controller):
             "hrmis_bps": req.hrmis_bps or employee.hrmis_bps or "",
             "hrmis_cadre": (req.hrmis_cadre.id if req.hrmis_cadre else (employee.hrmis_cadre.id if employee.hrmis_cadre else False)),
             "hrmis_designation": (req.hrmis_designation.id if req.hrmis_designation else (employee.hrmis_designation.id if employee.hrmis_designation else False)),
-            "district_id": (req.district_id.id if req.district_id else (employee.district_id.id if employee.district_id else False)),
-            "facility_id": (req.facility_id.id if req.facility_id else (employee.facility_id.id if employee.facility_id else False)),
+            "district_id": (req.district_id if req.district_id else (employee.district_id.id if employee.district_id else False)),
+            "facility_id": (req.facility_id if req.facility_id else (employee.facility_id.id if employee.facility_id else False)),
             "hrmis_contact_info": req.hrmis_contact_info or employee.hrmis_contact_info or "",
             "hrmis_merit_number": req.hrmis_merit_number or employee.hrmis_merit_number or "",
             "hrmis_leaves_taken": req.hrmis_leaves_taken if req.hrmis_leaves_taken is not False else (employee.hrmis_leaves_taken or 0),
@@ -1624,8 +1648,8 @@ class HrmisProfileRequestController(http.Controller):
             req.birthday,
             req.hrmis_cadre.id if req.hrmis_cadre else None,
             req.hrmis_designation.id if req.hrmis_designation else None,
-            req.district_id.id if req.district_id else None,
-            req.facility_id.id if req.facility_id else None,
+            req.district_id or None,
+            req.facility_id or None,
             req.hrmis_merit_number,
             req.hrmis_domicile,
             req.hrmis_contact_info,
@@ -1867,25 +1891,36 @@ class HrmisProfileRequestController(http.Controller):
 
     def _normalize_main_facility_from_form(self, post, form):
         """
-        Your XML's Substantive Posting Facility uses name="posting_facility_id[]"
-        but main.py expects name="facility_id".
+        Normalizes facility field coming from the form.
 
-        This bridges that gap without changing existing functionality.
+        Supports BOTH:
+        - posting_facility_id
+        - posting_facility_id[]
+
+        And maps them to facility_id (which backend expects).
         """
         if (post.get("facility_id") or "").strip():
-            return post  # already OK
+            return post
 
+        # Case 1: new field name
+        val = (post.get("posting_facility_id") or "").strip()
+        if val:
+            post = dict(post)
+            post["facility_id"] = val
+            _logger.info("[HRMIS_SUBMIT][NORMALIZE] facility_id <- posting_facility_id=%s", val)
+            return post
+
+        # Case 2: old [] array field
         arr = form.getlist("posting_facility_id[]") or []
-        # take first non-empty
         for v in arr:
             v = (v or "").strip()
             if v:
                 post = dict(post)
                 post["facility_id"] = v
-                _logger.warning("[HRMIS_SUBMIT][NORMALIZE] facility_id missing -> using posting_facility_id[] first=%r", v)
+                _logger.info("[HRMIS_SUBMIT][NORMALIZE] facility_id <- posting_facility_id[]=%s", v)
                 return post
 
-        _logger.warning("[HRMIS_SUBMIT][NORMALIZE] facility_id missing and posting_facility_id[] empty")
+        _logger.warning("[HRMIS_SUBMIT][NORMALIZE] facility_id missing")
         return post
 
     # -------------------------------------------------------------------------
@@ -1921,20 +1956,45 @@ class HrmisProfileRequestController(http.Controller):
         designation = env["hrmis.designation"].sudo().browse(designation_id) if designation_id else env["hrmis.designation"]
         return designation_id, cadre_id, bps, designation
 
+
+    def _safe_int_or_false(self, value):
+        """
+        Convert incoming POST value to int.
+        Return False for empty/invalid values instead of 0.
+        """
+        if value in (None, "", False):
+            return False
+
+        value = str(value).strip()
+        if value in ("", "0", "false", "False", "null", "None"):
+            return False
+
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return False
+
+
     def _parse_facility_district(self, env, post):
-        district_id = self._safe_int(post.get("district_id"))
-        facility_val = (post.get("facility_id") or "").strip()
+        district_id = self._safe_int_or_false(post.get("district_id"))
 
-        facility_id = self._safe_int(facility_val)
-        facility = env["hrmis.facility.type"].sudo().browse(facility_id) if facility_id else env["hrmis.facility.type"]
+        raw_facility = (post.get("posting_facility_id") or post.get("facility_id") or "").strip()
+        raw_other_name = (post.get("facility_other_name") or "").strip()
 
-        # If facility is __other__, create it
-        if self._is_other(facility_val):
-            other_name = post.get("facility_other_name") or post.get("facility_other") or ""
-            facility_id = self._get_or_create_temp_facility(env, other_name, district_id)
-            facility = env["hrmis.facility.type"].sudo().browse(facility_id) if facility_id else env["hrmis.facility.type"]
+        facility_id = False
 
-        return facility_id, district_id, facility
+        if self._is_other(raw_facility):
+            if not raw_other_name:
+                raise ValidationError("Facility name is required when Substantive Posting Facility is Other.")
+
+            # Safer: do not force district mapping if your local temp facility model
+            # is not aligned with EMR district IDs
+            facility_id = self._get_or_create_temp_facility(env, raw_other_name, district_id or 0) or False
+        else:
+            facility_id = self._safe_int_or_false(raw_facility)
+
+        return facility_id, district_id
+    
 
     # -------------------------------------------------------------------------
     # Manager/approver resolution wrapper (keeps your existing behavior)
@@ -2370,26 +2430,21 @@ class HrmisProfileRequestController(http.Controller):
         # -----------------------------
         # 1) Read arrays (robust)
         # -----------------------------
-        p_fac_other = (
-            form.getlist("posting_facility_other_name[]")
-            or form.getlist("posting_facility_other_name")
-            or form.getlist("facility_other_name")  # fallback if template used single name
-        )
-        p_des_other = (
-            form.getlist("posting_designation_other_name[]")
-            or form.getlist("posting_designation_other_name")
-            or form.getlist("designation_other_name")
-        )
+        # p_fac_other = (
+        #     form.getlist("posting_facility_other_name[]")
+        #     or form.getlist("posting_facility_other_name")
+        #     or form.getlist("facility_other_name")  # fallback if template used single name
+        # )
+        # p_des_other = (
+        #     form.getlist("posting_designation_other_name[]")
+        #     or form.getlist("posting_designation_other_name")
+        #     or form.getlist("designation_other_name")
+        # )
+        p_fac_other = form.getlist("posting_facility_other_name[]")
+        p_des_other = form.getlist("posting_designation_other_name[]")
 
         p_district = form.getlist("posting_district_id[]")
-
-        # ✅ Robust: accept multiple possible names for posting facility
-        p_facility = (
-            form.getlist("posting_facility_id[]")
-            or form.getlist("posting_facility_id")                 # fallback if [] missing
-            or form.getlist("frontend_reporting_facility_id[]")    # fallback if template used this
-            or form.getlist("frontend_reporting_facility_id")      # fallback if single
-        )
+        p_facility = form.getlist("posting_facility_id[]")
 
         p_designation = (
             form.getlist("posting_designation_id[]")
@@ -2720,7 +2775,13 @@ class HrmisProfileRequestController(http.Controller):
             allowed_district_id,
         )
         allowed_bps_val = int(post.get("allowed_bps") or 0) if (post.get("allowed_bps") or "").strip() else 0
-
+        onleave_district_id = m2o_int(post.get("frontend_onleave_district_id"))
+        onleave_facility_id = _resolve_facility_other(
+            post.get("frontend_onleave_facility_id"),
+            post.get("frontend_onleave_facility_other_name"),
+            onleave_district_id,
+        )
+        
         vals = {
             "status": status,
 
@@ -2731,13 +2792,13 @@ class HrmisProfileRequestController(http.Controller):
             "suspension_reporting_facility_id": susp_facility_id,
             "suspension_reporting_designation_id": susp_designation_id,  # <-- if you added this field
 
-            # On leave (unchanged)
+            # On leave
             "onleave_type_id": m2o_int(post.get("frontend_onleave_type")),
             "onleave_start": post.get("frontend_onleave_start") or False,
             "onleave_end": post.get("frontend_onleave_end") or False,
             "onleave_reporting_to": post.get("frontend_onleave_reporting_to") or False,
-            "onleave_reporting_district_id": m2o_int(post.get("frontend_onleave_district_id")),
-            "onleave_reporting_facility_id": m2o_int(post.get("frontend_onleave_facility_id")),
+            "onleave_reporting_district_id": onleave_district_id,
+            "onleave_reporting_facility_id": onleave_facility_id,
 
             # EOL
             "eol_institute_id": eol_institute_id,
@@ -2769,6 +2830,7 @@ class HrmisProfileRequestController(http.Controller):
             "eol_primary_designation_id": m2o_int(post.get("frontend_eol_primary_designation_id")),
             "eol_primary_bps": int(post.get("frontend_eol_primary_bps") or 0) if (post.get("frontend_eol_primary_bps") or "").strip() else 0,
         }
+        
 
         return vals
 
@@ -3389,7 +3451,7 @@ class HrmisProfileRequestController(http.Controller):
             return resp
 
         # 5) Parse cadre/designation/bps + facility/district (browse kept)
-        facility_id, district_id, facility = self._parse_facility_district(env, post)
+        facility_id, district_id = self._parse_facility_district(env, post)
         designation_id, cadre_id, bps, designation = self._parse_designation_cadre_bps(env, post, facility_id=facility_id)
         
 
@@ -3494,6 +3556,52 @@ class HrmisProfileRequestController(http.Controller):
         success_msg = message_override or "Profile update request submitted successfully."
         return self._render_profile_form(env, employee, req, success=success_msg)
 
+#     @http.route(
+#     "/hrmis/profile/request/submit",
+#     type="http",
+#     auth="user",
+#     website=True,
+#     methods=["POST"],
+#     csrf=True,
+# )
+# def hrmis_profile_request_submit(self, **post):
+#     from odoo.http import request
+
+#     html = """
+#     <html>
+#         <head>
+#             <title>Submitted Form Data</title>
+#             <style>
+#                 body {font-family: Arial; padding: 40px;}
+#                 table {border-collapse: collapse; width: 100%%;}
+#                 th, td {border: 1px solid #ddd; padding: 8px;}
+#                 th {background: #f5f5f5; text-align:left;}
+#             </style>
+#         </head>
+#         <body>
+#             <h2>Submitted Fields</h2>
+#             <table>
+#                 <tr>
+#                     <th>Field</th>
+#                     <th>Value</th>
+#                 </tr>
+#     """
+
+#     for key, value in post.items():
+#         html += f"""
+#             <tr>
+#                 <td>{key}</td>
+#                 <td>{value}</td>
+#             </tr>
+#         """
+
+#     html += """
+#             </table>
+#         </body>
+#     </html>
+#     """
+
+    # return request.make_response(html)
 
     @http.route(
         "/hrmis/profile/request/save",
@@ -3541,7 +3649,7 @@ class HrmisProfileRequestController(http.Controller):
             )
 
         # 4) Parse facility/district + designation/cadre/bps (same logic as submit)
-        facility_id, district_id, facility = self._parse_facility_district(env, post)
+        facility_id, district_id = self._parse_facility_district(env, post)
         designation_id, cadre_id, bps, designation = self._parse_designation_cadre_bps(env, post, facility_id=facility_id)
 
         # 5) Approver handling on SAVE:
@@ -3764,8 +3872,8 @@ class HrmisProfileUpdateRequests(http.Controller):
             "hr_holidays_updates.hrmis_profile_update_request_view",
             {
                 "req": req,
-                "districts": request.env["hrmis.district.master"].sudo().search([]),
-                "facilities": request.env["hrmis.facility.type"].sudo().search([]),
+                "districts": self._get_emr_districts(request.env),
+                "facilities": self._get_emr_facilities(request.env, page=1, limit=2000)[0],
                 "cadres": request.env["hrmis.cadre"].sudo().search([]),
 
                 # Only active designations (recommended)

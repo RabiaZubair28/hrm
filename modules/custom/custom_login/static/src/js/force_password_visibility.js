@@ -95,7 +95,6 @@ function _initPasswordMatch() {
 function _bindEyeButtons() {
 
   if (!_isResetPasswordPage()) {
-    console.log("[ForcePasswordEye] not reset page -> skip");
     return;
   }
 

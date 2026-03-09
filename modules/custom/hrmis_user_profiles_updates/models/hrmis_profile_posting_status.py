@@ -41,14 +41,17 @@ class HrmisProfilePostingStatus(models.Model):
         string="Suspension Reporting To",
     )
 
-    suspension_reporting_district_id = fields.Many2one(
-        "hrmis.district.master",
-        string="Suspension Reporting District",
+    # -----------------------
+    # Suspension details (XML)
+    # -----------------------
+    suspension_reporting_district_id = fields.Integer(
+        string="Suspension Reporting District ID",
     )
-    suspension_reporting_facility_id = fields.Many2one(
-        "hrmis.facility.type",
-        string="Suspension Reporting Facility",
+
+    suspension_reporting_facility_id = fields.Integer(
+        string="Suspension Reporting Facility ID",
     )
+    
     suspension_reporting_designation_id = fields.Many2one(
         "hrmis.designation",
         string="Suspension Reporting Designation",
@@ -72,14 +75,14 @@ class HrmisProfilePostingStatus(models.Model):
         string="On Leave Reporting To",
     )
 
-    onleave_reporting_district_id = fields.Many2one(
-        "hrmis.district.master",
-        string="On Leave Reporting District",
+    onleave_reporting_district_id = fields.Integer(
+    string="On Leave Reporting District ID",
     )
-    onleave_reporting_facility_id = fields.Many2one(
-        "hrmis.facility.type",
-        string="On Leave Reporting Facility",
+
+    onleave_reporting_facility_id = fields.Integer(
+        string="On Leave Reporting Facility ID",
     )
+
 
     # -----------------------
     # EOL (PGship) details
@@ -134,14 +137,12 @@ class HrmisProfilePostingStatus(models.Model):
     # -----------------------
     # EOL (PGship) - Primary Posting
     # -----------------------
-    eol_primary_district_id = fields.Many2one(
-        "hrmis.district.master",
-        string="EOL Primary Posting District",
+    eol_primary_district_id = fields.Integer(
+        string="EOL Primary Posting District ID",
     )
-
-    eol_primary_facility_id = fields.Many2one(
-        "hrmis.facility.type",
-        string="EOL Primary Posting Facility",
+    
+    eol_primary_facility_id = fields.Integer(
+        string="EOL Primary Posting Facility ID",
     )
 
     eol_primary_designation_id = fields.Many2one(
@@ -156,14 +157,14 @@ class HrmisProfilePostingStatus(models.Model):
     # -----------------------
     allowed_to_work = fields.Boolean(string="Allowed To Work")
 
-    allowed_district_id = fields.Many2one(
-        "hrmis.district.master",
-        string="Allowed To Work District",
+    allowed_district_id = fields.Integer(
+        string="Allowed To Work District ID",
     )
-    allowed_facility_id = fields.Many2one(
-        "hrmis.facility.type",
-        string="Allowed To Work Facility",
+
+    allowed_facility_id = fields.Integer(
+        string="Allowed To Work Facility ID",
     )
+
     allowed_bps = fields.Integer(string="Allowed To Work BPS")
     allowed_designation_id = fields.Many2one(
         "hrmis.designation",
@@ -234,11 +235,11 @@ class HrmisProfilePostingStatus(models.Model):
             # -----------------------
             # EOL (PGship)
             # -----------------------
-            if r.status == "eol_pgship":
-                if not r.eol_start:
-                    raise ValidationError("EOL Start Date is required when status is EOL (PGship).")
-                if r.eol_status == "completed" and not r.eol_end:
-                    raise ValidationError("EOL End Date is required when EOL status is Complete.")
+            # if r.status == "eol_pgship":
+            #     if not r.eol_start:
+            #         raise ValidationError("EOL Start Date is required when status is EOL (PGship).")
+            #     if r.eol_status == "completed" and not r.eol_end:
+            #         raise ValidationError("EOL End Date is required when EOL status is Complete.")
 
     # -----------------------
     # Onchanges

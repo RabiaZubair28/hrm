@@ -2494,3 +2494,27 @@ select.js-status-pretty option:focus {
   background: #eef5f2;
   color: #000;
 }
+
+.hrmis-warning-msg {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 8px;
+
+    color: #b54708;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+
+    animation: hrmisWarnPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes hrmisWarnPulse {
+    0%,100% {
+        opacity: 0.8;
+    }
+    50% {
+        opacity: 1;
+        text-shadow: 0 0 6px rgba(181,71,8,0.35);
+    }
+}

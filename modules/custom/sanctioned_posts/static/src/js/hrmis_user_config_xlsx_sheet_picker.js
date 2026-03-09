@@ -44,11 +44,9 @@ async function _readSheetNamesFromFile(file) {
 }
 
 function _initHrmisXlsxSheetPicker() {
-    console.log("[HRMIS][SheetPicker] init start");
 
     const form = _qs(document, ".hrmis-xlsx-upload-form");
     if (!form) {
-        console.log("[HRMIS][SheetPicker] no form (.hrmis-xlsx-upload-form) found");
         return;
     }
 
@@ -57,7 +55,6 @@ function _initHrmisXlsxSheetPicker() {
     const sheetHidden = _qs(form, ".js-sheet-name");
     const hint = _qs(form, ".js-sheet-hint");
 
-    console.log("[HRMIS][SheetPicker] form found", { form, fileInput, sheetSelect, sheetHidden, hint });
 
     if (!fileInput || !sheetSelect || !sheetHidden) {
         console.warn("[HRMIS][SheetPicker] missing required elements. "
@@ -72,12 +69,10 @@ function _initHrmisXlsxSheetPicker() {
     _setHintVisible(hint, false);
 
     sheetSelect.addEventListener("change", () => {
-        console.log("[HRMIS][SheetPicker] sheet changed:", sheetSelect.value);
         _setSelectedSheet(sheetHidden, sheetSelect.value || "");
     });
 
     fileInput.addEventListener("change", async () => {
-        console.log("[HRMIS][SheetPicker] file input changed");
 
         _clearOptions(sheetSelect);
         _setSelectedSheet(sheetHidden, "");
@@ -85,13 +80,11 @@ function _initHrmisXlsxSheetPicker() {
         _setHintVisible(hint, false);
 
         const file = fileInput.files && fileInput.files[0];
-        console.log("[HRMIS][SheetPicker] selected file:", file);
 
         if (!file) return;
 
         try {
             const names = await _readSheetNamesFromFile(file);
-            console.log("[HRMIS][SheetPicker] sheet names:", names);
 
             if (!names.length) {
                 console.warn("[HRMIS][SheetPicker] workbook has no sheet names");
@@ -112,7 +105,6 @@ function _initHrmisXlsxSheetPicker() {
             _setSelectEnabledVisible(sheetSelect, true);
             _setHintVisible(hint, true);
 
-            console.log("[HRMIS][SheetPicker] dropdown shown, selected:", names[0]);
         } catch (e) {
             console.error("[HRMIS][SheetPicker] failed to read workbook", e);
             _clearOptions(sheetSelect);
@@ -123,12 +115,6 @@ function _initHrmisXlsxSheetPicker() {
     });
 
     form.addEventListener("submit", (ev) => {
-        console.log("[HRMIS][SheetPicker] submit", {
-            selectVisible: sheetSelect.style.display !== "none",
-            selectDisabled: sheetSelect.disabled,
-            sheetHidden: sheetHidden.value,
-            sheetSelect: sheetSelect.value,
-        });
 
         // if dropdown is visible, enforce sheet selection
         const ddVisible = sheetSelect.style.display !== "none" && !sheetSelect.disabled;
@@ -141,7 +127,6 @@ function _initHrmisXlsxSheetPicker() {
         }
     });
 
-    console.log("[HRMIS][SheetPicker] init done");
 }
 
 if (document.readyState === "loading") {

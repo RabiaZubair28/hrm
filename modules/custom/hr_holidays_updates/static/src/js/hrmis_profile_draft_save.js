@@ -33,14 +33,15 @@ function _setMsg(text, isError) {
 
     // ✅ AUTO HIDE (reset previous timer)
     if (_draftMsgTimer) clearTimeout(_draftMsgTimer);
+        const timeout = isError ? 20000 : 10000;
+
         _draftMsgTimer = setTimeout(() => {
-        el.style.display = "none";
-        el.textContent = "";
-    }, 10000);
-    }
+            el.style.display = "none";
+            el.textContent = "";
+        }, timeout);
+}
 
 function _applyHrmisDraftSave() {
-    console.log("[HRMIS_DRAFT_SAVE] _applyHrmisDraftSave() called");
 
     const form = _qs(document, "#profile_update_form");
     if (!form) {
@@ -61,40 +62,27 @@ function _applyHrmisDraftSave() {
     }
     btn.dataset.hrmisDraftSaveBound = "1";
 
-    console.log("[HRMIS_DRAFT_SAVE] binding click handler", { form: !!form, btn: !!btn });
-
     btn.addEventListener("click", async (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
 
-        console.log("[HRMIS_DRAFT_SAVE] Save clicked");
-
         // Basic sanity check: required route
         const url = "/hrmis/profile/request/save";
-        console.log("[HRMIS_DRAFT_SAVE] preparing FormData for", url);
-
         btn.disabled = true;
 
         try {
             const fd = new FormData(form);
 
             // Optional: log a few known fields (don’t log sensitive values)
-            console.log("[HRMIS_DRAFT_SAVE] FormData keys sample:", Array.from(fd.keys()).slice(0, 25));
-
-            console.log("[HRMIS_DRAFT_SAVE] fetch POST start");
-
             const res = await fetch(url, {
                 method: "POST",
                 body: fd,
                 credentials: "same-origin",
             });
 
-            console.log("[HRMIS_DRAFT_SAVE] fetch response", { ok: res.ok, status: res.status });
-
             let payload = null;
             try {
                 payload = await res.json();
-                console.log("[HRMIS_DRAFT_SAVE] response JSON", payload);
             } catch (e) {
                 console.warn("[HRMIS_DRAFT_SAVE] response not JSON / parse failed", e);
                 payload = null;
@@ -110,21 +98,18 @@ function _applyHrmisDraftSave() {
             }
 
             const okMsg = (payload && payload.message) || "Draft saved.";
-            console.log("[HRMIS_DRAFT_SAVE] saved OK:", okMsg);
             _setMsg(okMsg, false);
         } catch (e) {
             console.error("[HRMIS_DRAFT_SAVE] exception:", e);
             _setMsg("Save failed due to a network/server error.", true);
         } finally {
             btn.disabled = false;
-            console.log("[HRMIS_DRAFT_SAVE] button re-enabled");
         }
     });
 }
 
 /* INIT — exactly like your working file */
 function _initHrmisDraftSave() {
-    console.log("[HRMIS_DRAFT_SAVE] init");
     _applyHrmisDraftSave();
     const serverMsg = document.querySelector(".hrmis_server_msg");
 if (serverMsg) {

@@ -11,10 +11,7 @@ from odoo.addons.hrmis_core.utils.cache_policy import (
     EMR_DEFAULT_TTL,
 )
 
-
 _logger = logging.getLogger(__name__)
-
-
 
 
 class HrmisEmrApiClient(models.AbstractModel):
@@ -29,14 +26,14 @@ class HrmisEmrApiClient(models.AbstractModel):
 
     def _auth_headers(self) -> dict:
         """
+        Uses x-client-key header for authentication.
         For testing you can leave secret empty and this will do nothing.
-        For production, you can use Bearer auth or switch to HMAC etc.
         """
         secret = self._cfg().secret_key()
         if not secret:
             return {}
-        return {"Authorization": f"Bearer {secret}"}
-    
+        return {"x-client-key": secret}
+
     def _cache_key(self, method: str, url: str, params=None, json_body=None) -> str:
         raw = {
             "m": method.upper(),
@@ -60,11 +57,9 @@ class HrmisEmrApiClient(models.AbstractModel):
         """
         p = self._normalize_path(path)
 
-        # 1) Exact match
         if p in EMR_ENDPOINT_TTL:
             return int(EMR_ENDPOINT_TTL[p])
 
-        # 2) Prefix match (longest prefix wins)
         best = None
         for prefix, ttl in EMR_ENDPOINT_TTL_PREFIX.items():
             if p.startswith(prefix):
@@ -73,7 +68,6 @@ class HrmisEmrApiClient(models.AbstractModel):
         if best:
             return int(best[1])
 
-        # 3) Default
         return int(EMR_DEFAULT_TTL)
 
     def request(
@@ -162,22 +156,50 @@ class HrmisEmrApiClient(models.AbstractModel):
         if not ok:
             _logger.warning(
                 "[HRMIS EMR API] Non-2xx %s %s -> %s body=%s",
-                method, url, resp.status_code,
-                (resp.text[:1200] if resp.text else "")
+                method,
+                url,
+                resp.status_code,
+                (resp.text[:1200] if resp.text else ""),
             )
 
-        if cache and method == "GET" and ok and resp.status_code == 200 and cache_key:
+            api_message = None
+            api_error = None
+
+            if isinstance(payload, dict):
+                api_message = (
+                    payload.get("message")
+                    or payload.get("error_description")
+                    or payload.get("detail")
+                    or payload.get("error")
+                )
+                api_error = payload.get("error") or "http_error"
+
+            if not api_message:
+                api_message = f"Request failed with status {resp.status_code}"
+
+            return {
+                "ok": False,
+                "status": resp.status_code,
+                "url": url,
+                "error": api_error or "http_error",
+                "message": api_message,
+                "data": None,
+                "raw": payload,
+                "cached": False,
+            }
+
+        if cache and method == "GET" and resp.status_code == 200 and cache_key:
             ttl_to_use = cache_ttl if cache_ttl is not None else self._smart_ttl(path)
             self.env["hrmis.redis.cache"].sudo().set_json(cache_key, payload, ttl=ttl_to_use)
 
         return {
-            "ok": ok,
+            "ok": True,
             "status": resp.status_code,
             "url": url,
-            "error": None if ok else "http_error",
-            "message": None if ok else "Request failed",
-            "data": payload if ok else None,
-            "raw": payload if not ok else None,
+            "error": None,
+            "message": None,
+            "data": payload,
+            "raw": None,
             "cached": False,
         }
 

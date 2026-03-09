@@ -100,17 +100,15 @@ class EmployeeProfileRequest(models.Model):
         string="BPS Grade"
     )
 
-    district_id = fields.Many2one(
-        'hrmis.district.master',
+    # CHANGED: external EMR IDs, not local Many2one
+    district_id = fields.Integer(
         string="Current District",
-        required=False
+        required=False,
     )
 
-    facility_id = fields.Many2one(
-        'hrmis.facility.type',
+    facility_id = fields.Integer(
         string="Current Facility",
         required=False,
-        domain="[('district_id','=',district_id)]"
     )
     hrmis_leaves_taken = fields.Float(
         string="Total Leaves Taken Since Joining (Days)"
@@ -124,9 +122,6 @@ class EmployeeProfileRequest(models.Model):
     hrmis_contact_info = fields.Char(string="Contact Info")
     current_posting_start = fields.Char(string="Current Posting Start (YYYY-MM)")
     facility_other_name = fields.Char(string="Other Facility Name")
-
-
-    # ---------------- QUALIFICATION / PROMOTION ---------------- #
 
     hrmis_domicile = fields.Char(string="Domicile")
 
@@ -158,7 +153,6 @@ class EmployeeProfileRequest(models.Model):
     )
 
     posting_line_ids = fields.One2many(
-        # "hrmis.employee.profile.request.posting.line",
         "hrmis.posting.history",
         "request_id",
         string="Previous Posting History",
@@ -183,12 +177,12 @@ class EmployeeProfileRequest(models.Model):
         ("eol_pgship", "EOL (PGship)"),
         ("reported_to_health_department", "Reported to Health Department"),
     ], default="currently_posted")
-    posting_status_id = fields.One2many(
-    "hrmis.profile.posting.status",
-    "request_id",
-    string="Posting Status Detail",
-)
 
+    posting_status_id = fields.One2many(
+        "hrmis.profile.posting.status",
+        "request_id",
+        string="Posting Status Detail",
+    )
 
     @api.model
     def default_get(self, fields_list):
@@ -208,12 +202,14 @@ class EmployeeProfileRequest(models.Model):
             'hrmis_cadre': employee.hrmis_cadre,
             'hrmis_designation': employee.hrmis_designation,
             'hrmis_bps': employee.hrmis_bps,
-            'district_id': employee.district_id.id,
-            'facility_id': employee.facility_id.id,
+
+            # CHANGED: store integer IDs only
+            'district_id': employee.district_id.id if employee.district_id else False,
+            'facility_id': employee.facility_id.id if employee.facility_id else False,
+
             'hrmis_contact_info': employee.hrmis_contact_info,
             "hrmis_leaves_taken": employee.hrmis_leaves_taken,
 
-            # NEW
             "hrmis_domicile": employee.hrmis_domicile,
             "qualification": employee.qualification,
             "qualification_date": employee.qualification_date,
@@ -232,18 +228,8 @@ class EmployeeProfileRequest(models.Model):
 
     @api.onchange('district_id')
     def _onchange_district(self):
+        # CHANGED: no Many2one domain anymore
         self.facility_id = False
-        if self.district_id:
-            return {
-                'domain': {
-                    'facility_id': [('district_id', '=', self.district_id.id)]
-                }
-            }
-
-    # -------------------------------------------------
-    # ACTIONS
-    # -------------------------------------------------
-
 
     def _is_parent_approver(self):
         self.ensure_one()
@@ -265,8 +251,6 @@ class EmployeeProfileRequest(models.Model):
             'hrmis_designation',
             'hrmis_bps',
             'hrmis_leaves_taken',
-
-            # NEW
             'hrmis_domicile',
             'qualification',
             'qualification_date',
@@ -294,22 +278,21 @@ class EmployeeProfileRequest(models.Model):
                 rec.message_post(
                     body="Profile update request submitted for approval.",
                     partner_ids=hr_group.users.mapped('partner_id').ids,
-                    message_type='comment',  # avoids sending email
+                    message_type='comment',
                     subtype_xmlid="mail.mt_comment",
                 )
-            # Notify employee
+
             if rec.user_id:
                 rec.message_post(
                     body="You have submitted a profile update request.",
                     partner_ids=[rec.user_id.partner_id.id],
-                    message_type='comment',  # avoids sending email
+                    message_type='comment',
                     subtype_xmlid="mail.mt_comment",
                 )
 
     def action_approve(self):
         self.ensure_one()
 
-        # Access: either parent/manager, admin, or HR
         is_hr = self.env.user.has_group('hr.group_hr_manager')
         is_admin = self.env.user.has_group('base.group_system')
         is_parent = self._is_parent_approver()
@@ -317,15 +300,12 @@ class EmployeeProfileRequest(models.Model):
         if not (is_hr or is_admin or is_parent):
             raise UserError("Only the employee's manager (or HR/Admin) can approve this request.")
 
-        # Prevent self-approval
         if self.user_id == self.env.user:
             raise UserError("You cannot approve your own profile update request.")
 
-        # Must be submitted
         if self.state != 'submitted':
             raise UserError("Only submitted requests can be approved.")
 
-        # Apply changes safely
         self.employee_id.write({
             'hrmis_employee_id': self.hrmis_employee_id,
             'hrmis_cnic': self.hrmis_cnic,
@@ -337,12 +317,13 @@ class EmployeeProfileRequest(models.Model):
             'hrmis_commission_date': self.hrmis_commission_date,
             'hrmis_cadre': self.hrmis_cadre.id if self.hrmis_cadre else False,
             'hrmis_designation': self.hrmis_designation,
-            'district_id': self.district_id.id if self.district_id else False,
-            'facility_id': self.facility_id.id if self.facility_id else False,
+
+            # CHANGED: direct integer values
+            'district_id': self.district_id or False,
+            'facility_id': self.facility_id or False,
+
             'hrmis_contact_info': self.hrmis_contact_info,
             'hrmis_leaves_taken': self.hrmis_leaves_taken,
-
-            # NEW
             'hrmis_domicile': self.hrmis_domicile,
             'qualification': self.qualification,
             'qualification_date': self.qualification_date,
@@ -359,7 +340,6 @@ class EmployeeProfileRequest(models.Model):
         self.approved_by = self.env.user.id
         self.state = 'approved'
 
-        # Notify employee (without breaking UI)
         if self.user_id and self.user_id.partner_id:
             self.message_post(
                 body="Your profile update request has been approved.",
@@ -368,11 +348,9 @@ class EmployeeProfileRequest(models.Model):
                 subtype_xmlid="mail.mt_comment",
             )
 
-
     def action_reject(self):
         self.ensure_one()
 
-        # Access: either parent/manager, admin, or HR
         is_hr = self.env.user.has_group('hr.group_hr_manager')
         is_admin = self.env.user.has_group('base.group_system')
         is_parent = self._is_parent_approver()
@@ -388,7 +366,6 @@ class EmployeeProfileRequest(models.Model):
 
         self.state = 'rejected'
 
-        # Notify employee safely
         if self.user_id and self.user_id.partner_id:
             self.message_post(
                 body="Your profile update request has been rejected.",

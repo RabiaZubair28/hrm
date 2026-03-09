@@ -40,7 +40,6 @@ function _getOrCreateOtherWrap(selectEl) {
     wrap.className = "js-other-wrap";
     wrap.style.cssText = "display:none; margin-top:6px;";
     field.appendChild(wrap);
-    _LOG("Created missing .js-other-wrap for", selectEl.name || selectEl);
   }
 
   let input = wrap.querySelector(".js-other-input");
@@ -51,7 +50,6 @@ function _getOrCreateOtherWrap(selectEl) {
     input.name = _computeOtherInputName(selectEl);
     input.placeholder = "Enter value";
     wrap.appendChild(input);
-    _LOG("Created missing .js-other-input:", input.name);
   }
   return { wrap, input };
 }
@@ -100,7 +98,6 @@ function _injectSearch(selectEl) {
     dataset: { ...o.dataset },
   }));
 
-  _LOG("Search enabled on select:", selectEl.name || selectEl, "options:", originalOptions.length);
 
   const rebuild = (q) => {
     const query = _norm(q);
@@ -174,10 +171,8 @@ publicWidget.registry.HrmisOtherOption = publicWidget.Widget.extend({
   },
 
   start() {
-    _LOG("Init HrmisOtherOption on:", this.el);
 
     const selects = this.el.querySelectorAll("select.js-other-select");
-    _LOG("Found js-other-select count:", selects.length);
 
     selects.forEach((sel) => {
       _ensureOtherOption(sel);
@@ -190,7 +185,6 @@ publicWidget.registry.HrmisOtherOption = publicWidget.Widget.extend({
 
   _onSelectChange(ev) {
     const sel = ev.currentTarget;
-    _LOG("Change:", sel.name, "value=", sel.value);
     _toggleOther(sel);
   },
 
@@ -202,4 +196,3 @@ publicWidget.registry.HrmisOtherOption = publicWidget.Widget.extend({
   },
 });
 
-_LOG("hrmis_other_option.js loaded");

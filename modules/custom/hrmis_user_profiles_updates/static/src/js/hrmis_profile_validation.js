@@ -632,6 +632,55 @@ function _initSearchableSelects(scopeRoot) {
 /* ---------------------------------------------------------
  * Digits-only enforcement (strict)
  * --------------------------------------------------------- */
+// function _digitsOnly(input, { maxLen = null } = {}) {
+//   if (!input) return;
+
+//   input.setAttribute("inputmode", "numeric");
+//   input.setAttribute("autocomplete", "off");
+//   if (maxLen) input.setAttribute("maxlength", String(maxLen));
+
+//   input.addEventListener("keydown", (e) => {
+//     const allowed =
+//       e.key === "Backspace" ||
+//       e.key === "Delete" ||
+//       e.key === "Tab" ||
+//       e.key === "ArrowLeft" ||
+//       e.key === "ArrowRight" ||
+//       e.key === "Home" ||
+//       e.key === "End";
+
+//     if (allowed) return;
+//     if (e.ctrlKey || e.metaKey) return;
+
+//     if (!/^\d$/.test(e.key)) {
+//       e.preventDefault();
+//       _showError(input, "Only numbers allowed");
+//     } else {
+//       _clearError(input);
+//     }
+//   });
+
+//   input.addEventListener("paste", (e) => {
+//     e.preventDefault();
+//     const text =
+//       (e.clipboardData || window.clipboardData).getData("text") || "";
+//     let digits = text.replace(/\D/g, "");
+//     if (maxLen) digits = digits.slice(0, maxLen);
+//     input.value = digits;
+//     input.dispatchEvent(new Event("input", { bubbles: true }));
+//   });
+
+//   input.addEventListener("input", () => {
+//     const raw = input.value || "";
+//     let digits = raw.replace(/\D/g, "");
+//     if (maxLen) digits = digits.slice(0, maxLen);
+//     if (digits !== raw) input.value = digits;
+//   });
+// }
+
+/* ---------------------------------------------------------
+ * Digits-only enforcement (strict)
+ * --------------------------------------------------------- */
 function _digitsOnly(input, { maxLen = null } = {}) {
   if (!input) return;
 
@@ -646,13 +695,17 @@ function _digitsOnly(input, { maxLen = null } = {}) {
       e.key === "Tab" ||
       e.key === "ArrowLeft" ||
       e.key === "ArrowRight" ||
+      e.key === "ArrowUp" ||
+      e.key === "ArrowDown" ||
       e.key === "Home" ||
-      e.key === "End";
+      e.key === "End" ||
+      e.key === "Enter";
 
-    if (allowed) return;
-    if (e.ctrlKey || e.metaKey) return;
+    if (allowed || e.ctrlKey || e.metaKey) {
+      return;
+    }
 
-    if (!/^\d$/.test(e.key)) {
+    if (!/[0-9]/.test(e.key)) {
       e.preventDefault();
       _showError(input, "Only numbers allowed");
     } else {
@@ -662,21 +715,45 @@ function _digitsOnly(input, { maxLen = null } = {}) {
 
   input.addEventListener("paste", (e) => {
     e.preventDefault();
-    const text =
-      (e.clipboardData || window.clipboardData).getData("text") || "";
+    const text = (e.clipboardData || window.clipboardData).getData("text") || "";
     let digits = text.replace(/\D/g, "");
-    if (maxLen) digits = digits.slice(0, maxLen);
+
+    if (maxLen) {
+      digits = digits.slice(0, maxLen);
+    }
+
     input.value = digits;
+    _clearError(input);
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
 
   input.addEventListener("input", () => {
     const raw = input.value || "";
     let digits = raw.replace(/\D/g, "");
-    if (maxLen) digits = digits.slice(0, maxLen);
-    if (digits !== raw) input.value = digits;
+
+    if (maxLen) {
+      digits = digits.slice(0, maxLen);
+    }
+
+    if (digits !== raw) {
+      input.value = digits;
+    }
+
+    if (digits) {
+      _clearError(input);
+    }
   });
+
+  input.addEventListener("blur", () => {
+  const raw = input.value || "";
+  const digits = raw.replace(/\D/g, "");
+
+  if (digits) {
+    _clearError(input);
+  }
+});
 }
+
 
 /* ---------------------------------------------------------
  * Joining/Current BPS helpers
@@ -2719,16 +2796,26 @@ function _initCnicScanFiles(form) {
 function _initAllowedToWorkToggle() {
   const checkbox = document.getElementById("allowed_to_work_checkbox");
   const box = document.getElementById("allowed_to_work_box");
+  const startMonth = document.querySelector('input[name="allowed_start_month"]');
 
   if (!checkbox || !box) return;
 
   function syncAllowedUI() {
-    box.style.display = checkbox.checked ? "" : "none";
+    const enabled = checkbox.checked;
+    box.style.display = enabled ? "" : "none";
+
+    if (startMonth) {
+      if (enabled) {
+        startMonth.setAttribute("required", "required");
+      } else {
+        startMonth.removeAttribute("required");
+        startMonth.value = "";
+        _clearError(startMonth);
+      }
+    }
   }
 
   checkbox.addEventListener("change", syncAllowedUI);
-
-  // Run once on load
   syncAllowedUI();
 }
 function _readPrefillJSON() {

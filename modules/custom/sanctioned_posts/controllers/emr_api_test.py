@@ -9,7 +9,7 @@ class HrmisEmrApiTestController(http.Controller):
 
     @http.route("/hrmis/emr_api/test", type="http", auth="user", website=True, methods=["GET", "POST"], csrf=True)
     def emr_api_test_page(self, **post):
-        endpoint = (post.get("endpoint") or "/breeds").strip() or "/breeds"
+        endpoint = (post.get("endpoint") or "facilities/district/1?page=1&limit=2500").strip() or "facilities/district/1?page=1&limit=2500"
 
         ctx = {
             "active_menu": "emr_api_test",
