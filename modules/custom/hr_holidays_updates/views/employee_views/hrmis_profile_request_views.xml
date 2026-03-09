@@ -21,7 +21,7 @@
                 <t t-esc="info"/>
               </div>
             </t>
-            <t t-if="error and str(error).strip().lower() not in ('not found', 'not_found')">
+            <t t-if="error">
               <div class="hrmis_server_msg" data-type="error" style="display:none;">
                 <t t-esc="error"/>
               </div>
