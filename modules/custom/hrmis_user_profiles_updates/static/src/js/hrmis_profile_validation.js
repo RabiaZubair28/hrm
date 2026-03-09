@@ -67,8 +67,6 @@ function _visualErrorTarget(el) {
   // If this is a hidden select that has a visible combobox input, use that.
   if (el && el.tagName === "SELECT" && el._hrmisComboboxInput)
     return el._hrmisComboboxInput;
-  // Commission / Joining date inputs render through a visible month proxy.
-  if (el && el._hrmisMonthProxy) return el._hrmisMonthProxy;
   return el;
 }
 

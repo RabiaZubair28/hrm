@@ -19,7 +19,6 @@ function _qsa(root, sel) {
 function _visualControlTarget(control) {
   if (control && control.tagName === "SELECT" && control._hrmisComboboxInput)
     return control._hrmisComboboxInput;
-  if (control && control._hrmisMonthProxy) return control._hrmisMonthProxy;
   return control;
 }
 
