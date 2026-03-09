@@ -857,9 +857,26 @@ function _isExplicitlyHiddenForSubmit(el, stopAt = null) {
     if (cur.hidden) return true;
     if (cur.classList?.contains("d-none")) return true;
     if (cur.style?.display === "none") return true;
+    try {
+      const style = window.getComputedStyle(cur);
+      if (style.display === "none" || style.visibility === "hidden") return true;
+    } catch {
+      // ignore computed-style lookup failures
+    }
     cur = cur.parentElement;
   }
   return false;
+}
+
+function _isFileFieldAlreadySatisfied(input) {
+  if (!input || _inputTypeLower(input) !== "file") return false;
+  const field = input.closest(".hrmis-field") || input.parentElement;
+  if (!field) return false;
+
+  const fieldText = (field.textContent || "").toLowerCase();
+  if (fieldText.includes("already uploaded:")) return true;
+
+  return !!field.querySelector('a[href*="/web/content/"], img[src*="/web/content/"]');
 }
 
 function _hasRequiredStarLabel(form, el) {
@@ -879,6 +896,8 @@ function _hasRequiredStarLabel(form, el) {
 function _isSubmitRelevantField(form, input) {
   if (!input || input.disabled) return false;
   if (_inputTypeLower(input) === "hidden") return false;
+  if (_inputTypeLower(input) === "file" && !input.required && _isFileFieldAlreadySatisfied(input))
+    return false;
 
   const target = _visualErrorTarget(input) || input;
   if (_isExplicitlyHiddenForSubmit(target, form)) return false;
@@ -893,6 +912,7 @@ function _isEmptyFieldValue(form, input) {
 
   const type = _inputTypeLower(input);
   if (type === "file") {
+    if (_isFileFieldAlreadySatisfied(input)) return false;
     return !(input.files && input.files.length) && _isEmpty(input.value);
   }
   if (type === "checkbox") return !input.checked;
@@ -947,6 +967,7 @@ function _setSubmitValidationWarning(form, message) {
 function _runSubmitValidation(form) {
   let hasError = false;
   let firstVisibleError = null;
+  const invalidFields = [];
 
   _setSubmitValidationWarning(form, "");
   _syncPmdcRequiredByCadre(form);
@@ -964,9 +985,18 @@ function _runSubmitValidation(form) {
 
     if (isRequiredField && _isEmptyFieldValue(form, input)) {
       _showError(input, "This field is required");
+      invalidFields.push({
+        name: input.name || "(unnamed)",
+        message: "This field is required",
+      });
       hasError = true;
     } else if (!isExplicitlyHidden && input.willValidate && !input.checkValidity()) {
-      _showError(input, input.validationMessage || "Invalid value");
+      const msg = input.validationMessage || "Invalid value";
+      _showError(input, msg);
+      invalidFields.push({
+        name: input.name || "(unnamed)",
+        message: msg,
+      });
       hasError = true;
     }
 
@@ -989,6 +1019,9 @@ function _runSubmitValidation(form) {
     hasError = true;
 
   if (hasError) {
+    if (invalidFields.length) {
+      console.warn("[HRMIS Validation] invalid fields:", invalidFields);
+    }
     _setSubmitValidationWarning(form, "There are some missing / incorrect fields");
     if (firstVisibleError) {
       firstVisibleError.scrollIntoView({ behavior: "smooth", block: "center" });
