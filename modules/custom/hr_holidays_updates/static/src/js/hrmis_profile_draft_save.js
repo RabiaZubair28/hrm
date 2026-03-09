@@ -6,6 +6,11 @@ function _qs(root, sel) {
 
 let _draftMsgTimer = null;
 
+function _shouldIgnoreServerMsg(text) {
+    const normalized = String(text || "").trim().toLowerCase();
+    return normalized === "not found" || normalized === "not_found";
+}
+
 function _setMsg(text, isError) {
     const el = document.getElementById("draft_save_msg");
     if (!el) {
@@ -130,7 +135,7 @@ function _initHrmisDraftSave() {
 if (serverMsg) {
     const msgText = (serverMsg.textContent || "").trim();
     const msgType = serverMsg.dataset.type; // "success" or "error"
-    if (msgText) {
+    if (msgText && !_shouldIgnoreServerMsg(msgText)) {
         _setMsg(msgText, msgType === "error");
     }
     // serverMsg.remove(); // ✅ prevents showing again on pageshow
