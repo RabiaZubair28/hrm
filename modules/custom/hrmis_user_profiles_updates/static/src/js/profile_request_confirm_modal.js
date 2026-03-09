@@ -709,9 +709,23 @@ function _initConfirmModal() {
   confirmBtn.addEventListener("click", (ev) => {
     ev.preventDefault();
     console.log("[HRMIS ConfirmModal] confirm clicked -> submitting form");
+
+    const customOk =
+      typeof form._hrmisRunSubmitValidation === "function"
+        ? form._hrmisRunSubmitValidation()
+        : true;
+    const nativeOk = form.checkValidity();
+
+    if (!customOk || !nativeOk) {
+      console.warn("[HRMIS ConfirmModal] confirm blocked by validation");
+      _highlightInvalidFields(form);
+      _showSubmitWarning(form);
+      return;
+    }
+
     confirmBtn.disabled = true;
-    if (typeof form.requestSubmit === "function") form.requestSubmit();
-    else form.submit();
+    _hideModal(modalEl);
+    form.submit();
   });
 }
 
