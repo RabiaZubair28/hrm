@@ -3024,7 +3024,7 @@ function _initHRMISValidations() {
     return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
   }
 
-  form.addEventListener("submit", function (e) {
+  form._hrmisRunSubmitValidation = function () {
     let hasError = false;
 
     // Ensure conditional required flags are in sync right before validation
@@ -3107,7 +3107,12 @@ function _initHRMISValidations() {
     if (form._hrmisValidateCnicFiles && !form._hrmisValidateCnicFiles())
       hasError = true;
 
-    if (hasError) {
+    return !hasError;
+  };
+
+  form.addEventListener("submit", function (e) {
+    const isValid = form._hrmisRunSubmitValidation();
+    if (!isValid) {
       e.preventDefault();
       e.stopPropagation();
     }
