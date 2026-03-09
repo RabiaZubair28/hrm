@@ -93,16 +93,6 @@ function _showError(input, message) {
   }
 }
 
-function _markErrorOnly(input) {
-  if (!input) return;
-  const target = _visualErrorTarget(input);
-  target.classList.add("has-error");
-  target.style.borderColor = "#dc3545";
-  if (target !== input && input) {
-    input.classList.add("has-error");
-  }
-}
-
 function _clearError(input) {
   if (!input) return;
   const target = _visualErrorTarget(input);
@@ -3051,7 +3041,7 @@ function _initHRMISValidations() {
         const inp = _qs(form, `[name="${f.name}"]`);
         if (!inp || inp.disabled) return;
         if (_isEmpty(inp.value)) {
-          _markErrorOnly(inp);
+          _showError(inp, f.msg);
           hasError = true;
         }
       });
@@ -3077,14 +3067,17 @@ function _initHRMISValidations() {
             input.name === "hrmis_joining_date" &&
             joiningInput?._hrmisMonthProxy
           ) {
-            _markErrorOnly(joiningInput._hrmisMonthProxy);
+            _showError(joiningInput._hrmisMonthProxy, "This field is required");
           } else if (
             input.name === "hrmis_commission_date" &&
             commissionInput?._hrmisMonthProxy
           ) {
-            _markErrorOnly(commissionInput._hrmisMonthProxy);
+            _showError(
+              commissionInput._hrmisMonthProxy,
+              "This field is required",
+            );
           } else {
-            _markErrorOnly(input);
+            _showError(input, "This field is required");
           }
           hasError = true;
         }
