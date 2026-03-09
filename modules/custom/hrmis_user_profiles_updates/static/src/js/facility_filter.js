@@ -23,6 +23,14 @@ function _norm(v) {
   return (v || "").toString().trim();
 }
 
+function _canonBps(v) {
+  // Accepts: "18", "BS-18", "BPS 18", "BS 18", etc.
+  // Returns numeric string if found, else normalized string.
+  const s = _norm(v);
+  const m = s.match(/\b(\d{1,2})\b/);
+  return m ? m[1] : s;
+}
+
 function _isOther(v) {
   return _norm(v) === "__other__";
 }
@@ -130,6 +138,15 @@ function _filterFacilityAndDesignation() {
     ].join(", "),
   );
 
+  // Top BPS (Employee Information) drives designation filters in sections where BPS inputs were removed
+  const topBpsEl =
+    _qs(form, 'input[name="hrmis_bps"], select[name="hrmis_bps"]') || null;
+
+  function _isTopBps(el) {
+    return !!(topBpsEl && el === topBpsEl);
+  }
+
+
   if (!districts.length && !facilities.length && !designations.length) {
     console.warn("[HRMIS][FILTER] No relevant fields found.");
     return;
@@ -184,13 +201,14 @@ function _filterFacilityAndDesignation() {
   }
 
   function _findBpsFor(ctxRoot) {
-    return (
+    // Prefer a local BPS inside the same section/row (posting history, etc.)
+    // IMPORTANT: we intentionally do NOT look for name="hrmis_bps" inside ctxRoot here,
+    // because BPS was removed from some sections and must always come from the top BPS.
+    const local =
       _qs(
         ctxRoot,
         [
           ".js-hrmis-bps",
-          'input[name="hrmis_bps"]',
-          'select[name="hrmis_bps"]',
           'input[name="bps"]',
           'select[name="bps"]',
           'input[name="bps_id"]',
@@ -200,11 +218,11 @@ function _filterFacilityAndDesignation() {
           'input[name="allowed_bps"]',
           'select[name="allowed_bps"]',
         ].join(", "),
-      ) ||
-      bpsInputs[0] ||
-      null
-    );
+      ) || null;
+
+    return local || topBpsEl || null;
   }
+
 
   function filterFacilities(districtSelect, facilitySelect) {
     if (!districtSelect || !facilitySelect) return;
@@ -254,7 +272,8 @@ function _filterFacilityAndDesignation() {
   function filterDesignationsByBps(designationSelect, bpsInput) {
     if (!designationSelect) return;
 
-    const bpsValue = bpsInput ? _norm(bpsInput.value) : "";
+    const bpsValueRaw = bpsInput ? _norm(bpsInput.value) : "";
+    const bpsValue = _canonBps(bpsValueRaw);
 
     let visibleCount = 0;
     let totalReal = 0;
@@ -268,11 +287,14 @@ function _filterFacilityAndDesignation() {
 
       totalReal += 1;
 
-      const optBps = _norm(option.dataset.bps);
+      // Your XML uses data-bps. Some older/other templates may use data-bps-id.
+      const optBpsRaw = _norm(option.dataset.bps || option.dataset.bpsId);
+      const optBps = _canonBps(optBpsRaw);
 
       // If BPS empty => show all
       // Else show only exact match
-      const visible = !bpsValue || optBps === bpsValue;
+      // If an option has no bps metadata, keep it visible (avoid "only Other" situations)
+      const visible = !bpsValue || !optBps || optBps === bpsValue;
 
       _setOptionVisible(option, visible);
       if (visible) visibleCount += 1;
@@ -296,6 +318,7 @@ function _filterFacilityAndDesignation() {
 
     console.info("[HRMIS][FILTER][DESIG] done", {
       bps: bpsValue,
+      bpsRaw: bpsValueRaw,
       totalRealOptions: totalReal,
       visibleCount,
       name: designationSelect.name,
@@ -371,6 +394,11 @@ function _filterFacilityAndDesignation() {
       )
     ) {
       console.info("[HRMIS][FILTER] bps changed", { name: t.getAttribute("name"), value: t.value });
+      if (_isTopBps(t)) {
+        console.info("[HRMIS][FILTER][BPS] top BPS changed => refresh all designations");
+        designations.forEach((ds) => runBpsDesignation(_getCtx(ds, form)));
+        return;
+      }
       runBpsDesignation(_getCtx(t, form));
       return;
     }
@@ -393,9 +421,58 @@ function _filterFacilityAndDesignation() {
         ].join(", "),
       )
     ) {
-      runBpsDesignation(_getCtx(t, form));
+      if (_isTopBps(t)) {
+        designations.forEach((ds) => runBpsDesignation(_getCtx(ds, form)));
+      } else {
+        runBpsDesignation(_getCtx(t, form));
+      }
     }
   });
+
+  // If some sections are hidden on load (Suspended / On Leave), your searchable-combobox
+  // enhancer may initialize later (on first focus/click). In that case, we must re-apply
+  // the BPS filter right before the user opens the dropdown.
+  // This fixes cases where those dropdowns appear unfiltered even though top BPS exists.
+  form.addEventListener(
+    "focusin",
+    (ev) => {
+      const t = ev.target;
+      if (!(t instanceof Element)) return;
+
+      // If the searchable combobox enhancer is used, focus will land on the input,
+      // not the underlying <select>. Map back to the wrapped select.
+      let sel = null;
+      if (t.matches && t.matches(".hrmis-combobox input")) {
+        const wrap = t.closest(".hrmis-combobox");
+        sel = wrap ? _qs(wrap, "select") : null;
+      } else if (t.matches && t.matches("select")) {
+        sel = t;
+      }
+
+      if (!sel) return;
+
+      if (
+        sel.matches(
+          [
+            "select.js-designation-select",
+            "select.js-suspension-designation",
+            "select.js-onleave-designation",
+            'select[name="hrmis_designation"]',
+            'select[name="designation_id"]',
+            'select[name="posting_designation_id[]"]',
+            'select[name="allowed_designation_id"]',
+            'select[name="frontend_reporting_designation_id"]',
+            'select[name="frontend_onleave_designation_id"]',
+          ].join(", "),
+        )
+      ) {
+        // Filter this designation select using local BPS (if any) else TOP BPS.
+        filterDesignationsByBps(sel, _findBpsFor(_getCtx(sel, form)));
+      }
+    },
+    true,
+  );
+
 
   // Dynamic rows support
   const obs = new MutationObserver((muts) => {

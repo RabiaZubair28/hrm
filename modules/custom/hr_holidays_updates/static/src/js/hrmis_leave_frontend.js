@@ -431,6 +431,14 @@ function _init() {
   _syncProfileTabsActiveClass();
   if (!formEl) return;
 
+  // This form submits via AJAX; don't let the global page loader get stuck.
+  try {
+    formEl.dataset.hrmisNoLoader = "1";
+    formEl.setAttribute("data-hrmis-no-loader", "1");
+  } catch {
+    // ignore
+  }
+
   // Submit via AJAX so validation errors (especially overlaps) do not navigate away.
   formEl.addEventListener("submit", async (ev) => {
     ev.preventDefault();
@@ -472,17 +480,37 @@ function _init() {
           msg = `Could not submit leave request${resp?.status ? ` (HTTP ${resp.status})` : ""}`;
         }
         _showInlineAlert(formEl, "error", msg);
+        // Ensure loader is hidden on AJAX errors.
+        try {
+          const loader = document.querySelector("#hrmis_page_loader");
+          if (loader) loader.style.display = "none";
+        } catch {
+          // ignore
+        }
         return;
       }
 
       const redirect = data?.redirect;
       if (redirect) {
+        // Show loader for the upcoming navigation.
+        try {
+          const loader = document.querySelector("#hrmis_page_loader");
+          if (loader) loader.style.display = "flex";
+        } catch {
+          // ignore
+        }
         window.location.href = redirect;
       } else {
         _showInlineAlert(formEl, "success", "Leave request submitted");
       }
     } catch {
       _showInlineAlert(formEl, "error", "Could not submit leave request");
+      try {
+        const loader = document.querySelector("#hrmis_page_loader");
+        if (loader) loader.style.display = "none";
+      } catch {
+        // ignore
+      }
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;

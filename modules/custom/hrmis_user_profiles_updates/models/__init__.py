@@ -17,3 +17,5 @@ from . import promotion_history
 from . import leave_history
 from . import employee_export
 from . import hrmis_profile_posting_status
+# from . import hrmis_training_institue
+from . import hrmis_training_institute

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="emr_api_test_templates" name="HRMIS EMR API Test Page">
+        <t t-call="hr_holidays_updates.hrmis_ui_layout">
+            <t t-set="active_menu" t-value="'emr_api_test'"/>
+
+            <div class="container mt-4 mb-5">
+                <div class="card p-3" style="border:1px solid #eee; border-radius:10px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <div>
+                            <div style="font-size:18px; font-weight:700;">EMR API Test</div>
+                            <div style="font-size:13px; color:#666;">
+                                Server-rendered test (no JS). Calls <code>hrmis.emr.api.client</code> and prints JSON below.
+                            </div>
+                        </div>
+
+                        <!-- POST to same controller; it will render same page with results -->
+                        <form method="post" action="/hrmis/emr_api/test" style="margin:0;">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <input type="hidden" name="endpoint" t-att-value="endpoint or '/breeds'"/>
+                            <button type="submit" class="btn btn-primary">
+                                Hit API
+                            </button>
+                        </form>
+                    </div>
+
+                    <t t-if="error_msg">
+                        <div class="alert alert-danger mt-3" role="alert">
+                            <t t-esc="error_msg"/>
+                        </div>
+                    </t>
+
+                    <t t-if="api_result_text">
+                        <div class="mt-3">
+                            <div style="font-size:13px; color:#666;">
+                                <strong>Endpoint:</strong> <t t-esc="endpoint"/> |
+                                <strong>Status:</strong> <t t-esc="api_status"/>
+                            </div>
+
+                            <pre style="margin-top:10px; padding:12px; background:#0b1020; color:#e6e6e6; border-radius:10px; overflow:auto; max-height:520px;"
+                                 t-esc="api_result_text"/>
+                        </div>
+                    </t>
+
+                    <t t-if="not api_result_text and not error_msg">
+                        <div class="mt-3" style="font-size:13px; color:#666;">
+                            Click <strong>Hit API</strong> to fetch data and render it here.
+                        </div>
+                    </t>
+                </div>
+            </div>
+
+        </t>
+    </template>
+</odoo>

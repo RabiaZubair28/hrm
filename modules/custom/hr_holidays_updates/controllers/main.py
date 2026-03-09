@@ -233,47 +233,55 @@ def _can_manage_employee_leave(employee) -> bool:
 
 def _pending_leave_requests_for_user(user_id: int):
     Leave = request.env["hr.leave"].sudo()
-
     domains = []
-    # Prefer the custom sequential/parallel visibility engine when available.
-    # This ensures only the *current* pending approver(s) see the request.
-    if "pending_approver_ids" in Leave._fields:
-        # Some deployments use 'validate1' as an intermediate "still pending final approval" state.
-        domains.append([("state", "in", ("confirm", "validate1")), ("pending_approver_ids", "in", [user_id])])
-    # OpenHRMS multi-level approval: show only requests where current user is a validator
-    # and has NOT yet approved.
-    if "validation_status_ids" in Leave._fields and "pending_approver_ids" not in Leave._fields:
-        domains.append(
-            [
-                ("state", "=", "confirm"),
-                ("validation_status_ids.user_id", "=", user_id),
-                ("validation_status_ids.validation_status", "=", False),
-            ]
-        )
 
-    # Standard Odoo manager approval fallback (useful if validation_status_ids is absent
-    # or leave types aren't configured with validators).
+    # Prefer the custom sequential/parallel visibility engine when available.
+    if "pending_approver_ids" in Leave._fields:
+        f = Leave._fields["pending_approver_ids"]
+        comodel = getattr(f, "comodel_name", None)
+
+        # Map current user to the right ID type stored in pending_approver_ids
+        if comodel == "res.users":
+            approver_ids = [user_id]
+        elif comodel == "hr.employee":
+            emp = request.env["hr.employee"].sudo().search([("user_id", "=", user_id)], limit=1)
+            approver_ids = [emp.id] if emp else [-1]
+        elif comodel == "res.partner":
+            user = request.env["res.users"].sudo().browse(user_id)
+            approver_ids = [user.partner_id.id] if user and user.partner_id else [-1]
+        else:
+            # fallback (better than breaking visibility)
+            approver_ids = [user_id]
+
+        domains.append([
+            ("state", "in", ("confirm", "validate1")),
+            ("pending_approver_ids", "in", approver_ids),
+        ])
+
+    # OpenHRMS / validator-line engine fallback
+    if "validation_status_ids" in Leave._fields and "pending_approver_ids" not in Leave._fields:
+        domains.append([
+            ("state", "in", ("confirm", "validate1")),
+            ("validation_status_ids.user_id", "=", user_id),
+            ("validation_status_ids.validation_status", "=", False),
+        ])
+
+    # Standard Odoo manager fallback
     if "employee_id" in Leave._fields:
         domains.append([("state", "=", "confirm"), ("employee_id.parent_id.user_id", "=", user_id)])
 
-    # Second-stage approvals (Odoo standard "validate1" => "validate") are usually handled
-    # by Time Off officers/managers. Without this, those requests won't show up in Manage Requests.
-    if (
-        request.env.user
-        and (
-            request.env.user.has_group("hr_holidays.group_hr_holidays_user")
-            or request.env.user.has_group("hr_holidays.group_hr_holidays_manager")
-        )
+    # HR officers/managers see validate1
+    if request.env.user and (
+        request.env.user.has_group("hr_holidays.group_hr_holidays_user")
+        or request.env.user.has_group("hr_holidays.group_hr_holidays_manager")
     ):
-        # Be permissive across versions: some builds gate validate1 by validation_type,
-        # others don't. Showing validate1 to HR users matches Odoo's "To Approve" behavior.
         domains.append([("state", "=", "validate1")])
 
     if not domains:
         return Leave.browse([])
     if len(domains) == 1:
         return Leave.search(domains[0], order="request_date_from desc, id desc", limit=200)
-    # OR the domains
+
     domain = ["|"] + domains[0] + domains[1]
     for extra in domains[2:]:
         domain = ["|"] + domain + extra
@@ -1727,6 +1735,99 @@ class HrmisProfileRequestController(http.Controller):
     # -------------------------------------------------------------------------
     # Required fields validation (same rules)
     # -------------------------------------------------------------------------
+    def _validate_current_posting_status_or_form_error(self, env, employee, req, post):
+        status = (post.get("hrmis_current_status_frontend") or "").strip()
+
+        if not status:
+            return self._render_profile_form(
+                env, employee, req,
+                error="Current Posting Status: Status is required.",
+                prefer_draft=True,
+            )
+
+        def empty(name):
+            return not (post.get(name) or "").strip()
+
+        errors = []
+
+        # Common "currently posted" main block
+        if status == "currently_posted":
+            facility_value = (post.get("facility_id") or "").strip()
+            if not facility_value:
+                raw_pf = request.httprequest.form.getlist("posting_facility_id[]") or []
+                facility_value = next((str(v).strip() for v in raw_pf if str(v).strip()), "")
+
+            if empty("district_id"):
+                errors.append("Substantive Posting District is required.")
+            if not facility_value:
+                errors.append("Facility is required.")
+            if empty("hrmis_designation"):
+                errors.append("Designation is required.")
+            # if empty("current_posting_start"):
+
+        elif status == "suspended":
+            if empty("frontend_suspension_date"):
+                errors.append("Suspension Date is required.")
+            if empty("hrmis_designation"):
+                errors.append("Designation is required.")
+            # Reporting To / District / Facility are optional for Suspended
+
+        elif status == "on_leave":
+            if empty("frontend_onleave_start"):
+                errors.append("On Leave Starting Date is required.")
+            if empty("frontend_onleave_end"):
+                errors.append("On Leave Ending Date is required.")
+            if empty("hrmis_designation"):
+                errors.append("Designation is required.")
+            # Reporting To / District / Facility are optional for On Leave
+
+        elif status == "eol_pgship":
+            if empty("frontend_eol_degree"):
+                errors.append("EOL Degree is required.")
+            # if empty("frontend_eol_start"):
+            #     errors.append("EOL Starting Date is required.")
+            if empty("frontend_eol_status"):
+                errors.append("EOL Status is required.")
+
+            eol_status = (post.get("frontend_eol_status") or "").strip()
+            if eol_status == "completed" and empty("frontend_eol_end"):
+                errors.append("EOL Ending Date is required when status is Complete.")
+
+            # If your EOL primary posting fields have asterisks in the form, validate them too:
+            # if empty("frontend_eol_primary_district_id"):
+            #     errors.append("Primary Posting District is required.")
+            # if empty("frontend_eol_primary_facility_id"):
+            #     errors.append("Primary Facility is required.")
+            # if empty("frontend_eol_primary_designation_id"):
+            #     errors.append("Primary Designation is required.")
+
+        elif status == "reported_to_health_department":
+            
+            if empty("hrmis_designation"):
+                errors.append("Designation is required.")
+            
+
+        # Allowed to Work conditional block
+        if (post.get("allowed_to_work") or "").strip():
+            if empty("allowed_district_id"):
+                errors.append("Allowed To Work District is required.")
+            if empty("allowed_facility_id"):
+                errors.append("Allowed To Work Facility is required.")
+            if empty("allowed_designation_id"):
+                errors.append("Allowed To Work Designation is required.")
+            if empty("allowed_start_month"):
+                errors.append("Allowed To Work Start Month is required.")
+
+        if errors:
+            return self._render_profile_form(
+                env,
+                employee,
+                req,
+                error="Please complete the following Current Posting Status fields:\n• " + "\n• ".join(errors),
+                prefer_draft=True,
+            )
+
+        return None
     def _validate_required_fields_or_form_error(self, env, employee, req, post):
         required_fields = {
             "hrmis_cnic": "CNIC",
@@ -2018,7 +2119,7 @@ class HrmisProfileRequestController(http.Controller):
             inst_other = (q_inst_other[i] if i < len(q_inst_other) else "").strip()
 
             inst_id, inst_code = _m2o_or_code(inst_raw)
-
+            
             # if “Other” typed, create like PGship does for specialization 
             if inst_other:
                 inst = env["hrmis.training.institute"].sudo().create({"name": inst_other})
@@ -2599,7 +2700,7 @@ class HrmisProfileRequestController(http.Controller):
             eol_degree = eol_degree_raw or False
             eol_degree_other_name = False
         eol_institute_id, eol_institute_code = _m2o_or_code(inst_raw)
-
+        
         if inst_other:
             inst = env["hrmis.training.institute"].sudo().create({"name": inst_other})
             eol_institute_id = inst.id
@@ -3277,7 +3378,13 @@ class HrmisProfileRequestController(http.Controller):
             return resp
 
         # 4) Required fields
+        # 4) Required fields
         resp = self._validate_required_fields_or_form_error(env, employee, req, post)
+        if resp:
+            return resp
+
+        # 4.1) Current Posting Status strict validation
+        resp = self._validate_current_posting_status_or_form_error(env, employee, req, post)
         if resp:
             return resp
 
@@ -3377,7 +3484,7 @@ class HrmisProfileRequestController(http.Controller):
         # 11) Update employee merit (unchanged timing)
         self._update_employee_merit(employee, post)
         
-
+        
         # 12) Write req inside savepoint/temp parent logic
         resp = self._write_req_with_temp_parent_or_form_error(env, employee, req, final_manager_employee, vals)
         if resp:

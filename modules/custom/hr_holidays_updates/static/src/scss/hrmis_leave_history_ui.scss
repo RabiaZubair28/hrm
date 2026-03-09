@@ -1,0 +1,713 @@
+/* Leave history screen – match reference screenshot
+   IMPORTANT:
+   - We do NOT style .hrmis-tab / .hrmis-pr-tab at all.
+   - We only fix the rail (the line under tabs) + history area table.
+*/
+.hrmis-leave-history-ui {
+  margin-top: 6px;
+}
+
+/* Remove the thick black line coming from some generic header/tabs container */
+.hrmis-leave-history-ui .hrmis-panel__header--tabs {
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Add the correct thin light divider line under the whole tabs row (like reference) */
+.hrmis-leave-history-ui .hrmis-pr-tabs {
+  border-bottom: 1px solid #e6eef0 !important;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+/* The reference also has a subtle green rail, not a thick black line */
+.hrmis-leave-history-ui .hrmis-pr-tabs::after {
+  content: "";
+  display: block;
+  height: 2px;
+  margin-top: -2px;
+  background: #0b3d2e; /* deep green */
+  opacity: 0.25; /* subtle */
+}
+
+/* Keep spacing like reference */
+.hrmis-leave-history-ui .hrmis-pr-tabs + * {
+  margin-top: 16px;
+}
+
+/* ===== TABLE / LIST LOOK ===== */
+/* Your current header row looks like a rounded capsule.
+   We remove that look and use a clean grid header like the reference. */
+
+// .hrmis-leave-history-ui table {
+//   width: 100%;
+//   border-collapse: separate;
+//   border-spacing: 0;
+//   background: #fff;
+//   border: 1px solid #eef2f3;
+//   border-radius: 14px;
+//   overflow: hidden;
+// }
+
+// .hrmis-leave-history-ui thead th {
+//   text-transform: uppercase;
+//   letter-spacing: 0.02em;
+//   font-weight: 800;
+//   font-size: 12px;
+
+//   background: #fbfbfb;
+//   color: #111827;
+
+//   padding: 18px 14px;
+//   text-align: center;
+
+//   border-bottom: 1px solid #eef2f3;
+// }
+
+// .hrmis-leave-history-ui thead th + th {
+//   border-left: 1px solid #f0f2f3;
+// }
+
+// .hrmis-leave-history-ui tbody td {
+//   padding: 16px 14px;
+//   text-align: center;
+//   border-bottom: 1px solid #f3f4f6;
+//   color: #111827;
+// }
+
+// .hrmis-leave-history-ui tbody tr:last-child td {
+//   border-bottom: 0;
+// }
+/* =========================================================
+   Leave History - Table style (match reference screenshot)
+   Scope: ONLY inside .hrmis-leave-history-ui
+   - Works for both HTML <table> and HRMIS div-table (.hrmis-table)
+   - Adds clean header separators, row dividers, roomy padding
+   - Pagination/footer aligned like reference
+   ========================================================= */
+
+/* Card wrapper for tables */
+.hrmis-leave-history-ui .hrmis-table-card,
+.hrmis-leave-history-ui .hrmis-table,
+.hrmis-leave-history-ui .table-responsive,
+.hrmis-leave-history-ui .o_list_view,
+.hrmis-leave-history-ui .o_list_renderer {
+  background: #fff;
+  //   border: 1px solid #e9ecef;
+  border-radius: 14px;
+}
+
+/* ---------- HTML TABLES ---------- */
+.hrmis-leave-history-ui table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.hrmis-leave-history-ui thead th {
+  background: #fbfbfb;
+  color: #2b2f33;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 800;
+
+  padding: 18px 14px;
+  text-align: center;
+
+  border-bottom: 1px solid #eceff1;
+}
+
+.hrmis-leave-history-ui thead th + th {
+  border-left: 1px solid #f0f2f3;
+}
+
+.hrmis-leave-history-ui tbody td {
+  padding: 18px 14px;
+  text-align: center;
+  color: #111827;
+  border-bottom: 1px solid #edf0f2;
+}
+
+.hrmis-leave-history-ui tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* ---------- HRMIS DIV-TABLES ---------- */
+.hrmis-leave-history-ui .hrmis-table {
+  overflow: hidden;
+}
+
+.hrmis-leave-history-ui .hrmis-table__head {
+  background: #fbfbfb;
+  border-bottom: 1px solid #eceff1;
+
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 800;
+  font-size: 12px;
+
+  padding: 18px 14px;
+  align-items: center;
+}
+
+.hrmis-leave-history-ui .hrmis-table__head > div {
+  text-align: center;
+  padding: 0 10px;
+}
+
+.hrmis-leave-history-ui .hrmis-table__head > div + div {
+  border-left: 1px solid #f0f2f3;
+}
+
+.hrmis-leave-history-ui .hrmis-table__row {
+  padding: 18px 14px;
+  align-items: center;
+  background: #fff;
+}
+
+.hrmis-leave-history-ui .hrmis-table__row > div {
+  text-align: center;
+  padding: 0 10px;
+  color: #111827;
+}
+
+.hrmis-leave-history-ui .hrmis-table__row:not(:last-child) {
+  border-bottom: 1px solid #edf0f2;
+}
+
+/* Slight hover (subtle like modern lists) */
+.hrmis-leave-history-ui tbody tr:hover td,
+.hrmis-leave-history-ui .hrmis-table__row:hover {
+  background: #fcfcfc;
+}
+
+/* ---------- Footer "Showing 1-12 ..." ---------- */
+.hrmis-leave-history-ui .hrmis-table-footer,
+.hrmis-leave-history-ui .o_list_view .o_list_footer,
+.hrmis-leave-history-ui .o_list_view .o_list_pager,
+.hrmis-leave-history-ui .o_pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 8px 0 8px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* =========================================================
+   Appointment-style top filters (Leave Requests + Leave Status)
+   - New classes only (does not touch existing input button classes)
+   - Legacy filter row is kept for JS compatibility but hidden
+   ========================================================= */
+
+/* Hide legacy filters that were previously inside the content box */
+.hrmis-filters--legacy {
+  display: none !important;
+}
+
+/* Place filters on the same line as tabs (right aligned) */
+.hrmis-tabs-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 12px;
+  /* Pull the toolbar into the tabs row without touching the tab markup */
+  margin-top: -52px;
+}
+
+.hrmis-appt-filters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
+}
+
+.hrmis-appt-filters__search {
+  position: relative;
+  min-width: 320px;
+  max-width: 520px;
+  flex: 1 1 360px;
+}
+
+.hrmis-appt-filters__icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  pointer-events: none;
+}
+
+.hrmis-appt-filters__input {
+  width: 100%;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 0 16px 0 44px;
+  outline: none;
+}
+
+.hrmis-appt-filters__dds {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.hrmis-appt-filters__select {
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 0 40px 0 16px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #0b3d2e 50%),
+    linear-gradient(135deg, #0b3d2e 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 19px,
+    calc(100% - 12px) 19px,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* Responsive: stack on smaller screens */
+@media (max-width: 992px) {
+  .hrmis-tabs-toolbar {
+    margin-top: 10px;
+    padding: 0 12px;
+  }
+  .hrmis-appt-filters {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .hrmis-appt-filters__search {
+    min-width: 240px;
+    flex: 1 1 260px;
+  }
+}
+
+/* ---------- Pagination buttons ---------- */
+/* Supports: .pagination (bootstrap), .o_pager (odoo), and custom .hrmis-pagination */
+.hrmis-leave-history-ui .pagination,
+.hrmis-leave-history-ui .o_pager,
+.hrmis-leave-history-ui .hrmis-pagination {
+  margin: 0;
+}
+
+.hrmis-leave-history-ui .pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hrmis-leave-history-ui .pagination .page-link,
+.hrmis-leave-history-ui .o_pager .btn,
+.hrmis-leave-history-ui .o_pager .o_pager_previous,
+.hrmis-leave-history-ui .o_pager .o_pager_next,
+.hrmis-leave-history-ui .hrmis-pagination button,
+.hrmis-leave-history-ui .hrmis-pagination a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 44px;
+  height: 34px;
+
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #6b7280;
+
+  text-decoration: none;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+}
+
+/* Active/primary arrow (right button) */
+.hrmis-leave-history-ui .pagination .page-item.active .page-link,
+.hrmis-leave-history-ui .o_pager .btn.btn-primary,
+.hrmis-leave-history-ui .o_pager .o_pager_next:not(.disabled),
+.hrmis-leave-history-ui .hrmis-pagination .is-active {
+  border-color: #0b3d2e;
+  color: #0b3d2e;
+}
+
+/* Disabled */
+.hrmis-leave-history-ui .pagination .page-item.disabled .page-link,
+.hrmis-leave-history-ui .o_pager .disabled,
+.hrmis-leave-history-ui .hrmis-pagination [disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Make arrow-only buttons look like screenshot (no extra padding) */
+.hrmis-leave-history-ui .o_pager .o_pager_previous,
+.hrmis-leave-history-ui .o_pager .o_pager_next {
+  padding: 0;
+}
+
+/* If pager has icons inside */
+.hrmis-leave-history-ui .o_pager i,
+.hrmis-leave-history-ui .pagination i {
+  font-size: 18px;
+  line-height: 1;
+}
+/* =========================================================
+   Leave History: Empty state icon + pagination controls
+   Scope: ONLY inside .hrmis-leave-history-ui
+   ========================================================= */
+
+.hrmis-leave-history-ui .hrmis-leave-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 420px;
+  padding: 30px 10px;
+  color: #9ca3af;
+  font-size: 20px;
+}
+
+.hrmis-leave-history-ui .hrmis-leave-history-empty__icon {
+  width: 86px;
+  height: 62px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  position: relative;
+  margin-bottom: 16px;
+  background: #fff;
+}
+
+.hrmis-leave-history-ui .hrmis-leave-history-empty__icon::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 18px;
+  height: 18px;
+  border: 2px solid #e5e7eb;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+}
+
+.hrmis-leave-history-ui .hrmis-leave-history-empty__icon::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #f3f4f6;
+}
+
+.hrmis-leave-history-ui .hrmis-leave-history-empty__text {
+  font-size: 18px;
+}
+
+/* Footer + pagination */
+.hrmis-leave-history-ui .hrmis-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 6px 0 6px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.hrmis-leave-history-ui .hrmis-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hrmis-leave-history-ui .hrmis-pager-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 44px;
+  height: 34px;
+
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #0b3d2e;
+
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+}
+
+.hrmis-leave-history-ui .hrmis-pager-btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   HRMIS: Tables should match Profile Request Form typography
+   (same font-family + 12px sizing like profile request inputs/labels)
+   Scoped to HRMIS only, so it won't affect website pages.
+   ========================================================= */
+
+.hrmis-app {
+  --hrmis-font-family: system-ui;
+  --hrmis-form-font-size: 12px;
+}
+
+/* Apply to all HRMIS “table-like” grids used across pages */
+.hrmis-app .hrmis-table__head,
+.hrmis-app .hrmis-table__row,
+.hrmis-app .hrmis-leave-row,
+.hrmis-app .hrmis-manage-table__row,
+.hrmis-app .hrmis-kv__row,
+.hrmis-app .hrmis-kv--grid .hrmis-kv__item,
+.hrmis-app .hrmis-comments,
+.hrmis-app .hrmis-comment {
+  font-family: var(--hrmis-font-family) !important;
+  font-size: var(--hrmis-form-font-size) !important;
+}
+
+/* Optional: keep headers slightly stronger but SAME size */
+.hrmis-app .hrmis-table__head,
+.hrmis-app .hrmis-table__head > div {
+  font-weight: 900;
+}
+
+/* Optional: keep table “meta” text consistent */
+.hrmis-app .hrmis-approver-step__sub,
+.hrmis-app .hrmis-notif-item__meta {
+  font-family: var(--hrmis-font-family) !important;
+  font-size: 12px !important;
+}
+
+/* =========================================================
+   Leave history: remove header divider lines near the head row
+   (vertical separators / pseudo dividers)
+   ========================================================= */
+
+/* Some builds create separators using border-left on header cells */
+.hrmis-leave-history-ui .hrmis-table__head > div + div {
+  border-left: 0 !important;
+}
+
+/* Some builds create separators using ::after pseudo elements */
+.hrmis-leave-history-ui .hrmis-table__head > div::after,
+.hrmis-pr-shell--leave .hrmis-table__head > div::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* =========================================================
+   Filters (Leave Requests / Leave Status): match appointment UI
+   - pill search with left icon
+   - rounded selects
+   ========================================================= */
+
+/* Keep layout, just restyle controls */
+.hrmis-filters {
+  gap: 14px;
+}
+
+.hrmis-filters .hrmis-filter__search {
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #d6dee1;
+  background: #fff;
+  padding: 0 18px 0 46px; /* room for icon */
+  font-weight: 600;
+  box-shadow: none;
+  background-repeat: no-repeat;
+  background-position: 16px 50%;
+  background-size: 18px 18px;
+  /* inline SVG funnel icon */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%232a2f31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='22 3 2 3 10 12 10 19 14 21 14 12 22 3'/%3E%3C/svg%3E");
+}
+
+.hrmis-filters .hrmis-filter__search:focus {
+  outline: none;
+  border-color: rgba(6, 69, 38, 0.55);
+  box-shadow: 0 0 0 3px rgba(6, 69, 38, 0.1);
+}
+
+.hrmis-filters .hrmis-filter__select {
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #d6dee1;
+  background: #fff;
+  padding: 0 18px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   Manage Requests (SO): Filters row match Appointment UI
+   - "All Statuses" + "All Dates" as pill dropdowns on top-right
+   - Search icon inside search input
+   Scope: ONLY inside .hrmis-pr-shell--manage
+   ========================================================= */
+
+.hrmis-pr-shell--manage .hrmis-filters {
+  align-items: center;
+}
+
+/* Search input with icon */
+.hrmis-pr-shell--manage .hrmis-filter__search {
+  padding-left: 44px; /* room for icon */
+  background-repeat: no-repeat;
+  background-position: 16px center;
+  background-size: 18px 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23064526' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+}
+
+/* Right-side dropdown filters (pill look) */
+.hrmis-pr-shell--manage .hrmis-filter__select {
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  padding: 0 44px 0 16px; /* room for caret */
+  font-weight: 600;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 18px 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23064526'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
+}
+
+/* Keep them tight and aligned on the right */
+.hrmis-pr-shell--manage .hrmis-filters > .hrmis-filter__select {
+  flex: 0 0 auto;
+  min-width: 140px;
+}
+
+/* =========================================================
+   Leave (employee): body card top-left radius should be 0
+   (other 3 corners stay 20px)
+   Scope: ONLY inside .hrmis-pr-shell--leave
+   ========================================================= */
+.hrmis-pr-shell--leave .hrmis-pr-shell__body,
+.hrmis-pr-shell--leave .hrmis-panel__body {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 20px !important;
+  border-bottom-right-radius: 20px !important;
+  border-bottom-left-radius: 20px !important;
+}
+
+/* =========================================================
+   NEW: Appointment-style filter bar (Leave Status)
+   - These controls proxy to the legacy .hrmis-filters in the template.
+   - Kept isolated via unique class names to avoid side-effects.
+   ========================================================= */
+
+.hrmis-appt-filters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin: 8px 0 16px;
+}
+
+.hrmis-appt-filters__search {
+  position: relative;
+  flex: 1 1 520px;
+  max-width: 720px;
+}
+
+.hrmis-appt-filters__icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.hrmis-appt-filters__input {
+  width: 100%;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #d6dee1;
+  background: #ffffff;
+  padding: 0 18px 0 44px;
+  font-weight: 600;
+  outline: none;
+}
+
+.hrmis-appt-filters__input:focus {
+  border-color: rgba(6, 69, 38, 0.55);
+  box-shadow: 0 0 0 3px rgba(6, 69, 38, 0.1);
+}
+
+.hrmis-appt-filters__dds {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.hrmis-appt-filters__select {
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #d6dee1;
+  background: #ffffff;
+  padding: 0 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .hrmis-appt-filters {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  .hrmis-appt-filters__search {
+    max-width: none;
+  }
+
+  .hrmis-appt-filters__dds {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hrmis-appt-filters__select {
+    width: 100%;
+  }
+}
+
+/* Bigger prev/next arrows */
+.hrmis-leave-history-ui .hrmis-pager-btn {
+  font-size: 22px; /* increase arrow size */
+  font-weight: 800;
+  line-height: 1; /* keep glyph centered */
+}
+
+.hrmis-leave-history-ui .hrmis-pager-btn {
+  width: 52px; /* optional: slightly larger button */
+  height: 40px;
+}

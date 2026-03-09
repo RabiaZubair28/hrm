@@ -621,7 +621,12 @@ function _enhanceSelect(select) {
 
 function _initSearchableSelects(scopeRoot) {
   const root = scopeRoot || document;
-  _qsa(root, "select").forEach((sel) => _enhanceSelect(sel));
+  _qsa(root, "select").forEach((sel) => {
+    if (!sel) return;
+    if (sel.name === "hrmis_current_status_frontend") return;
+    if (sel.classList.contains("js-no-search")) return;
+    _enhanceSelect(sel);
+  });
 }
 
 /* ---------------------------------------------------------
@@ -684,6 +689,53 @@ function _joiningMonthValue(form) {
 function _currentBpsValue(form) {
   const bps = _qs(form, '[name="hrmis_bps"]');
   return _normInt(bps?.value);
+}
+
+/* ---------------------------------------------------------
+ * PMDC fields required only for specific cadres
+ *   - General
+ *   - Special
+ *   - Health Management
+ * --------------------------------------------------------- */
+function _cadreSelectedLabel(form) {
+  const sel = _qs(form, 'select[name="hrmis_cadre"]');
+  if (!sel) return "";
+  const opt = sel.options?.[sel.selectedIndex];
+  return (opt?.textContent || "").trim();
+}
+
+function _cadreRequiresPmdc(form) {
+  const label = _cadreSelectedLabel(form).toLowerCase();
+  return ["general", "specialist", "health management"].includes(label);
+}
+
+function _syncPmdcRequiredByCadre(form) {
+  if (!form) return;
+
+  const needs = _cadreRequiresPmdc(form);
+  const fields = [
+    _qs(form, '[name="hrmis_pmdc_no"]'),
+    _qs(form, '[name="hrmis_pmdc_issue_date"]'),
+    _qs(form, '[name="hrmis_pmdc_expiry_date"]'),
+  ];
+
+  fields.forEach((inp) => {
+    if (!inp) return;
+    if (needs) {
+      inp.setAttribute("required", "required");
+    } else {
+      inp.removeAttribute("required");
+      // clear any previous error when it becomes optional
+      _clearError(inp);
+    }
+  });
+
+  // Toggle the * marker visibility
+  _qsa(form, ".js-pmdc-req").forEach((star) => {
+    star.style.display = needs ? "" : "none";
+  });
+
+  return needs;
 }
 
 /* ---------------------------------------------------------
@@ -765,6 +817,71 @@ function _validateCurrentPostingStart(form) {
   }
 
   return true;
+}
+
+/* ---------------------------------------------------------
+ * DOB vs Commission year rule
+ *  - Commission is month-proxy (YYYY-MM) stored as YYYY-MM-01
+ *  - Requirement: Commission year cannot be before Date of Birth year
+ * --------------------------------------------------------- */
+function _validateDobCommission(form) {
+  const dob = _qs(form, '[name="birthday"]'); // date YYYY-MM-DD
+  const commission = _qs(form, '[name="hrmis_commission_date"]'); // hidden date YYYY-MM-DD
+  if (!dob || !commission) return true;
+
+  const commissionUI = commission._hrmisMonthProxy || null;
+  const cErrTarget = commissionUI || commission;
+
+  _clearError(cErrTarget);
+
+  const dobVal = (dob.value || "").trim();
+  const cv = (commission.value || "").trim();
+  if (_isEmpty(dobVal) || _isEmpty(cv)) return true;
+
+  // Commission is month-granular; enforce month >= DOB month.
+  const minMonth = dobVal.length >= 7 ? dobVal.slice(0, 7) : "";
+  const commMonth = cv.length >= 7 ? cv.slice(0, 7) : "";
+  if (!_isValidMonth(minMonth) || !_isValidMonth(commMonth)) return true;
+
+  if (_monthToIndex(commMonth) < _monthToIndex(minMonth)) {
+    _showError(cErrTarget, "Commission month cannot be before Date of Birth");
+    return false;
+  }
+  return true;
+}
+
+function _syncCommissionMinFromDob(form) {
+  const dob = _qs(form, '[name="birthday"]'); // date YYYY-MM-DD
+  const commission = _qs(form, '[name="hrmis_commission_date"]'); // hidden date YYYY-MM-DD
+  if (!dob || !commission) return;
+
+  const dobVal = (dob.value || "").trim();
+  const minMonth = dobVal.length >= 7 ? dobVal.slice(0, 7) : "";
+
+  const commissionUI = commission._hrmisMonthProxy || null;
+  const cUi = commissionUI || null;
+
+  if (_isValidMonth(minMonth)) {
+    if (cUi) cUi.setAttribute("min", minMonth);
+    commission.setAttribute("min", `${minMonth}-01`);
+  } else {
+    if (cUi) cUi.removeAttribute("min");
+    commission.removeAttribute("min");
+    return;
+  }
+
+  // Clamp existing value into min range.
+  const curMonth =
+    (cUi && (cUi.value || "").trim()) ||
+    (commission.value || "").trim().slice(0, 7) ||
+    "";
+  if (
+    _isValidMonth(curMonth) &&
+    _monthToIndex(curMonth) < _monthToIndex(minMonth)
+  ) {
+    if (cUi) cUi.value = minMonth;
+    commission.value = `${minMonth}-01`;
+  }
 }
 
 /* ---------------------------------------------------------
@@ -1645,34 +1762,8 @@ function _toggleStatusBoxes(form) {
   });
 }
 
-publicWidget.registry.HrmisPostingStatusToggle = publicWidget.Widget.extend({
-  selector: "#profile_update_form",
+/* Removed legacy publicWidget status toggle to avoid duplicate status logic. */
 
-  events: {
-    'change select[name="hrmis_current_status_frontend"]': "_onStatusChange",
-  },
-
-  start() {
-    console.warn("[POSTING_STATUS] init");
-    _toggleStatusBoxes(this.el);
-
-    // Helpful debug: show which field blocks submission
-    this.el.addEventListener("submit", (ev) => {
-      const ok = this.el.checkValidity();
-      console.warn("[POSTING_STATUS] submit checkValidity=", ok);
-      if (!ok) {
-        ev.preventDefault();
-        this.el.reportValidity();
-      }
-    });
-
-    return this._super(...arguments);
-  },
-
-  _onStatusChange() {
-    _toggleStatusBoxes(this.el);
-  },
-});
 /* ---------------------------------------------------------
  * Dates (basic max=today)
  * --------------------------------------------------------- */
@@ -1693,6 +1784,18 @@ function _initProfileDatePickers(form) {
   const dob = _qs(form, '[name="birthday"]');
   if (dob) {
     _ensureNativeDateInput(dob);
+    // Avoid double-binding on BFCache / repeated init.
+    if (dob.dataset.hrmisDobCommissionBound === "1") return;
+    dob.dataset.hrmisDobCommissionBound = "1";
+    // Keep Commission-vs-DOB validation in sync.
+    dob.addEventListener("change", () => {
+      _syncCommissionMinFromDob(form);
+      _validateDobCommission(form);
+    });
+    dob.addEventListener("blur", () => {
+      _syncCommissionMinFromDob(form);
+      _validateDobCommission(form);
+    });
   }
 }
 
@@ -2281,13 +2384,7 @@ function _validateRepeatables(form) {
     if (jm !== cm) {
       const rows = _qsa(document, "#prev_post_rows .hrmis-repeat-row");
 
-      if (rows.length === 0) {
-        _showError(
-          _qs(form, '[name="current_posting_start"]'),
-          "Please complete Previous Posting History.",
-        );
-        hasError = true;
-      } else {
+      if (rows.length > 0) {
         let expectedStart = jm;
 
         for (let i = 0; i < rows.length; i++) {
@@ -2784,6 +2881,14 @@ function _initHRMISValidations() {
   _digitsOnly(_qs(form, '[name="hrmis_bps"]'), { maxLen: 2 });
   _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
 
+  // PMDC conditional required (depends on Cadre)
+  const cadreSel = _qs(form, 'select[name="hrmis_cadre"]');
+  if (cadreSel) {
+    cadreSel.addEventListener("change", () => _syncPmdcRequiredByCadre(form));
+    // run once on load (prefilled cadre)
+    _syncPmdcRequiredByCadre(form);
+  }
+
   const leavesTakenEl = _qs(form, '[name="hrmis_leaves_taken"]');
   if (leavesTakenEl) {
     leavesTakenEl.readOnly = true;
@@ -2828,6 +2933,7 @@ function _initHRMISValidations() {
       toggle();
       _validateCurrentPostingStart(form);
       _validateJoiningCommission(form);
+      _validateDobCommission(form);
       _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
       _syncPostingBpsConstraints(form);
     });
@@ -2845,6 +2951,9 @@ function _initHRMISValidations() {
     const syncMinMax = () => {
       const jmv = (joiningUI.value || "").trim(); // YYYY-MM
       const cmv = (commissionUI.value || "").trim(); // YYYY-MM
+
+      // DOB constraint: commission >= DOB month
+      _syncCommissionMinFromDob(form);
 
       commissionUI.setAttribute("max", _todayMonth());
       commissionInput.setAttribute("max", _todayLocalYmd());
@@ -2881,6 +2990,7 @@ function _initHRMISValidations() {
       }
 
       _validateJoiningCommission(form);
+      _validateDobCommission(form);
     };
 
     commissionUI.addEventListener("change", syncMinMax);
@@ -2907,56 +3017,70 @@ function _initHRMISValidations() {
     bpsEl.addEventListener("change", refresh);
   }
 
-  const requiredFields = [
-    "hrmis_cnic",
-    "hrmis_father_name",
-    "birthday",
-    "gender",
-    "hrmis_cadre",
-    "hrmis_designation",
-    "hrmis_bps",
-    "district_id",
-    "facility_id",
-    "hrmis_merit_number",
-    "hrmis_joining_date",
-    "hrmis_commission_date",
-  ];
+  function _isActuallyVisible(el) {
+    if (!el) return false;
+    const style = window.getComputedStyle(el);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+  }
 
   form.addEventListener("submit", function (e) {
     let hasError = false;
 
-    requiredFields.forEach((name) => {
-      const input = _qs(form, `[name="${name}"]`);
-      if (!input) return;
+    // Ensure conditional required flags are in sync right before validation
+    const needsPmdc = _syncPmdcRequiredByCadre(form);
 
-      // ✅ Skip fields that are disabled (status toggle intentionally disables them)
-      if (input.disabled) return;
-
-      // ✅ Skip fields inside hidden status boxes
-      const box = input.closest(".js-status-box");
-      if (box && (box.style.display === "none" || box.hidden)) return;
-
-      // ✅ Skip fields inside hidden wrappers
-      const wrap = input.closest("[style*='display: none'], .d-none");
-      if (wrap) return;
-
-      if (_isEmpty(input.value)) {
-        if (name === "hrmis_joining_date" && joiningInput?._hrmisMonthProxy) {
-          _showError(joiningInput._hrmisMonthProxy, "This field is required");
-        } else if (
-          name === "hrmis_commission_date" &&
-          commissionInput?._hrmisMonthProxy
-        ) {
-          _showError(
-            commissionInput._hrmisMonthProxy,
-            "This field is required",
-          );
-        } else {
-          _showError(input, "This field is required");
+    if (needsPmdc) {
+      [
+        { name: "hrmis_pmdc_no", msg: "PMDC No. is required" },
+        { name: "hrmis_pmdc_issue_date", msg: "PMDC Issue Date is required" },
+        { name: "hrmis_pmdc_expiry_date", msg: "PMDC Expiry Date is required" },
+      ].forEach((f) => {
+        const inp = _qs(form, `[name="${f.name}"]`);
+        if (!inp || inp.disabled) return;
+        if (_isEmpty(inp.value)) {
+          _showError(inp, f.msg);
+          hasError = true;
         }
-        hasError = true;
-      }
-    });
+      });
+    }
+
+    // Validate all visible enabled required fields, including active Status box fields.
+    _qsa(form, "input[required], select[required], textarea[required]").forEach(
+      (input) => {
+        if (!input) return;
+        if (input.disabled) return;
+
+        const box = input.closest(".js-status-box");
+        if (box && (box.style.display === "none" || box.hidden)) return;
+
+        const wrap = input.closest("[style*='display: none'], .d-none");
+        if (wrap) return;
+
+        if (!_isActuallyVisible(input) && !input.closest(".js-status-box"))
+          return;
+
+        if (_isEmpty(input.value)) {
+          if (
+            input.name === "hrmis_joining_date" &&
+            joiningInput?._hrmisMonthProxy
+          ) {
+            _showError(joiningInput._hrmisMonthProxy, "This field is required");
+          } else if (
+            input.name === "hrmis_commission_date" &&
+            commissionInput?._hrmisMonthProxy
+          ) {
+            _showError(
+              commissionInput._hrmisMonthProxy,
+              "This field is required",
+            );
+          } else {
+            _showError(input, "This field is required");
+          }
+          hasError = true;
+        }
+      },
+    );
 
     // DOB 18+
     const dobVal = _qs(form, '[name="birthday"]')?.value;
@@ -2977,6 +3101,7 @@ function _initHRMISValidations() {
 
     if (!_validateCurrentPostingStart(form)) hasError = true;
     if (!_validateJoiningCommission(form)) hasError = true;
+    if (!_validateDobCommission(form)) hasError = true;
 
     if (_validateRepeatables(form)) hasError = true;
     if (form._hrmisValidateCnicFiles && !form._hrmisValidateCnicFiles())
@@ -3061,13 +3186,18 @@ function _initFrontendStatusToggle(formArg) {
     if (!box) return;
     box.querySelectorAll("input, select, textarea").forEach((el) => {
       remember(el);
+      const field = el.closest(".hrmis-field");
+      const hasStar = !!field?.querySelector(".req");
       if (!enabled) {
         el.disabled = true;
         el.removeAttribute("required");
       } else {
         el.disabled = el.dataset.hrmisOrigDisabled === "1";
-        if (el.dataset.hrmisOrigRequired === "1")
+        if (hasStar || el.dataset.hrmisOrigRequired === "1") {
           el.setAttribute("required", "required");
+        } else {
+          el.removeAttribute("required");
+        }
       }
     });
   }
@@ -3172,9 +3302,7 @@ function _initFrontendStatusToggle(formArg) {
       if (showFacility) {
         suspensionDistrictSel.disabled =
           suspensionDistrictSel.dataset.hrmisOrigDisabled === "1";
-        if (suspensionDistrictSel.dataset.hrmisOrigRequired === "1") {
-          suspensionDistrictSel.setAttribute("required", "required");
-        }
+        suspensionDistrictSel.removeAttribute("required");
       } else {
         suspensionDistrictSel.value = "";
         suspensionDistrictSel.disabled = true;
@@ -3187,9 +3315,7 @@ function _initFrontendStatusToggle(formArg) {
       if (showFacility) {
         suspensionFacilitySel.disabled =
           suspensionFacilitySel.dataset.hrmisOrigDisabled === "1";
-        if (suspensionFacilitySel.dataset.hrmisOrigRequired === "1") {
-          suspensionFacilitySel.setAttribute("required", "required");
-        }
+        suspensionFacilitySel.removeAttribute("required");
       } else {
         suspensionFacilitySel.value = "";
         suspensionFacilitySel.disabled = true;
@@ -3212,7 +3338,7 @@ function _initFrontendStatusToggle(formArg) {
     '[name="frontend_onleave_district_id"]',
   );
   const onLeaveFacilitySel = form.querySelector(
-    '[name="frontend_onleave_facility"]',
+    '[name="frontend_onleave_facility_id"]',
   );
 
   function syncOnLeaveFacility() {
@@ -3229,9 +3355,7 @@ function _initFrontendStatusToggle(formArg) {
       if (showFacility) {
         onLeaveDistrictSel.disabled =
           onLeaveDistrictSel.dataset.hrmisOrigDisabled === "1";
-        if (onLeaveDistrictSel.dataset.hrmisOrigRequired === "1") {
-          onLeaveDistrictSel.setAttribute("required", "required");
-        }
+        onLeaveDistrictSel.removeAttribute("required");
       } else {
         onLeaveDistrictSel.value = "";
         onLeaveDistrictSel.disabled = true;
@@ -3244,9 +3368,7 @@ function _initFrontendStatusToggle(formArg) {
       if (showFacility) {
         onLeaveFacilitySel.disabled =
           onLeaveFacilitySel.dataset.hrmisOrigDisabled === "1";
-        if (onLeaveFacilitySel.dataset.hrmisOrigRequired === "1") {
-          onLeaveFacilitySel.setAttribute("required", "required");
-        }
+        onLeaveFacilitySel.removeAttribute("required");
       } else {
         onLeaveFacilitySel.value = "";
         onLeaveFacilitySel.disabled = true;

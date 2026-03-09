@@ -1,5 +1,6 @@
 from odoo import models, fields, api
 
+
 class ResUsers(models.Model):
     _inherit = "res.users"
 
@@ -8,12 +9,9 @@ class ResUsers(models.Model):
         ('section_officer', 'Section Officer'),
         ('ms_dho', 'MS DHO'),
     ], string="HRMIS Role")
-    
+
     hrmis_cnic = fields.Char(string="CNIC")
-    hrmis_cadre = fields.Many2one(
-    'hrmis.cadre',
-    string="Cadre"
-)
+    hrmis_cadre = fields.Many2one('hrmis.cadre', string="Cadre")
     manager_id = fields.Many2one('hr.employee', string="Section Officer")
     temp_password = fields.Char(string="Temporary Password")
     is_temp_password = fields.Boolean(default=True)
@@ -26,70 +24,86 @@ class ResUsers(models.Model):
 
     @api.model
     def create(self, vals):
-        if vals.get('temp_password'):
-            vals['password'] = vals['temp_password']
-            vals['is_temp_password'] = True
+        # prevent re-entrancy when we call write() internally
+        if self.env.context.get("hrmis_skip_hooks"):
+            return super().create(vals)
 
-        role = vals.pop('hrmis_role', False)
+        # temp password
+        if vals.get("temp_password"):
+            vals["password"] = vals["temp_password"]
+            vals["is_temp_password"] = True
+
+        role = vals.pop("hrmis_role", False)
 
         # FORCE internal user
-        internal_group = self.env.ref('base.group_user')
-        vals.setdefault('groups_id', [])
-        vals['groups_id'].append((4, internal_group.id))
+        internal_group = self.env.ref("base.group_user")
+        vals.setdefault("groups_id", [])
+        vals["groups_id"].append((4, internal_group.id))
 
         user = super().create(vals)
 
+        # Role group
         if role:
             group_map = {
-                'employee': 'custom_login.group_hrmis_employee_self',
-                'section_officer': 'custom_login.group_section_officer',
-                'ms_dho': 'custom_login.group_ms_dho',
+                "employee": "custom_login.group_hrmis_employee_self",
+                "section_officer": "custom_login.group_section_officer",
+                "ms_dho": "custom_login.group_ms_dho",
             }
             role_group = self.env.ref(group_map[role])
-            user.write({'groups_id': [(4, role_group.id)]})
-
-        # Auto-create employee
-        if not user.employee_id:
-            employee = self.env['hr.employee'].create({
-                'name': vals.get('name', user.name),
-                'user_id': user.id,
-                'work_email': vals.get('login', user.login),
-                'cnic': vals.get('hrmis_cnic'),
-                'cadre_id': vals.get('hrmis_cadre') or False,
-                'parent_id': vals.get('manager_id') or False,
+            # IMPORTANT: call super-write via context to avoid recursion
+            user.with_context(hrmis_skip_hooks=True).write({
+                "groups_id": [(4, role_group.id)]
             })
- 
+
+        # Auto-create employee (this is expensive; keep, but avoid recursion)
+        if not user.employee_id:
+            employee = self.env["hr.employee"].create({
+                "name": vals.get("name", user.name),
+                "user_id": user.id,
+                "work_email": vals.get("login", user.login),
+                "cnic": vals.get("hrmis_cnic"),
+                "cadre_id": vals.get("hrmis_cadre") or False,
+                "parent_id": vals.get("manager_id") or False,
+            })
             user.employee_id = employee.id
+
         return user
 
-
     def write(self, vals):
-        if vals.get('temp_password'):
-            vals['password'] = vals['temp_password']
-            vals['is_temp_password'] = True
+        # prevent re-entrancy when we call write() internally
+        if self.env.context.get("hrmis_skip_hooks"):
+            return super().write(vals)
 
-        role = vals.pop('hrmis_role', False)
+        if vals.get("temp_password"):
+            vals["password"] = vals["temp_password"]
+            vals["is_temp_password"] = True
+
+        role = vals.pop("hrmis_role", False)
+
         res = super().write(vals)
 
-        # Sync CNIC and Cadre on update
-        for user in self:
-            if user.employee_id:
-                employee_vals = {}
-                if 'hrmis_cnic' in vals:
-                    employee_vals['cnic'] = vals['hrmis_cnic']
-                if 'hrmis_cadre' in vals:
-                    employee_vals['cadre_id'] = vals['hrmis_cadre'].id if vals['hrmis_cadre'] else False
-                if employee_vals:
-                    user.employee_id.write(employee_vals)
+        # Sync CNIC/Cadre to employee
+        if any(k in vals for k in ("hrmis_cnic", "hrmis_cadre")):
+            for user in self:
+                if user.employee_id:
+                    employee_vals = {}
+                    if "hrmis_cnic" in vals:
+                        employee_vals["cnic"] = vals.get("hrmis_cnic")
+                    if "hrmis_cadre" in vals:
+                        employee_vals["cadre_id"] = vals["hrmis_cadre"].id if vals.get("hrmis_cadre") else False
+                    if employee_vals:
+                        user.employee_id.write(employee_vals)
 
+        # Role group (NO recursion)
         if role:
             group_map = {
-                'employee': 'custom_login.group_hrmis_employee_self',
-                'section_officer': 'custom_login.group_section_officer',
-                'ms_dho': 'custom_login.group_ms_dho',
+                "employee": "custom_login.group_hrmis_employee_self",
+                "section_officer": "custom_login.group_section_officer",
+                "ms_dho": "custom_login.group_ms_dho",
             }
             role_group = self.env.ref(group_map[role])
-            for user in self:
-                user.write({'groups_id': [(4, role_group.id)]})
+            self.with_context(hrmis_skip_hooks=True).write({
+                "groups_id": [(4, role_group.id)]
+            })
 
         return res

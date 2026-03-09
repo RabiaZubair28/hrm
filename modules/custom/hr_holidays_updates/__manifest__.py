@@ -26,18 +26,23 @@
         'views/sec_officer_views/hrmis_user_profile_update_requests_detailed_view.xml',
         "views/not_found_page.xml",
     ],
+    
     'assets': {
         'web.assets_frontend': [
             'hr_holidays_updates/static/src/scss/hrmis_leave_frontend.scss',
+            'hr_holidays_updates/static/src/js/hrmis_page_loader.js',
+            'hr_holidays_updates/static/src/scss/hrmis_leave_history_ui.scss',
             'hr_holidays_updates/static/src/js/hrmis_leave_frontend.js',
+            'hr_holidays_updates/static/src/js/hrmis_leave_histroy_pager.js',
             'hr_holidays_updates/static/src/js/hrmis_nav_drawer.js',
             'hr_holidays_updates/static/src/js/hrmis_notifications.js',
             'hr_holidays_updates/static/src/js/hrmis_pending_badges.js',
-            'hr_holidays_updates/static/src/js/hrmis_leave_filters.js',
+            'hr_holidays_updates/static/src/js/hrmis_leaves_taken_policy.js',
+            # 'hr_holidays_updates/static/src/js/hrmis_leave_filters.js',
             'hr_holidays_updates/static/src/js/hrmis_profile_draft_save.js',
             
             # 'hr_holidays_updates/static/src/js/hrmis_profile_request_facility_filter.js',
-            
+            'hr_holidays_updates/static/src/js/hrmis_picker_autopen.js',
             'hr_holidays_updates/static/src/js/hrmis_other_option.js',
             'hrmis_user_profiles_updates/static/src/js/hrmis_profile_validation.js',
             'hrmis_user_profiles_updates/static/src/js/hrmis_extra_validations.js',

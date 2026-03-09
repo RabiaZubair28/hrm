@@ -20,3 +20,4 @@ access_hrmis_cadre_user,hrmis cadre user,model_hrmis_cadre,,1,1,1,1
 
 access_hrmis_designation_employee,HRMIS Designation Employee,model_hrmis_designation,base.group_user,1,1,1,0
 access_hrmis_designation_hr,HRMIS Designation HR,model_hrmis_designation,hr.group_hr_manager,1,1,1,1
+access_hrmis_training_institute,access_hrmis_training_institute,model_hrmis_training_institute,base.group_user,1,1,1,1

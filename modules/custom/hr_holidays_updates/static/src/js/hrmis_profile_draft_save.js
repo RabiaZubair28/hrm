@@ -4,6 +4,8 @@ function _qs(root, sel) {
     return root ? root.querySelector(sel) : null;
 }
 
+let _draftMsgTimer = null;
+
 function _setMsg(text, isError) {
     const el = document.getElementById("draft_save_msg");
     if (!el) {
@@ -28,7 +30,14 @@ function _setMsg(text, isError) {
     }
 
     el.textContent = text || "";
-}
+
+    // ✅ AUTO HIDE (reset previous timer)
+    if (_draftMsgTimer) clearTimeout(_draftMsgTimer);
+        _draftMsgTimer = setTimeout(() => {
+        el.style.display = "none";
+        el.textContent = "";
+    }, 10000);
+    }
 
 function _applyHrmisDraftSave() {
     console.log("[HRMIS_DRAFT_SAVE] _applyHrmisDraftSave() called");
@@ -117,6 +126,16 @@ function _applyHrmisDraftSave() {
 function _initHrmisDraftSave() {
     console.log("[HRMIS_DRAFT_SAVE] init");
     _applyHrmisDraftSave();
+    const serverMsg = document.querySelector(".hrmis_server_msg");
+if (serverMsg) {
+    const msgText = (serverMsg.textContent || "").trim();
+    const msgType = serverMsg.dataset.type; // "success" or "error"
+    if (msgText) {
+        _setMsg(msgText, msgType === "error");
+    }
+    // serverMsg.remove(); // ✅ prevents showing again on pageshow
+
+}
 }
 
 if (document.readyState === "loading") {

@@ -22,6 +22,8 @@
         "web.assets_frontend": [
             "custom_section_officers/static/src/scss/search_staff.scss",
             "custom_section_officers/static/src/js/transfer_vacancies_pagination.js",
+            'custom_section_officers/static/src/js/hrmis_so_leave_filters.js',
+            'custom_section_officers/static/src/scss/hrmis_so_leave_filters.scss',
         ],
     },
     'installable': True,

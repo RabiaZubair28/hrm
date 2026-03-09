@@ -7,7 +7,7 @@
   --hrmis-green: #064526;
   --hrmis-green-dark: #04381f;
   --hrmis-border-soft: #cfd7da;
-  --hrmis-focus: rgba(6, 69, 38, 0.20);
+  --hrmis-focus: rgba(6, 69, 38, 0.2);
   --hrmis-input-bg: #f7fbf8;
 }
 
@@ -68,7 +68,7 @@
 /* --- Clear button inside input (NO ugly circle) --- */
 .hrmis-app .scb .scb-clear {
   position: absolute;
-  right: 48px;   /* just left of caret */
+  right: 48px; /* just left of caret */
   top: 50%;
   transform: translateY(-50%);
 
@@ -93,7 +93,7 @@
 
 .hrmis-app .scb .scb-clear:hover {
   opacity: 1;
-  background: rgba(6, 69, 38, 0.10) !important;
+  background: rgba(6, 69, 38, 0.1) !important;
 }
 
 /* Hide Bootstrap input-group-text visuals (if present) */
@@ -171,7 +171,10 @@
 }
 
 .js-tv-acc-item {
-  transition: max-height 260ms ease, opacity 220ms ease, transform 220ms ease;
+  transition:
+    max-height 260ms ease,
+    opacity 220ms ease,
+    transform 220ms ease;
   transform-origin: top;
 }
 
@@ -193,7 +196,7 @@
 }
 /* Make Reset button match SearchComboBox height */
 .tv-btn-sameheight {
-  height: 31px;         /* matches input-group-sm height nicely */
+  height: 31px; /* matches input-group-sm height nicely */
   display: inline-flex;
   align-items: center;
   justify-content: center;

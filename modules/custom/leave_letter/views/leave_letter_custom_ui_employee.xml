@@ -8,11 +8,16 @@
              and lv.leave_notification_id
               and lv.holiday_status_id.name != 'Casual Leave'">
                 <a t-att-href="'/leave_letter/pdf/%s' % lv.leave_notification_id.id"
-                   class="hrmis-btn hrmis-btn--outline"
-                   style="margin-left:8px;"
-                   target="_blank">
-                    Download 
-                </a>
+   class="hrmis-btn hrmis-btn--secondary hrmis-btn--same"
+           t-attf-style="
+              margin-left:0px;
+              border:1px solid #064526;
+              background: #{ (not lv.leave_notification_id.is_downloaded) and '#064526' or '#ffffff' };
+              color: #{ (not lv.leave_notification_id.is_downloaded) and '#ffffff' or '#064526' };
+           "
+           target="_blank">
+    Download
+</a>
             </t>
             <t t-else="">
     <span style="
@@ -27,7 +32,7 @@
         text-align: center;
         white-space: normal;
         overflow-wrap: break-word;">
-        No notification available
+        N/A
     </span>
 </t>
 

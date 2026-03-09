@@ -6,6 +6,52 @@ from odoo import api, models
 class HrLeaveNotifications(models.Model):
     _inherit = "hr.leave"
 
+    def _hrmis_effective_days_for_display(self) -> float:
+        """
+        Display duration aligned with HRMIS frontend policy:
+        - If leave is partial (half-day/hours/custom), prefer Odoo's computed duration.
+        - Otherwise, if HRMIS effective-days method exists, use it (Sunday-only off).
+        - Fallback to Odoo duration fields.
+        """
+        self.ensure_one()
+
+        # Partial-day requests should keep Odoo's computed values (e.g., 0.5 day).
+        try:
+            is_partial = bool(
+                ("request_unit_half" in self._fields and self.request_unit_half)
+                or ("request_unit_hours" in self._fields and self.request_unit_hours)
+                or ("request_unit_custom" in self._fields and self.request_unit_custom)
+            )
+        except Exception:
+            is_partial = False
+
+        def _odoo_days():
+            for f in ("number_of_days_display", "number_of_days"):
+                try:
+                    if f in self._fields:
+                        return float(getattr(self, f, 0.0) or 0.0)
+                except Exception:
+                    continue
+            return 0.0
+
+        if is_partial:
+            return _odoo_days()
+
+        try:
+            d_from = getattr(self, "request_date_from", None)
+            d_to = getattr(self, "request_date_to", None)
+            if (
+                self.employee_id
+                and d_from
+                and d_to
+                and hasattr(self, "_hrmis_effective_days")
+            ):
+                return float(self._hrmis_effective_days(self.employee_id, d_from, d_to) or 0.0)
+        except Exception:
+            pass
+
+        return _odoo_days()
+
     def _hrmis_push(self, users, title: str, body: str):
         """Create HRMIS dropdown notifications for given users."""
         Notification = self.env["hrmis.notification"].sudo()
@@ -26,11 +72,7 @@ class HrLeaveNotifications(models.Model):
         """Return a human-readable snippet: 'Casual Leave request for 10 day(s)'."""
         self.ensure_one()
         leave_type_name = self.holiday_status_id.name if self.holiday_status_id else "Leave"
-        days = 0
-        if "number_of_days" in self._fields:
-            days = self.number_of_days or 0
-        elif "number_of_days_display" in self._fields:
-            days = self.number_of_days_display or 0
+        days = self._hrmis_effective_days_for_display()
         # Format days nicely: show integer if whole number, else one decimal
         if days == int(days):
             days_str = str(int(days))

@@ -5,14 +5,33 @@
         <!-- Add new item after "Promotion Requests" (adjust target if you want a different position) -->
         <xpath expr="//nav[contains(@class,'hrmis-nav')]//a[contains(normalize-space(.),'Promotion Requests')]"
                position="after">
-
             <t t-if="request.env.user.has_group('base.group_system')">
                 <a t-att-class="'hrmis-nav__item' + (' is-active' if active_menu == 'sanctioned_posts' else '')"
                    t-att-href="'/hrmis/sanctioned_posts/upload'">
-                    Sanctioned Posts
+                    <span class="hrmis-nav__icon" aria-hidden="true">
+                        <i class="fa fa-file-text-o" aria-hidden="true"/>
+                    </span>
+                    <span class="hrmis-nav__label">Sanctioned Posts</span>
                 </a>
             </t>
-
+            <t t-if="request.env.user.has_group('base.group_system')">
+                <a t-att-class="'hrmis-nav__item' + (' is-active' if active_menu == 'emr_api_test' else '')"
+                    t-att-href="'/hrmis/emr_api/test'">
+                    <span class="hrmis-nav__icon" aria-hidden="true">
+                        <i class="fa fa-exchange" aria-hidden="true"/>
+                    </span>
+                    <span class="hrmis-nav__label">EMR API Test</span>
+                </a>
+            </t>
+            <t t-if="request.env.user.has_group('base.group_system')">
+                <a t-att-class="'hrmis-nav__item' + (' is-active' if active_menu == 'user_config' else '')"
+                     t-att-href="'/hrmis/user_config'">
+                    <span class="hrmis-nav__icon" aria-hidden="true">
+                        <i class="fa fa-cog" aria-hidden="true"/>
+                    </span>
+                    <span class="hrmis-nav__label">User Configurations</span>
+                </a>
+            </t>
         </xpath>
     </template>
 </odoo>

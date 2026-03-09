@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+  <!-- Server Action (required in Odoo 18 cron) -->
+  <record id="act_server_hrmis_user_import_worker" model="ir.actions.server">
+    <field name="name">HRMIS User Import Worker</field>
+    <!-- IMPORTANT: model the code runs on -->
+    <field name="model_id" ref="model_hrmis_user_queue_worker"/>
+    <field name="state">code</field>
+    <field name="code">env["hrmis.user.queue.worker"].run_user_import_batch(batch_size=300)</field>
+  </record>
+
+  <!-- Cron that executes the server action -->
+  <record id="ir_cron_hrmis_user_import_worker" model="ir.cron">
+    <field name="name">HRMIS User Import Worker</field>
+    <field name="active">True</field>
+
+    <!-- Link to server action -->
+    <field name="ir_actions_server_id" ref="act_server_hrmis_user_import_worker"/>
+
+    <field name="interval_number">1</field>
+    <field name="interval_type">minutes</field>
+  </record>
+
+</odoo>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-  <data noupdate="1">
+  <data>
 
 
     <record id="facility_badin_bi0128" model="hrmis.facility.type">
@@ -681,7 +681,7 @@
     <record id="facility_mithi_mx0068" model="hrmis.facility.type">
         <field name="name">TALUKA HOSPITAL CHACHRO MITHI</field>
         <field name="facility_code">MX0068</field>
-        <field name="district_id" ref="hrmis_user_profiles_updates.district_mithi"/>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_tharparkar"/>
         <field name="category">hospital</field>
         <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
         <field name="active">True</field>
@@ -690,7 +690,7 @@
     <record id="facility_mithi_mx0069" model="hrmis.facility.type">
         <field name="name">TALUKA HOSPITAL DIPLO MITHI</field>
         <field name="facility_code">MX0069</field>
-        <field name="district_id" ref="hrmis_user_profiles_updates.district_mithi"/>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_tharparkar"/>
         <field name="category">hospital</field>
         <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
         <field name="active">True</field>
@@ -699,7 +699,7 @@
     <record id="facility_mithi_mx0070" model="hrmis.facility.type">
         <field name="name">TALUKA HOSPITAL NAGARPARKAR MITHI</field>
         <field name="facility_code">MX0070</field>
-        <field name="district_id" ref="hrmis_user_profiles_updates.district_mithi"/>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_tharparkar"/>
         <field name="category">hospital</field>
         <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
         <field name="active">True</field>
@@ -708,7 +708,7 @@
     <record id="facility_mithi_mx0071" model="hrmis.facility.type">
         <field name="name">DHQ HOSPITAL THARPARKAR@ MITHI</field>
         <field name="facility_code">MX0071</field>
-        <field name="district_id" ref="hrmis_user_profiles_updates.district_mithi"/>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_tharparkar"/>
         <field name="category">hospital</field>
         <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
         <field name="active">True</field>
@@ -717,7 +717,7 @@
     <record id="facility_mithi_mx0386" model="hrmis.facility.type">
         <field name="name">TALUKA HOSPITAL KHAME-JO-PAR DISTIRCT THARPARKAR</field>
         <field name="facility_code">MX0386</field>
-        <field name="district_id" ref="hrmis_user_profiles_updates.district_mithi"/>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_tharparkar"/>
         <field name="category">hospital</field>
         <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
         <field name="active">True</field>
@@ -798,7 +798,7 @@
     <record id="facility_nawabshah_sb0108" model="hrmis.facility.type">
         <field name="name">PEOPLES MEDICAL COLLEGE HOSPITAL BENAZIR ABAD</field>
         <field name="facility_code">SB0108</field>
-        <field name="district_id" ref="hrmis_user_profiles_updates.district_nawabshah"/>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_shaheed_benazirabad"/>
         <field name="category">hospital</field>
         <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
         <field name="active">True</field>
@@ -807,7 +807,7 @@
     <record id="facility_nawabshah_sb0119" model="hrmis.facility.type">
         <field name="name">MS TALUKA HOSPITAL SAKRAND (S) BENAZIR</field>
         <field name="facility_code">SB0119</field>
-        <field name="district_id" ref="hrmis_user_profiles_updates.district_nawabshah"/>
+        <field name="district_id" ref="hrmis_user_profiles_updates.district_shaheed_benazirabad"/>
         <field name="category">hospital</field>
         <field name="hcu_id" ref="hrmis_user_profiles_updates.hcu_thq"/>
         <field name="active">True</field>

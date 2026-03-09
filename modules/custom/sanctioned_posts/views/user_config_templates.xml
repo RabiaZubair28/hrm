@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <template id="hrmis_user_config_page" name="HRMIS User Configurations">
+    <t t-call="hr_holidays_updates.hrmis_ui_layout">
+      <t t-set="active_menu" t-value="'user_config'"/>
+
+      <div class="container mt-4 mb-5">
+        <div class="card p-3" style="border:1px solid #eee; border-radius:10px;">
+          <div style="font-size:18px; font-weight:700;">User Configurations</div>
+          <div style="font-size:13px; color:#666;">
+            Metrics + XLSX upload (queued to Redis).
+          </div>
+
+          <div class="mt-3" style="display:flex; gap:18px; flex-wrap:wrap;">
+            <div style="min-width:220px; padding:12px; border:1px solid #f0f0f0; border-radius:10px;">
+              <div style="font-size:12px; color:#777;">Total Users</div>
+              <div style="font-size:22px; font-weight:800;"><t t-esc="metrics.get('total_users')"/></div>
+            </div>
+            <div style="min-width:220px; padding:12px; border:1px solid #f0f0f0; border-radius:10px;">
+              <div style="font-size:12px; color:#777;">Users Created Today</div>
+              <div style="font-size:22px; font-weight:800;"><t t-esc="metrics.get('users_created_today')"/></div>
+            </div>
+            <div style="min-width:220px; padding:12px; border:1px solid #f0f0f0; border-radius:10px;">
+              <div style="font-size:12px; color:#777;">Redis Queue Length</div>
+              <div style="font-size:22px; font-weight:800;"><t t-esc="metrics.get('queue_len')"/></div>
+            </div>
+          </div>
+
+          <t t-if="flash_success">
+            <div class="alert alert-success mt-3" role="alert"><t t-esc="flash_success"/></div>
+          </t>
+          <t t-if="flash_error">
+            <div class="alert alert-danger mt-3" role="alert"><t t-esc="flash_error"/></div>
+          </t>
+
+          <div class="mt-3">
+            <div style="font-weight:700; margin-bottom:6px;">Upload XLSX</div>
+            <div style="font-size:13px; color:#666; margin-bottom:10px;">
+              Expected columns include: <strong>Name of Medical Officer</strong>, <strong>Date of Birth</strong>, <strong>Domicile code</strong>.
+            </div>
+
+            <form method="post" action="/hrmis/user_config/upload" enctype="multipart/form-data"
+                  class="hrmis-xlsx-upload-form">
+              <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+              <input type="hidden" name="sheet_name" class="js-sheet-name" value=""/>
+
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <input type="file"
+                      name="xlsx_file"
+                      accept=".xlsx"
+                      required="required"
+                      class="js-xlsx-file"/>
+
+                <select class="form-select js-sheet-select"
+                        style="min-width:220px; display:none;"
+                        disabled="disabled">
+                  <option value="" selected="selected" disabled="disabled">Select sheet…</option>
+                </select>
+
+                <button type="submit" class="btn btn-primary">Upload &amp; Queue</button>
+              </div>
+
+              <div class="mt-2 js-sheet-hint" style="font-size:12px; color:#777; display:none;">
+                Select the sheet that contains the upload data.
+              </div>
+            </form>
+
+            <t t-if="last_queued_preview">
+              <div class="mt-3" style="font-size:13px; color:#666;">
+                Last upload preview (first 5 queued):
+              </div>
+              <pre style="margin-top:10px; padding:12px; background:#0b1020; color:#e6e6e6; border-radius:10px; overflow:auto; max-height:320px;"
+                   t-esc="last_queued_preview"/>
+            </t>
+            <t t-if="latest_job and latest_job.report_attachment_id">
+              <div class="mt-3">
+                <a class="btn btn-success"
+                  t-att-href="'/web/content/%s?download=1' % latest_job.report_attachment_id.id">
+                  Download Skipped Report (XLSX)
+                </a>
+              </div>
+            </t>
+            <a href="/hrmis/user_config/queue" class="btn btn-info mt-3">
+              View Queue Status
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </t>
+  </template>
+</odoo>

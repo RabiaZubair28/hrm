@@ -23,7 +23,7 @@
 
         <t t-else="">
             <div class="alert alert-light text-muted">
-                No notifications available.
+                N/A
             </div>
         </t>
 

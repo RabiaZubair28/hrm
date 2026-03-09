@@ -40,8 +40,34 @@ class LeaveNotification(models.Model):
     def _compute_leave_duration(self):
         for rec in self:
             if rec.leave_start_date and rec.leave_end_date:
-                delta = (rec.leave_end_date - rec.leave_start_date).days + 1  # inclusive
-                rec.leave_duration = f"{delta} Day{'s' if delta > 1 else ''}"
+                days = None
+                try:
+                    if rec.leave_id and hasattr(rec.leave_id, "_hrmis_effective_days") and rec.leave_id.employee_id:
+                        is_partial = bool(
+                            ("request_unit_half" in rec.leave_id._fields and rec.leave_id.request_unit_half)
+                            or ("request_unit_hours" in rec.leave_id._fields and rec.leave_id.request_unit_hours)
+                            or ("request_unit_custom" in rec.leave_id._fields and rec.leave_id.request_unit_custom)
+                        )
+                        if not is_partial:
+                            days = rec.leave_id._hrmis_effective_days(
+                                rec.leave_id.employee_id, rec.leave_start_date, rec.leave_end_date
+                            )
+                except Exception:
+                    days = None
+
+                if days is None:
+                    days = (rec.leave_end_date - rec.leave_start_date).days + 1  # inclusive
+
+                try:
+                    days_f = float(days or 0.0)
+                except Exception:
+                    days_f = 0.0
+
+                if days_f == int(days_f):
+                    days_str = str(int(days_f))
+                else:
+                    days_str = f"{days_f:.1f}"
+                rec.leave_duration = f"{days_str} Day{'s' if days_f != 1 else ''}"
             else:
                 rec.leave_duration = ""
 
@@ -129,4 +155,3 @@ class LeaveNotification(models.Model):
     def action_download_pdf(self):
         self.ensure_one()
         return self.env.ref('leave_letter.action_leave_notification_pdf').report_action(self)
-

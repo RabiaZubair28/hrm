@@ -32,8 +32,12 @@ def pending_leave_requests_for_user(user_id: int):
         def _bps_allowed(leave):
             emp = leave.employee_id
             if not emp or emp.hrmis_bps is None:
-                return False
+                # If BPS isn't set, don't hide the record; just treat as "not last approver"
+                is_last_approver_by_leave[leave.id] = False
+                return True
 
+            # Flow lines only used to compute "last approver" and optional access control,
+            # but should NOT hide requests already assigned to the user via pending_approver_ids.
             flow_lines = FlowLine.search(
                 [
                     ("flow_id.leave_type_id", "=", leave.holiday_status_id.id),
@@ -45,13 +49,11 @@ def pending_leave_requests_for_user(user_id: int):
             )
 
             if not flow_lines:
-                return False
+                # IMPORTANT: keep the leave visible because it is already pending for this user
+                is_last_approver_by_leave[leave.id] = False
+                return True
 
-            # -----------------------------
-            # LAST APPROVER CHECK
-            # -----------------------------
             user_sequence = flow_lines[0].sequence
-
             all_flow_lines = FlowLine.search(
                 [
                     ("flow_id.leave_type_id", "=", leave.holiday_status_id.id),
@@ -59,13 +61,8 @@ def pending_leave_requests_for_user(user_id: int):
                     ("bps_to", ">=", emp.hrmis_bps),
                 ]
             )
-
             max_sequence = max(all_flow_lines.mapped("sequence")) if all_flow_lines else 0
-
-            is_last_approver_by_leave[leave.id] = (
-                user_sequence == max_sequence
-            )
-
+            is_last_approver_by_leave[leave.id] = (user_sequence == max_sequence)
             return True
 
         leaves = leaves.filtered(_bps_allowed)
@@ -122,8 +119,8 @@ def leave_pending_for_current_user(leave) -> bool:
     if not leave:
         return False
     try:
-        pending = pending_leave_requests_for_user(request.env.user.id)
-        return bool(leave.id in set(pending.ids))
+        leaves, _map = pending_leave_requests_for_user(request.env.user.id)
+        return leave.id in leaves.ids
     except Exception:
         return False
     

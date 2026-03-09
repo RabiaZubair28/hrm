@@ -1,31 +1,37 @@
 <odoo>
-    <template id="leave_letter_add_download_notification_manage_history"
-              inherit_id="custom_section_officers.hrmis_manage_requests">
+  <template id="leave_letter_add_download_notification_manage_history"
+            inherit_id="custom_section_officers.hrmis_manage_requests">
 
-        <xpath expr="//a[contains(@class,'hrmis-btn--outline') and contains(@t-att-href, 'history-view')]" position="replace">
+    <!-- Stable selector: match any View button/link going to history-view regardless of class or t-attf -->
+    <xpath expr="//a[(contains(@t-att-href,'history-view') or contains(@t-attf-href,'history-view'))]"
+           position="replace">
 
-            <t t-if="lv.state in ('validate','validate2')
-             and lv.leave_notification_id
-              and lv.holiday_status_id.name != 'Casual Leave'">
-                <a t-att-href="'/leave_letter/pdf/%s' % lv.leave_notification_id.id"
-                   class="hrmis-btn hrmis-btn--outline"
-                   t-attf-style="
-                        margin-left:0px;
-                        background: #{ not lv.leave_notification_id.is_downloaded and '#064526' or 'white' };
-                        color: #{ not lv.leave_notification_id.is_downloaded and 'white' or '#333' };
-                        border:1px solid #064526;
-                   "
-                   target="_blank"
-                   t-if="lv.state in ('validate','validate2')">
+      <t t-if="lv.state in ('validate','validate2')
+               and lv.leave_notification_id
+               and lv.holiday_status_id.name != 'Casual Leave'">
 
-                    <t t-esc="not lv.leave_notification_id.is_downloaded and 'Download' or 'Downloaded'"/>
+        <!-- Profile-style button:
+             - secondary look
+             - same height
+             - green emphasis if not downloaded
+        -->
+        <a t-att-href="'/leave_letter/pdf/%s' % lv.leave_notification_id.id"
+           class="hrmis-btn hrmis-btn--secondary hrmis-btn--same"
+           t-attf-style="
+              margin-left:0px;
+              border:1px solid #064526;
+              background: #{ (not lv.leave_notification_id.is_downloaded) and '#064526' or '#ffffff' };
+              color: #{ (not lv.leave_notification_id.is_downloaded) and '#ffffff' or '#064526' };
+           "
+           target="_blank">
 
-                </a>
-                <t t-else="">—</t>
-            </t>
+          <t t-esc="(not lv.leave_notification_id.is_downloaded) and 'Download' or 'Downloaded'"/>
 
-        <t t-else="">
-    <span style="
+        </a>
+
+      </t>
+      <t t-else="">
+        <span style="
         display: inline-block;
         font-size: 12px;
         color: #888;
@@ -37,12 +43,10 @@
         text-align: center;
         white-space: normal;
         overflow-wrap: break-word;">
-        No notification available
+        N/A
     </span>
-</t>
+      </t>
 
-
-        </xpath>
-
-    </template>
+    </xpath>
+  </template>
 </odoo>
