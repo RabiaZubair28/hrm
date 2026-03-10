@@ -1932,17 +1932,6 @@ body.hrmis-drawer-open {
   background: transparent !important;
 }
 
-.hrmis-profile-request .hrmis-pr-tabs::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 4px;
-  border-radius: 999px;
-  background: #0e5a37;
-}
-
 /* Tabs look like the reference screenshot (rounded, subtle border, active highlight) */
 .hrmis-tab.hrmis-pr-tab {
   flex: 0 0 auto;
@@ -1983,6 +1972,7 @@ body.hrmis-drawer-open {
   color: #0e5a37;
   border-color: #cfd8d1;
   border-top: 5px solid #0e5a37;
+  box-shadow: inset 0 -4px 0 #0e5a37;
   padding-top: 15px;
 }
 
