@@ -1924,84 +1924,15 @@ body.hrmis-drawer-open {
 
 .hrmis-profile-request .hrmis-pr-tabs {
   display: flex;
-  gap: 10px;
-  padding: 14px 14px 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Tabs look like the reference screenshot (rounded, subtle border, active highlight) */
-.hrmis-tab.hrmis-pr-tab {
-  flex: 0 0 auto;
-  position: relative;
-  width: auto;
-  text-decoration: none;
-  color: #0f172a;
-  background: #ffffff;
-  border: 1px solid #d6dee1;
-  border-bottom: 0;
-  border-right: 0;
-  padding: 14px 20px;
-  border-top-left-radius: 14px;
-  border-top-right-radius: 14px;
-  font-weight: 800;
-  font-size: 14px;
-  line-height: 1.1;
-  white-space: nowrap;
-}
-/* Tabs look like the reference screenshot (rounded, subtle border, active highlight) */
-.hrmis-profile-request .hrmis-tabs--profile-request {
-  flex: 0 0 auto;
-  position: relative;
-  width: auto;
-  text-decoration: none;
-  color: #0f172a;
-  background: #f6f7f3;
-  padding: 0 0;
-  font-weight: 800;
-  font-size: 14px;
-  line-height: 1.1;
-  white-space: nowrap;
-}
-.hrmis-profile-request
-  .hrmis-tabs--profile-request
-  .hrmis-tab.hrmis-pr-tab:hover {
-  background: #f6f7f3;
-}
-
-.hrmis-profile-request
-  .hrmis-tabs--profile-request
-  .hrmis-tab.hrmis-pr-tab.is-active,
-.hrmis-profile-request
-  .hrmis-tabs--profile-request
-  .hrmis-tab.hrmis-pr-tab.active {
-  color: var(--hrmis-pr-green);
-}
-
-.hrmis-profile-request
-  .hrmis-tabs--profile-request
-  .hrmis-tab.hrmis-pr-tab.is-active::after,
-.hrmis-profile-request
-  .hrmis-tabs--profile-request
-  .hrmis-tab.hrmis-pr-tab.active::after {
-  content: "";
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  top: -2px;
-  height: 3px;
-  border-radius: 999px;
-  background: var(--hrmis-pr-green);
-}
-
-.hrmis-profile-request .hrmis-pr-tabs[aria-label="Transfer sections"] {
   position: relative;
   gap: 12px;
   padding: 18px 0 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   background: transparent !important;
 }
 
-.hrmis-profile-request .hrmis-pr-tabs[aria-label="Transfer sections"]::after {
+.hrmis-profile-request .hrmis-pr-tabs::after {
   content: "";
   position: absolute;
   left: 0;
@@ -2012,31 +1943,41 @@ body.hrmis-drawer-open {
   background: #0e5a37;
 }
 
-.hrmis-profile-request
-  .hrmis-pr-tabs[aria-label="Transfer sections"]
-  .hrmis-tab.hrmis-pr-tab {
+/* Tabs look like the reference screenshot (rounded, subtle border, active highlight) */
+.hrmis-tab.hrmis-pr-tab {
+  flex: 0 0 auto;
+  position: relative;
+  width: auto;
+  text-decoration: none;
+  color: #1d2939;
   background: #f7f7f3;
   border: 1px solid #d7ddd8;
-  border-right: 1px solid #d7ddd8;
   border-bottom: 0;
+  border-right: 1px solid #d7ddd8;
   border-top: 0;
+  padding: 20px 22px 18px;
   border-top-left-radius: 28px;
   border-top-right-radius: 28px;
-  padding: 20px 22px 18px;
-  color: #1d2939;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.1;
+  white-space: nowrap;
 }
-
+/* Tabs look like the reference screenshot (rounded, subtle border, active highlight) */
+.hrmis-profile-request .hrmis-tabs--profile-request {
+  background: transparent;
+}
 .hrmis-profile-request
-  .hrmis-pr-tabs[aria-label="Transfer sections"]
+  .hrmis-tabs--profile-request
   .hrmis-tab.hrmis-pr-tab:hover {
   background: #fbfcf9;
 }
 
 .hrmis-profile-request
-  .hrmis-pr-tabs[aria-label="Transfer sections"]
+  .hrmis-tabs--profile-request
   .hrmis-tab.hrmis-pr-tab.is-active,
 .hrmis-profile-request
-  .hrmis-pr-tabs[aria-label="Transfer sections"]
+  .hrmis-tabs--profile-request
   .hrmis-tab.hrmis-pr-tab.active {
   background: #ffffff;
   color: #0e5a37;
@@ -2046,10 +1987,10 @@ body.hrmis-drawer-open {
 }
 
 .hrmis-profile-request
-  .hrmis-pr-tabs[aria-label="Transfer sections"]
+  .hrmis-tabs--profile-request
   .hrmis-tab.hrmis-pr-tab.is-active::after,
 .hrmis-profile-request
-  .hrmis-pr-tabs[aria-label="Transfer sections"]
+  .hrmis-tabs--profile-request
   .hrmis-tab.hrmis-pr-tab.active::after {
   content: none;
 }
