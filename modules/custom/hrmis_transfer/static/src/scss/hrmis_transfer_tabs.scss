@@ -1,0 +1,47 @@
+.hrmis-pr-tabs[aria-label="Transfer sections"] {
+  position: relative;
+  gap: 12px;
+  padding: 18px 0 10px;
+  background: transparent !important;
+}
+
+.hrmis-pr-tabs[aria-label="Transfer sections"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: #0e5a37;
+}
+
+.hrmis-pr-tabs[aria-label="Transfer sections"] .hrmis-tab.hrmis-pr-tab {
+  background: #f7f7f3;
+  border: 1px solid #d7ddd8;
+  border-right: 1px solid #d7ddd8;
+  border-bottom: 0;
+  border-top: 0;
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  padding: 20px 22px 18px;
+  color: #1d2939;
+}
+
+.hrmis-pr-tabs[aria-label="Transfer sections"] .hrmis-tab.hrmis-pr-tab:hover {
+  background: #fbfcf9;
+}
+
+.hrmis-pr-tabs[aria-label="Transfer sections"] .hrmis-tab.hrmis-pr-tab.is-active,
+.hrmis-pr-tabs[aria-label="Transfer sections"] .hrmis-tab.hrmis-pr-tab.active {
+  background: #ffffff;
+  color: #0e5a37;
+  border-color: #cfd8d1;
+  border-top: 5px solid #0e5a37;
+  padding-top: 15px;
+}
+
+.hrmis-pr-tabs[aria-label="Transfer sections"] .hrmis-tab.hrmis-pr-tab.is-active::after,
+.hrmis-pr-tabs[aria-label="Transfer sections"] .hrmis-tab.hrmis-pr-tab.active::after {
+  content: none;
+}
