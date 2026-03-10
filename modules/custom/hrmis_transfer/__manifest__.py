@@ -24,7 +24,6 @@
     ],
     "assets": {
         "web.assets_frontend": [
-            "hrmis_transfer/static/src/scss/hrmis_transfer_tabs.scss",
             "hrmis_transfer/static/src/js/hrmis_transfer_facility_filter.js",
         ],
     },
