@@ -116,7 +116,9 @@
                     </div>
 
                     <div class="hrmis-form__actions">
-                        <button class="hrmis-btn hrmis-btn--primary hrmis-btn--lg" type="submit">
+                        <button
+                            class="hrmis-btn hrmis-btn--primary hrmis-btn--lg hrmis-btn--sameheight"
+                            type="submit">
                             Submit
                         </button>
                     </div>

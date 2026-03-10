@@ -14,53 +14,57 @@
             <div class="hrmis-alert hrmis-alert--success"><t t-esc="success"/></div>
         </t>
 
-        <t t-if="not history">
-            <div class="hrmis-empty">No transfer history found.</div>
-        </t>
-        <t t-else="">
-            <div class="hrmis-table">
-                <div class="hrmis-table__head">
-                    <div>#</div>
-                    <div>Submitted on</div>
-                    <div>From</div>
-                    <div>To</div>
-                    <div>Status</div>
-                    <div>Pending With</div>
+        <div class="hrmis-leave-history-ui">
+            <t t-if="not history">
+                <div class="hrmis-empty">No transfer history found.</div>
+            </t>
+            <t t-else="">
+                <div class="hrmis-table hrmis-pr-table hrmis-pr-table--leave">
+                    <div class="hrmis-table__head hrmis-pr-table__head">
+                        <div>#</div>
+                        <div>Submitted on</div>
+                        <div>From</div>
+                        <div>To</div>
+                        <div>Status</div>
+                        <div>Pending With</div>
                         <div>Notifications</div>
-                </div>
-                <t t-foreach="range(len(history))" t-as="idx0">
-                    <t t-set="tr" t-value="history[idx0]"/>
-                    <div class="hrmis-table__row">
-                        <div style="text-wrap: wrap"><t t-esc="idx0 + 1" style="text-wrap: wrap" /></div>
-                        <div style="text-wrap: wrap"><t t-esc="tr.submitted_on or tr.create_date" style="text-wrap: wrap" /></div>
-                        <div style="text-wrap: wrap">
-                            <t t-esc="(tr.current_facility_id and tr.current_facility_id.name) or ''" style="text-wrap: wrap" />
-                            <div class="sub" style="color:#666; text-wrap: wrap">
-                                <t t-esc="(tr.current_district_id and tr.current_district_id.name) or ''" style="text-wrap: wrap"/>
-                            </div>
-                        </div>
-                        <div style="text-wrap: wrap">
-                            <t t-esc="(tr.required_facility_id and tr.required_facility_id.name) or ''" style="text-wrap: wrap"/>
-                            <div class="sub" style="color:#666; text-wrap: wrap">
-                                <t t-esc="(tr.required_district_id and tr.required_district_id.name) or ''" style="text-wrap: wrap" />
-                            </div>
-                        </div>
-                        <div style="text-wrap: wrap">
-                            <t t-if="tr.state == 'submitted'">Pending</t>
-                            <t t-elif="tr.state == 'approved'">Approved</t>
-                            <t t-elif="tr.state == 'rejected'">Rejected</t>
-                            <t t-else=""><t t-esc="tr.state"/></t>
-                        </div>
-                        <div><t t-esc="tr.pending_with or '-'"/></div>
-                         <div>
-                                            <a class="hrmis-btn hrmis-btn--outline"
-                                            t-att-href="'/hrmis/transfer/%d/history-view' % tr.id">
-                                                View
-                                            </a>
-                                        </div>
                     </div>
-                </t>
-            </div>
-        </t>
+                    <div class="hrmis-table__body">
+                        <t t-foreach="range(len(history))" t-as="idx0">
+                            <t t-set="tr" t-value="history[idx0]"/>
+                            <div class="hrmis-table__row hrmis-pr-table__row">
+                                <div style="text-wrap: wrap"><t t-esc="idx0 + 1" style="text-wrap: wrap" /></div>
+                                <div style="text-wrap: wrap"><t t-esc="tr.submitted_on or tr.create_date" style="text-wrap: wrap" /></div>
+                                <div style="text-wrap: wrap">
+                                    <t t-esc="(tr.current_facility_id and tr.current_facility_id.name) or ''" style="text-wrap: wrap" />
+                                    <div class="sub" style="color:#666; text-wrap: wrap">
+                                        <t t-esc="(tr.current_district_id and tr.current_district_id.name) or ''" style="text-wrap: wrap"/>
+                                    </div>
+                                </div>
+                                <div style="text-wrap: wrap">
+                                    <t t-esc="(tr.required_facility_id and tr.required_facility_id.name) or ''" style="text-wrap: wrap"/>
+                                    <div class="sub" style="color:#666; text-wrap: wrap">
+                                        <t t-esc="(tr.required_district_id and tr.required_district_id.name) or ''" style="text-wrap: wrap" />
+                                    </div>
+                                </div>
+                                <div style="text-wrap: wrap">
+                                    <t t-if="tr.state == 'submitted'">Pending</t>
+                                    <t t-elif="tr.state == 'approved'">Approved</t>
+                                    <t t-elif="tr.state == 'rejected'">Rejected</t>
+                                    <t t-else=""><t t-esc="tr.state"/></t>
+                                </div>
+                                <div><t t-esc="tr.pending_with or '-'"/></div>
+                                <div>
+                                    <a class="hrmis-btn hrmis-btn--outline hrmis-btn--sameheight"
+                                        t-att-href="'/hrmis/transfer/%d/history-view' % tr.id">
+                                        View
+                                    </a>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </t>
+        </div>
     </template>
 </odoo>
