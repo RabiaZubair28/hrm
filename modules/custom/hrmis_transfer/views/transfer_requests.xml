@@ -19,7 +19,7 @@
 
         <xpath expr="//t[@t-if=&quot;tab == 'history'&quot;]" position="replace">
             <t t-if="tab == 'history'">
-                <div class="hrmis-panel__body hrmis-pr-shell__body">
+                <div class="hrmis-panel__body">
                     <t t-call="hrmis_transfer.hrmis_transfer_history"/>
                 </div>
             </t>
@@ -27,7 +27,7 @@
 
         <xpath expr="//t[@t-if=&quot;tab == 'new'&quot;]" position="replace">
             <t t-if="tab == 'new'">
-                <div class="hrmis-panel__body hrmis-pr-shell__body">
+                <div class="hrmis-panel__body">
                     <t t-call="hrmis_transfer.hrmis_new_transfer_request"/>
                 </div>
             </t>
@@ -35,12 +35,12 @@
 
         <xpath expr="//div[contains(@class,'hrmis-panel') and contains(@class,'hrmis-pr-shell') and contains(@class,'hrmis-profile-request')]" position="inside">
             <t t-if="tab == 'requests'">
-                <div class="hrmis-panel__body hrmis-pr-shell__body">
+                <div class="hrmis-panel__body">
                     <t t-call="hrmis_transfer.hrmis_transfer_requests_list"/>
                 </div>
             </t>
             <t t-if="tab == 'status'">
-                <div class="hrmis-panel__body hrmis-pr-shell__body">
+                <div class="hrmis-panel__body">
                     <t t-call="hrmis_transfer.hrmis_transfer_status"/>
                 </div>
             </t>
