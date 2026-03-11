@@ -156,6 +156,29 @@ class EmrProfileDataMixin:
         },
     ]
 
+    _STATIC_TRANSFER_VACANCIES = [
+        {"facility_id": 2019, "total_sanctioned_posts": 4, "occupied_posts": 2},
+        {"facility_id": 2020, "total_sanctioned_posts": 3, "occupied_posts": 1},
+        {"facility_id": 2021, "total_sanctioned_posts": 2, "occupied_posts": 1},
+        {"facility_id": 2022, "total_sanctioned_posts": 3, "occupied_posts": 2},
+        {"facility_id": 2023, "total_sanctioned_posts": 4, "occupied_posts": 1},
+        {"facility_id": 2024, "total_sanctioned_posts": 3, "occupied_posts": 2},
+        {"facility_id": 2025, "total_sanctioned_posts": 2, "occupied_posts": 0},
+        {"facility_id": 2026, "total_sanctioned_posts": 3, "occupied_posts": 1},
+        {"facility_id": 2027, "total_sanctioned_posts": 4, "occupied_posts": 3},
+        {"facility_id": 2028, "total_sanctioned_posts": 2, "occupied_posts": 1},
+        {"facility_id": 2029, "total_sanctioned_posts": 5, "occupied_posts": 3},
+        {"facility_id": 2030, "total_sanctioned_posts": 3, "occupied_posts": 2},
+        {"facility_id": 2031, "total_sanctioned_posts": 3, "occupied_posts": 1},
+        {"facility_id": 2032, "total_sanctioned_posts": 2, "occupied_posts": 1},
+        {"facility_id": 2033, "total_sanctioned_posts": 4, "occupied_posts": 2},
+        {"facility_id": 2034, "total_sanctioned_posts": 3, "occupied_posts": 2},
+        {"facility_id": 2035, "total_sanctioned_posts": 3, "occupied_posts": 1},
+        {"facility_id": 2036, "total_sanctioned_posts": 2, "occupied_posts": 1},
+        {"facility_id": 2037, "total_sanctioned_posts": 2, "occupied_posts": 0},
+        {"facility_id": 2038, "total_sanctioned_posts": 2, "occupied_posts": 1},
+    ]
+
     def _use_static_emr_data(self):
         return bool(getattr(self, "_USE_EMR_STATIC_FALLBACK", False))
 
