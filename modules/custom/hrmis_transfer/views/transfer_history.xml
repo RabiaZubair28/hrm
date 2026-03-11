@@ -15,39 +15,46 @@
         </t>
 
         <div class="hrmis-leave-history-ui">
-            <t t-if="not history">
-                <div class="hrmis-empty">No transfer history found.</div>
-            </t>
-            <t t-else="">
-                <div class="hrmis-table hrmis-pr-table hrmis-pr-table--leave">
-                    <div class="hrmis-table__head hrmis-pr-table__head">
-                        <div>#</div>
-                        <div>Submitted on</div>
-                        <div>From</div>
-                        <div>To</div>
-                        <div>Status</div>
-                        <div>Pending With</div>
-                        <div>Notifications</div>
-                    </div>
-                    <div class="hrmis-table__body">
+            <div class="hrmis-table hrmis-pr-table hrmis-pr-table--leave">
+                <div class="hrmis-table__head hrmis-pr-table__head">
+                    <div>#</div>
+                    <div>Submitted on</div>
+                    <div>From</div>
+                    <div>To</div>
+                    <div>Status</div>
+                    <div>Pending With</div>
+                    <div>Notifications</div>
+                </div>
+                <div class="hrmis-table__body js-hrmis-pager-body">
+                    <t t-if="not history">
+                        <div class="hrmis-leave-history-empty" role="status" aria-live="polite">
+                            <div aria-hidden="true"
+                                style="display:flex; justify-content:center; align-items:center; ">
+                                <img src="https://res.cloudinary.com/dxokfhkhu/image/upload/v1772995560/ICONS_1_-02_vwl7on.svg"
+                                    alt="No data" style="width:120px; height:auto; opacity:0.7;" />
+                            </div>
+                            <div class="hrmis-leave-history-empty__text">No data</div>
+                        </div>
+                    </t>
+                    <t t-else="">
                         <t t-foreach="range(len(history))" t-as="idx0">
                             <t t-set="tr" t-value="history[idx0]"/>
                             <div class="hrmis-table__row hrmis-pr-table__row">
-                                <div style="text-wrap: wrap"><t t-esc="idx0 + 1" style="text-wrap: wrap" /></div>
-                                <div style="text-wrap: wrap"><t t-esc="tr.submitted_on or tr.create_date" style="text-wrap: wrap" /></div>
-                                <div style="text-wrap: wrap">
-                                    <t t-esc="(tr.current_facility_id and tr.current_facility_id.name) or ''" style="text-wrap: wrap" />
-                                    <div class="sub" style="color:#666; text-wrap: wrap">
-                                        <t t-esc="(tr.current_district_id and tr.current_district_id.name) or ''" style="text-wrap: wrap"/>
+                                <div><t t-esc="idx0 + 1" /></div>
+                                <div><t t-esc="tr.submitted_on or tr.create_date" /></div>
+                                <div>
+                                    <t t-esc="(tr.current_facility_id and tr.current_facility_id.name) or ''" />
+                                    <div class="sub" style="color:#666;">
+                                        <t t-esc="(tr.current_district_id and tr.current_district_id.name) or ''"/>
                                     </div>
                                 </div>
-                                <div style="text-wrap: wrap">
-                                    <t t-esc="(tr.required_facility_id and tr.required_facility_id.name) or ''" style="text-wrap: wrap"/>
-                                    <div class="sub" style="color:#666; text-wrap: wrap">
-                                        <t t-esc="(tr.required_district_id and tr.required_district_id.name) or ''" style="text-wrap: wrap" />
+                                <div>
+                                    <t t-esc="(tr.required_facility_id and tr.required_facility_id.name) or ''"/>
+                                    <div class="sub" style="color:#666;">
+                                        <t t-esc="(tr.required_district_id and tr.required_district_id.name) or ''" />
                                     </div>
                                 </div>
-                                <div style="text-wrap: wrap">
+                                <div>
                                     <t t-if="tr.state == 'submitted'">Pending</t>
                                     <t t-elif="tr.state == 'approved'">Approved</t>
                                     <t t-elif="tr.state == 'rejected'">Rejected</t>
@@ -55,16 +62,27 @@
                                 </div>
                                 <div><t t-esc="tr.pending_with or '-'"/></div>
                                 <div>
-                                    <a class="hrmis-btn hrmis-btn--outline hrmis-btn--sameheight"
+                                    <a class="hrmis-btn hrmis-btn--outline"
                                         t-att-href="'/hrmis/transfer/%d/history-view' % tr.id">
                                         View
                                     </a>
                                 </div>
                             </div>
                         </t>
+                    </t>
+                </div>
+                <div class="hrmis-table-footer js-hrmis-pager-footer"
+                    data-page-size="5" aria-label="Pagination">
+                    <div class="hrmis-table-footer__info js-hrmis-pager-info">Showing
+                        0-0 of 0</div>
+                    <div class="hrmis-pagination js-hrmis-pager-controls">
+                        <button type="button" class="hrmis-pager-btn js-hrmis-pager-prev"
+                            aria-label="Previous page">‹</button>
+                        <button type="button" class="hrmis-pager-btn js-hrmis-pager-next"
+                            aria-label="Next page">›</button>
                     </div>
                 </div>
-            </t>
+            </div>
         </div>
     </template>
 </odoo>

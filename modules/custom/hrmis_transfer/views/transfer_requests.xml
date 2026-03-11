@@ -19,7 +19,7 @@
 
         <xpath expr="//t[@t-if=&quot;tab == 'history'&quot;]" position="replace">
             <t t-if="tab == 'history'">
-                <div class="hrmis-panel__body">
+                <div class="hrmis-panel__body hrmis-pr-shell__body">
                     <t t-call="hrmis_transfer.hrmis_transfer_history"/>
                 </div>
             </t>
@@ -27,7 +27,9 @@
 
         <xpath expr="//t[@t-if=&quot;tab == 'new'&quot;]" position="replace">
             <t t-if="tab == 'new'">
-                <t t-call="hrmis_transfer.hrmis_new_transfer_request"/>
+                <div class="hrmis-panel__body hrmis-pr-shell__body">
+                    <t t-call="hrmis_transfer.hrmis_new_transfer_request"/>
+                </div>
             </t>
         </xpath>
 
