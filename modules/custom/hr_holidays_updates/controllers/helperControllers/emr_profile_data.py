@@ -157,26 +157,26 @@ class EmrProfileDataMixin:
     ]
 
     _STATIC_TRANSFER_VACANCIES = [
-        {"facility_id": 2019, "total_sanctioned_posts": 4, "occupied_posts": 2},
-        {"facility_id": 2020, "total_sanctioned_posts": 3, "occupied_posts": 1},
-        {"facility_id": 2021, "total_sanctioned_posts": 2, "occupied_posts": 1},
-        {"facility_id": 2022, "total_sanctioned_posts": 3, "occupied_posts": 2},
-        {"facility_id": 2023, "total_sanctioned_posts": 4, "occupied_posts": 1},
-        {"facility_id": 2024, "total_sanctioned_posts": 3, "occupied_posts": 2},
-        {"facility_id": 2025, "total_sanctioned_posts": 2, "occupied_posts": 0},
-        {"facility_id": 2026, "total_sanctioned_posts": 3, "occupied_posts": 1},
-        {"facility_id": 2027, "total_sanctioned_posts": 4, "occupied_posts": 3},
-        {"facility_id": 2028, "total_sanctioned_posts": 2, "occupied_posts": 1},
-        {"facility_id": 2029, "total_sanctioned_posts": 5, "occupied_posts": 3},
-        {"facility_id": 2030, "total_sanctioned_posts": 3, "occupied_posts": 2},
-        {"facility_id": 2031, "total_sanctioned_posts": 3, "occupied_posts": 1},
-        {"facility_id": 2032, "total_sanctioned_posts": 2, "occupied_posts": 1},
-        {"facility_id": 2033, "total_sanctioned_posts": 4, "occupied_posts": 2},
-        {"facility_id": 2034, "total_sanctioned_posts": 3, "occupied_posts": 2},
-        {"facility_id": 2035, "total_sanctioned_posts": 3, "occupied_posts": 1},
-        {"facility_id": 2036, "total_sanctioned_posts": 2, "occupied_posts": 1},
-        {"facility_id": 2037, "total_sanctioned_posts": 2, "occupied_posts": 0},
-        {"facility_id": 2038, "total_sanctioned_posts": 2, "occupied_posts": 1},
+        {"facility_id": 2019, "designation_name": "Medical Officer", "designation_code": "MO", "post_bps": 17, "total_sanctioned_posts": 4, "occupied_posts": 2},
+        {"facility_id": 2020, "designation_name": "Medical Officer", "designation_code": "MO", "post_bps": 17, "total_sanctioned_posts": 3, "occupied_posts": 1},
+        {"facility_id": 2021, "designation_name": "Staff Nurse", "designation_code": "SN", "post_bps": 16, "total_sanctioned_posts": 2, "occupied_posts": 1},
+        {"facility_id": 2022, "designation_name": "Medical Officer", "designation_code": "MO", "post_bps": 17, "total_sanctioned_posts": 3, "occupied_posts": 2},
+        {"facility_id": 2023, "designation_name": "Cardiologist", "designation_code": "CARD", "post_bps": 18, "total_sanctioned_posts": 4, "occupied_posts": 1},
+        {"facility_id": 2024, "designation_name": "Medical Officer", "designation_code": "MO", "post_bps": 17, "total_sanctioned_posts": 3, "occupied_posts": 2},
+        {"facility_id": 2025, "designation_name": "Staff Nurse", "designation_code": "SN", "post_bps": 16, "total_sanctioned_posts": 2, "occupied_posts": 0},
+        {"facility_id": 2026, "designation_name": "Medical Officer", "designation_code": "MO", "post_bps": 17, "total_sanctioned_posts": 3, "occupied_posts": 1},
+        {"facility_id": 2027, "designation_name": "Cardiologist", "designation_code": "CARD", "post_bps": 18, "total_sanctioned_posts": 4, "occupied_posts": 3},
+        {"facility_id": 2028, "designation_name": "Staff Nurse", "designation_code": "SN", "post_bps": 16, "total_sanctioned_posts": 2, "occupied_posts": 1},
+        {"facility_id": 2029, "designation_name": "Medical Officer", "designation_code": "MO", "post_bps": 17, "total_sanctioned_posts": 5, "occupied_posts": 3},
+        {"facility_id": 2030, "designation_name": "Gynecologist", "designation_code": "GYN", "post_bps": 18, "total_sanctioned_posts": 3, "occupied_posts": 2},
+        {"facility_id": 2031, "designation_name": "Staff Nurse", "designation_code": "SN", "post_bps": 16, "total_sanctioned_posts": 3, "occupied_posts": 1},
+        {"facility_id": 2032, "designation_name": "Medical Officer", "designation_code": "MO", "post_bps": 17, "total_sanctioned_posts": 2, "occupied_posts": 1},
+        {"facility_id": 2033, "designation_name": "Cardiologist", "designation_code": "CARD", "post_bps": 18, "total_sanctioned_posts": 4, "occupied_posts": 2},
+        {"facility_id": 2034, "designation_name": "Staff Nurse", "designation_code": "SN", "post_bps": 16, "total_sanctioned_posts": 3, "occupied_posts": 2},
+        {"facility_id": 2035, "designation_name": "Medical Officer", "designation_code": "MO", "post_bps": 17, "total_sanctioned_posts": 3, "occupied_posts": 1},
+        {"facility_id": 2036, "designation_name": "Staff Nurse", "designation_code": "SN", "post_bps": 16, "total_sanctioned_posts": 2, "occupied_posts": 1},
+        {"facility_id": 2037, "designation_name": "Medical Officer", "designation_code": "MO", "post_bps": 17, "total_sanctioned_posts": 2, "occupied_posts": 0},
+        {"facility_id": 2038, "designation_name": "Gynecologist", "designation_code": "GYN", "post_bps": 18, "total_sanctioned_posts": 2, "occupied_posts": 1},
     ]
 
     def _use_static_emr_data(self):
@@ -464,3 +464,255 @@ class EmrProfileDataMixin:
             len(filtered),
         )
         return filtered
+
+    def _get_static_transfer_rows(self):
+        districts, _ = self._get_static_emr_districts()
+        facilities, _meta, _ = self._get_static_emr_facilities(
+            district_id=None,
+            page=1,
+            limit=2500,
+        )
+
+        district_map = {
+            int(d.get("id") or 0): d for d in (districts or []) if int(d.get("id") or 0)
+        }
+        facility_map = {
+            int(f.get("id") or 0): f for f in (facilities or []) if int(f.get("id") or 0)
+        }
+
+        rows = []
+        for row in self._STATIC_TRANSFER_VACANCIES or []:
+            facility_id = int(row.get("facility_id") or 0)
+            facility = facility_map.get(facility_id)
+            if not facility:
+                continue
+
+            district = district_map.get(int(facility.get("district_id") or 0), {})
+            rows.append(
+                {
+                    "facility_id": facility_id,
+                    "facility_name": facility.get("name") or "",
+                    "facility_code": facility.get("code") or "",
+                    "district_id": district.get("id") or facility.get("district_id") or 0,
+                    "district_name": district.get("name") or facility.get("district_name") or "",
+                    "designation_name": row.get("designation_name") or "",
+                    "designation_code": row.get("designation_code") or "",
+                    "post_bps": int(row.get("post_bps") or 0),
+                    "total_sanctioned_posts": int(row.get("total_sanctioned_posts") or 0),
+                    "occupied_posts": int(row.get("occupied_posts") or 0),
+                }
+            )
+        return rows
+
+    def _transfer_row_matches_employee(self, employee, row):
+        emp_desig = getattr(employee, "hrmis_designation", False)
+        emp_bps = int(getattr(employee, "hrmis_bps", 0) or 0)
+        if not emp_desig or not emp_bps:
+            return False
+
+        row_bps = int(row.get("post_bps") or 0)
+        if row_bps and row_bps != emp_bps:
+            return False
+
+        emp_code_raw = (getattr(emp_desig, "code", "") or "").strip()
+        emp_code = emp_code_raw.lower()
+        emp_name = (getattr(emp_desig, "name", "") or "").strip().lower()
+        row_code = (row.get("designation_code") or "").strip().lower()
+        row_name = (row.get("designation_name") or "").strip().lower()
+        bad_codes = {"", "nan", "none", "null", "n/a", "na", "-"}
+
+        if emp_code and emp_code not in bad_codes and row_code and row_code not in bad_codes:
+            return row_code == emp_code or row_name == emp_name
+        return bool(row_name and row_name == emp_name)
+
+    def _get_transfer_static_hcu(self, env):
+        return env["hrmis.healthcare.unit"].sudo().browse(1).exists()
+
+    def _get_or_create_transfer_static_district(self, env, row):
+        row = row or {}
+        name = (row.get("district_name") or row.get("name") or "").strip()
+        if not name:
+            return env["hrmis.district.master"].browse()
+
+        District = env["hrmis.district.master"].sudo()
+        district = District.search([("name", "=", name)], limit=1)
+        if district:
+            return district
+
+        return District.create(
+            {
+                "name": name,
+                "code": f"TMP-{int(row.get('district_id') or row.get('id') or 0)}",
+                "active": True,
+            }
+        )
+
+    def _get_or_create_transfer_static_facility(self, env, row, district):
+        row = row or {}
+        name = (row.get("facility_name") or row.get("name") or "").strip()
+        code = (row.get("facility_code") or row.get("code") or "").strip() or f"TMP-{int(row.get('facility_id') or row.get('id') or 0)}"
+        if not name or not district:
+            return env["hrmis.facility.type"].browse()
+
+        Facility = env["hrmis.facility.type"].sudo()
+        facility = Facility.search(
+            [("name", "=", name), ("district_id", "=", district.id)],
+            limit=1,
+        )
+        if not facility and code:
+            facility = Facility.search([("facility_code", "=", code)], limit=1)
+        if facility:
+            return facility
+
+        hcu = self._get_transfer_static_hcu(env)
+        if not hcu:
+            return env["hrmis.facility.type"].browse()
+
+        return Facility.create(
+            {
+                "name": name,
+                "district_id": district.id,
+                "description": "Temporary facility created from static transfer API data.",
+                "capacity": 0,
+                "facility_code": code,
+                "category": "hospital",
+                "hcu_id": hcu.id,
+                "active": True,
+                "is_temp": True,
+            }
+        )
+
+    def _get_or_create_transfer_static_designation(self, env, employee, facility, row):
+        if not employee or not facility:
+            return env["hrmis.designation"].browse()
+
+        emp_desig = getattr(employee, "hrmis_designation", False)
+        emp_bps = int(getattr(employee, "hrmis_bps", 0) or 0)
+        if not emp_desig or not emp_bps:
+            return env["hrmis.designation"].browse()
+
+        Designation = env["hrmis.designation"].sudo()
+        emp_code_raw = (getattr(emp_desig, "code", "") or "").strip()
+        emp_code = emp_code_raw.lower()
+        emp_name = (getattr(emp_desig, "name", "") or "").strip()
+        bad_codes = {"", "nan", "none", "null", "n/a", "na", "-"}
+
+        dom = [("facility_id", "=", facility.id), ("active", "=", True), ("post_BPS", "=", emp_bps)]
+        designation = env["hrmis.designation"].browse()
+        if emp_code and emp_code not in bad_codes:
+            designation = Designation.search(dom + [("code", "=ilike", emp_code_raw)], limit=1)
+        if not designation:
+            designation = Designation.search(dom + [("name", "=ilike", emp_name)], limit=1)
+        if designation:
+            return designation
+
+        return Designation.create(
+            {
+                "name": row.get("designation_name") or emp_name or "Temporary Designation",
+                "code": row.get("designation_code") or emp_code_raw or False,
+                "designation_group_id": getattr(getattr(emp_desig, "designation_group_id", False), "id", False) or False,
+                "total_sanctioned_posts": max(int(row.get("total_sanctioned_posts") or 0), 1),
+                "post_BPS": max(emp_bps, 1),
+                "facility_id": facility.id,
+                "active": True,
+                "is_temp": True,
+            }
+        )
+
+    def _ensure_transfer_static_allocation(self, env, facility, designation, row):
+        if not facility or not designation:
+            return env["hrmis.facility.designation"].browse()
+
+        Allocation = env["hrmis.facility.designation"].sudo()
+        allocation = Allocation.search(
+            [("facility_id", "=", facility.id), ("designation_id", "=", designation.id)],
+            limit=1,
+        )
+        if allocation:
+            return allocation
+
+        return Allocation.create(
+            {
+                "facility_id": facility.id,
+                "designation_id": designation.id,
+                "occupied_posts": max(int(row.get("occupied_posts") or 0), 0),
+            }
+        )
+
+    def _get_static_transfer_destinations_payload(self, env, employee):
+        emp_desig = getattr(employee, "hrmis_designation", False)
+        emp_bps = int(getattr(employee, "hrmis_bps", 0) or 0)
+        if not emp_desig or not emp_bps:
+            return {
+                "ok": True,
+                "employee_designation": getattr(emp_desig, "name", "") if emp_desig else "",
+                "employee_bps": emp_bps,
+                "districts": [],
+                "facilities": [],
+            }
+
+        current_fac = getattr(employee, "facility_id", False) or getattr(employee, "hrmis_facility_id", False)
+        current_fac_name = (getattr(current_fac, "name", "") or "").strip().lower()
+        current_dist_name = (
+            (getattr(getattr(current_fac, "district_id", False), "name", "") or "").strip().lower()
+            if current_fac
+            else ""
+        )
+
+        districts_payload = []
+        facilities_payload = []
+        seen_district_ids = set()
+        seen_facility_ids = set()
+
+        for row in self._get_static_transfer_rows():
+            if not self._transfer_row_matches_employee(employee, row):
+                continue
+
+            if current_fac_name and current_fac_name == (row.get("facility_name") or "").strip().lower() and \
+               current_dist_name == (row.get("district_name") or "").strip().lower():
+                continue
+
+            district = self._get_or_create_transfer_static_district(env, row)
+            facility = self._get_or_create_transfer_static_facility(env, row, district)
+            designation = self._get_or_create_transfer_static_designation(env, employee, facility, row)
+            allocation = self._ensure_transfer_static_allocation(env, facility, designation, row)
+
+            if not district or not facility or not designation:
+                continue
+            if facility.id in seen_facility_ids:
+                continue
+
+            seen_facility_ids.add(facility.id)
+            if district.id not in seen_district_ids:
+                seen_district_ids.add(district.id)
+                districts_payload.append({"id": district.id, "name": district.name})
+
+            total = int(row.get("total_sanctioned_posts") or getattr(designation, "total_sanctioned_posts", 0) or 0)
+            occupied = int(getattr(allocation, "occupied_posts", 0) or row.get("occupied_posts") or 0)
+            vacant = max(total - occupied, 0)
+
+            facilities_payload.append(
+                {
+                    "id": facility.id,
+                    "name": facility.name,
+                    "district_id": district.id,
+                    "designation_id": designation.id,
+                    "designation_name": designation.name,
+                    "designation_code": designation.code or row.get("designation_code") or "",
+                    "post_bps": emp_bps,
+                    "total": total,
+                    "occupied": occupied,
+                    "vacant": vacant,
+                }
+            )
+
+        districts_payload.sort(key=lambda x: x.get("name") or "")
+        facilities_payload.sort(key=lambda x: (x.get("district_id") or 0, x.get("name") or ""))
+
+        return {
+            "ok": True,
+            "employee_designation": emp_desig.name,
+            "employee_bps": emp_bps,
+            "districts": districts_payload,
+            "facilities": facilities_payload,
+        }
