@@ -698,7 +698,7 @@ POSTING START (MONTH/YEAR)
                                     </label>
                                     <t t-set="cps_val" t-value="''"/>
                                     <t t-if="req and ('current_posting_start' in req._fields)">
-                                      <t t-set="cps_val" t-value="req.current_posting_start[:7] if req.current_posting_start else ''"/>
+                                      <t t-set="cps_val" t-value="status_prefill.get('current_posting_start') or (req.current_posting_start[:7] if req.current_posting_start else '')"/>
 </t>
                                     <input class="hrmis-input js-current-post-start" type="month" name="current_posting_start" required="required" t-att-value="cps_val"/>
                                   </div>
@@ -792,7 +792,7 @@ START (MONTH/YEAR)
                                     </label>
                                     <t t-set="cps_val" t-value="''"/>
                                     <t t-if="req and ('current_posting_start' in req._fields)">
-                                      <t t-set="cps_val" t-value="req.current_posting_start[:7] if req.current_posting_start else ''"/>
+                                      <t t-set="cps_val" t-value="status_prefill.get('current_posting_start') or (req.current_posting_start[:7] if req.current_posting_start else '')"/>
 </t>
                                     <input class="hrmis-input js-current-post-start" type="month" name="current_posting_start" required="required" t-att-value="cps_val"/>
                                   </div>
@@ -987,7 +987,7 @@ DISTRICT
 				    </option>
                                     <t t-foreach="districts" t-as="d">
                                       <option t-att-value="d.get('id')"
-                                              t-att-selected="p.get('district_id') == d.get('id')">
+                                              t-att-selected="str(p.get('district_id') or '') == str(d.get('id') or '')">
                                         <t t-esc="d.get('name')"/>
                                       </option>
                                     </t>
@@ -1012,7 +1012,7 @@ FACILITY
                                     <t t-foreach="facilities" t-as="f">
                                       <option t-att-value="f.get('id')"
                                               t-att-data-district-id="f.get('district_id') or ''"
-                                              t-att-selected="p.get('facility_id') == f.get('id')">
+                                              t-att-selected="str(p.get('facility_id') or '') == str(f.get('id') or '')">
                                         <t t-esc="f.get('name')"/>
                                       </option>
                                     </t>
@@ -1046,7 +1046,7 @@ DESIGNATION
                                   <select class="hrmis-input js-other-select" name="posting_designation_id[]" data-enable-search="1" data-other-name="posting_designation_other_name[]" required="required">
                                     <option value="" disabled="disabled" hidden="hidden" t-att-selected="not p.get('designation_id') and not (p.get('designation_other_name') or '').strip()"> Select Designation </option>
                                     <t t-foreach="designations_unique" t-as="des">
-                                      <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-selected="p.get('designation_id') == des.id">
+                                      <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-selected="str(p.get('designation_id') or '') == str(des.id or '')">
                                         <t t-esc="des.name"/>
                                       </option>
                                     </t>
