@@ -1414,15 +1414,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         ctx["selected_district_id"] = selected_district_id
 
         ctx = self._with_prefill_ctx(env, employee, ctx, prefer_draft=prefer_draft)
-        status_rec = env["hrmis.profile.posting.status"].sudo().search(
-            [("request_id", "=", req.id)], limit=1
-        )
-        ctx["current_status_prefill"] = (
-            (request.params.get("hrmis_current_status_frontend") if prefer_draft else "")
-            or req.hrmis_current_status_frontend
-            or status_rec.status
-            or ""
-        ).strip()
 
         ctx["hrmis_profile_prefill_json"] = json.dumps({
             "qual": ctx.get("prefill_qual_rows") or [],
