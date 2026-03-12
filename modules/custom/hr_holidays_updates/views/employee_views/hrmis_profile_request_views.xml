@@ -292,10 +292,9 @@ PDF uploaded:
                           <t t-set="current_status_val" t-value="(request.params.get('hrmis_current_status_frontend') or (posting_status_rec and posting_status_rec.status) or (req and req.hrmis_current_status_frontend) or '')"/>
                           <t t-set="joining_date_value" t-value="request.params.get('hrmis_joining_date') or (req and req.hrmis_joining_date) or current_employee.hrmis_joining_date or ''"/>
                           <t t-set="joining_month_min" t-value="str(joining_date_value)[:7] if joining_date_value else ''"/>
-                          <t t-set="deputation_district_val" t-value="request.params.get('frontend_deputation_posting_district_id') or (posting_status_rec and posting_status_rec.deputation_posting_district_id) or ''"/>
-                          <t t-set="deputation_department_val" t-value="request.params.get('frontend_deputation_department') or (posting_status_rec and posting_status_rec.deputation_department) or ''"/>
-                          <t t-set="deputation_designation_val" t-value="request.params.get('frontend_deputation_designation') or (posting_status_rec and posting_status_rec.deputation_designation) or ''"/>
-                          <t t-set="deputation_start_val" t-value="request.params.get('frontend_deputation_start') or ((posting_status_rec and posting_status_rec.deputation_start) and str(posting_status_rec.deputation_start)[:7]) or ''"/>
+                          <t t-set="deputation_district_val" t-value="request.params.get('deputation_district_id') or ((posting_status_rec and ('deputation_district_id' in posting_status_rec._fields)) and posting_status_rec.deputation_district_id) or ''"/>
+                          <t t-set="deputation_department_val" t-value="request.params.get('deputation_department') or ((posting_status_rec and ('deputation_department' in posting_status_rec._fields)) and posting_status_rec.deputation_department) or ''"/>
+                          <t t-set="deputation_start_val" t-value="request.params.get('deputation_start') or (((posting_status_rec and ('deputation_start' in posting_status_rec._fields)) and posting_status_rec.deputation_start) and str(posting_status_rec.deputation_start)[:7]) or ''"/>
                           <!--    CURRENT STATUS    -->
                           <div class="hrmis-leave-row-wrap d-flex align-items-stretch" style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
                             <div class="hrmis-form__grid pt-1 pb-3" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
@@ -821,7 +820,7 @@ START (MONTH/YEAR)
 POSTING DISTRICT
                                       <span class="req">*</span>
                                     </label>
-                                    <select class="hrmis-input" name="frontend_deputation_posting_district_id" t-att-required="'required' if is_draft else None">
+                                    <select class="hrmis-input" name="deputation_district_id" required="required">
                                       <option value="" disabled="disabled" hidden="hidden" t-att-selected="not deputation_district_val">Select District</option>
                                       <t t-foreach="districts" t-as="d">
                                         <option t-att-value="d.get('id')" t-att-selected="str(d.get('id')) == str(deputation_district_val)">
@@ -835,18 +834,33 @@ POSTING DISTRICT
 DEPARTMENT
                                       <span class="req">*</span>
                                     </label>
-                                    <input class="hrmis-input" type="text" name="frontend_deputation_department" placeholder="Enter Department" t-att-required="'required' if is_draft else None" t-att-value="deputation_department_val"/>
+                                    <input class="hrmis-input" type="text" name="deputation_department" placeholder="Enter Department" required="required" t-att-value="deputation_department_val"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
 DESIGNATION
                                       <span class="req">*</span>
                                     </label>
-                                    <input class="hrmis-input" type="text" name="frontend_deputation_designation" placeholder="Enter Designation" t-att-required="'required' if is_draft else None" t-att-value="deputation_designation_val"/>
+                                    <select class="hrmis-input js-other-select" name="hrmis_designation" data-enable-search="1" data-other-name="hrmis_designation_other_name" required="required">
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not (req.hrmis_designation or current_employee.hrmis_designation)"> Select Designation </option>
+                                      <t t-foreach="designations_unique" t-as="des">
+                                        <t t-set="des_fac_id" t-value="''"/>
+                                        <t t-if="'facility_id' in des._fields and des.facility_id">
+                                          <t t-set="des_fac_id" t-value="des.facility_id.id"/>
+</t>
+                                        <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-data-facility-id="des_fac_id" t-att-selected="(req.hrmis_designation and req.hrmis_designation.id == des.id) or (current_employee.hrmis_designation and current_employee.hrmis_designation.id == des.id)">
+                                          <t t-esc="des.name"/>
+                                        </option>
+                                      </t>
+                                      <option value="__other__">Other</option>
+                                    </select>
+                                    <div class="js-other-wrap" style="display:none; margin-top:6px;">
+                                      <input class="hrmis-input js-other-input" type="text" name="hrmis_designation_other_name" placeholder="Enter Designation"/>
+                                    </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>START (MONTH/YEAR)</label>
-                                    <input class="hrmis-input js-joining-month-boundary" type="month" name="frontend_deputation_start" t-att-min="joining_month_min or None" t-att-value="deputation_start_val"/>
+                                    <input class="hrmis-input js-joining-month-boundary" type="month" name="deputation_start" t-att-min="joining_month_min or None" t-att-value="deputation_start_val"/>
                                   </div>
                                 </div>
                               </div>

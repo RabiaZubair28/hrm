@@ -950,6 +950,61 @@ function _validateCurrentPostingStart(form) {
   return true;
 }
 
+function _validateDeputationStart(form) {
+  const joining = _qs(form, '[name="hrmis_joining_date"]');
+  const deputationStart = _qs(form, '[name="deputation_start"]');
+  if (!joining || !deputationStart) return true;
+
+  const statusSel = _qs(form, 'select[name="hrmis_current_status_frontend"]');
+  const activeStatus = (statusSel?.value || "").trim();
+  if (activeStatus !== "deputation") {
+    _clearError(deputationStart);
+    return true;
+  }
+
+  _clearError(deputationStart);
+
+  const joiningVal = (joining.value || "").trim();
+  const deputationVal = (deputationStart.value || "").trim();
+
+  if (_isEmpty(deputationVal)) return true;
+
+  if (_isEmpty(joiningVal)) {
+    _showError(deputationStart, "Please select Joining Date first");
+    return false;
+  }
+
+  const joiningMonth = joiningVal.slice(0, 7);
+  if (!_isValidMonth(joiningMonth)) {
+    _showError(deputationStart, "Joining Date is invalid");
+    return false;
+  }
+
+  if (!_isValidMonth(deputationVal)) {
+    _showError(deputationStart, "Deputation Start is invalid (YYYY-MM)");
+    return false;
+  }
+
+  if (_monthToIndex(deputationVal) < _monthToIndex(joiningMonth)) {
+    _showError(
+      deputationStart,
+      "Deputation Start cannot be before Joining Month",
+    );
+    return false;
+  }
+
+  const tm = _todayMonth();
+  if (_monthToIndex(deputationVal) > _monthToIndex(tm)) {
+    _showError(
+      deputationStart,
+      "Deputation Start cannot be after current month",
+    );
+    return false;
+  }
+
+  return true;
+}
+
 /* ---------------------------------------------------------
  * DOB vs Commission year rule
  *  - Commission is month-proxy (YYYY-MM) stored as YYYY-MM-01
@@ -3058,6 +3113,8 @@ function _initHRMISValidations() {
   // Current Posting Start: prevent future months
   const cpsInput = _qs(form, '[name="current_posting_start"]');
   if (cpsInput) cpsInput.setAttribute("max", _todayMonth());
+  const deputationStartInput = _qs(form, '[name="deputation_start"]');
+  if (deputationStartInput) deputationStartInput.setAttribute("max", _todayMonth());
 
   // Require Joining before enabling current posting start (UX)
   if (joiningInput && cpsInput) {
@@ -3093,6 +3150,37 @@ function _initHRMISValidations() {
     });
 
     toggle();
+  }
+
+  if (joiningInput && deputationStartInput) {
+    const toggleDeputation = () => {
+      const hasJoining = !_isEmpty(joiningInput.value);
+      deputationStartInput.disabled = !hasJoining;
+
+      if (!hasJoining) {
+        deputationStartInput.value = "";
+        _clearError(deputationStartInput);
+        _setHint(
+          deputationStartInput,
+          "Enter Joining Date first to enable Deputation Start.",
+        );
+      } else {
+        deputationStartInput.setAttribute("min", joiningInput.value.slice(0, 7));
+        _setHint(deputationStartInput, "");
+        _validateDeputationStart(form);
+      }
+    };
+
+    joiningInput.addEventListener("change", () => {
+      toggleDeputation();
+      _validateDeputationStart(form);
+    });
+
+    deputationStartInput.addEventListener("change", () => {
+      _validateDeputationStart(form);
+    });
+
+    toggleDeputation();
   }
 
   // Joining vs Commission: enforce order (Commission first) on UI proxies
@@ -3249,6 +3337,7 @@ function _initHRMISValidations() {
     }
 
     if (!_validateCurrentPostingStart(form)) hasError = true;
+    if (!_validateDeputationStart(form)) hasError = true;
     if (!_validateJoiningCommission(form)) hasError = true;
     if (!_validateDobCommission(form)) hasError = true;
 

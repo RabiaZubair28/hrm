@@ -628,19 +628,19 @@ function _getCurrentPostingFieldsToValidate(form) {
 
     const district = _qs(
       deputationBox,
-      'select[name="frontend_deputation_posting_district_id"]',
+      'select[name="deputation_district_id"]',
     );
     const department = _qs(
       deputationBox,
-      'input[name="frontend_deputation_department"]',
+      'input[name="deputation_department"]',
     );
     const designation = _qs(
       deputationBox,
-      'input[name="frontend_deputation_designation"]',
+      'select[name="hrmis_designation"]',
     );
     const startMonth = _qs(
       deputationBox,
-      'input[name="frontend_deputation_start"]',
+      'input[name="deputation_start"]',
     );
 
     fields.push(district, department, designation);
@@ -689,10 +689,10 @@ function _bindCurrentPostingClearHandlers(form) {
     '#current_posting_box select[name="posting_facility_id"]',
     '#current_posting_box select[name="hrmis_designation"]',
     '#current_posting_box input[name="current_posting_start"]',
-    '#deputation_box select[name="frontend_deputation_posting_district_id"]',
-    '#deputation_box input[name="frontend_deputation_department"]',
-    '#deputation_box input[name="frontend_deputation_designation"]',
-    '#deputation_box input[name="frontend_deputation_start"]',
+    '#deputation_box select[name="deputation_district_id"]',
+    '#deputation_box input[name="deputation_department"]',
+    '#deputation_box select[name="hrmis_designation"]',
+    '#deputation_box input[name="deputation_start"]',
     '#allowed_to_work_box select[name="allowed_district_id"]',
     '#allowed_to_work_box select[name="allowed_facility_id"]',
     '#allowed_to_work_box select[name="allowed_designation_id"]',
