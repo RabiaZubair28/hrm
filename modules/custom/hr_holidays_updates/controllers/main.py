@@ -1837,6 +1837,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 errors.append("Deputation Department is required.")
             if empty("frontend_deputation_district_id"):
                 errors.append("Deputation District is required.")
+            if empty("frontend_deputation_designation"):
+                errors.append("Deputation Designation is required.")
             
 
         # Allowed to Work conditional block
@@ -2844,6 +2846,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "deputation_start": post.get("frontend_deputation_start") or False,
             "deputation_department": (post.get("frontend_deputation_department") or "").strip() or False,
             "deputation_district_id": deputation_district_id,
+            "deputation_designation": (post.get("frontend_deputation_designation") or "").strip() or False,
         }
         
 

@@ -598,7 +598,7 @@ function _getCurrentPostingFieldsToValidate(form) {
     );
     const designation = _qs(
       deputationBox,
-      'input[name="hrmis_designation"]',
+      'input[name="frontend_deputation_designation"]',
     );
     const startMonth = _qs(
       deputationBox,
@@ -650,7 +650,7 @@ function _bindCurrentPostingClearHandlers(form) {
     '#current_posting_box input[name="current_posting_start"]',
     '#deputation_box select[name="frontend_deputation_district_id"]',
     '#deputation_box input[name="frontend_deputation_department"]',
-    '#deputation_box input[name="hrmis_designation"]',
+    '#deputation_box input[name="frontend_deputation_designation"]',
     '#deputation_box input[name="frontend_deputation_start"]',
     '#allowed_to_work_box select[name="allowed_district_id"]',
     '#allowed_to_work_box select[name="allowed_facility_id"]',

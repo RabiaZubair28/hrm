@@ -179,6 +179,7 @@ class HrmisProfilePostingStatus(models.Model):
     deputation_start = fields.Date(string="Deputation Start Date")
     deputation_department = fields.Char(string="Deputation Department")
     deputation_district_id = fields.Integer(string="Deputation District ID")
+    deputation_designation = fields.Char(string="Deputation Designation")
     # -----------------------
     # Validation (optional but recommended)
     # -----------------------

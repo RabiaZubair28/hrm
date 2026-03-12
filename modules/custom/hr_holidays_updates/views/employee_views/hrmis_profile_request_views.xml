@@ -933,7 +933,7 @@ DEPARTMENT
 DESIGNATION
                                       <span class="req">*</span>
                                     </label>
-                                    <input class="hrmis-input" type="text" name="hrmis_designation" required="required" placeholder="Enter Designation"/>
+                                    <input class="hrmis-input" type="text" name="frontend_deputation_designation" required="required" placeholder="Enter Designation"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
