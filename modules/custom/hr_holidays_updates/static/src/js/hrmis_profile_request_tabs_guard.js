@@ -412,6 +412,43 @@ function _isAllowedToWorkChecked(form) {
   return !!(checkbox && checkbox.checked);
 }
 
+function _getJoiningMonthMin(form) {
+  const joiningDate = _qs(form, 'input[name="hrmis_joining_date"]');
+  const raw = joiningDate ? String(joiningDate.value || "").trim() : "";
+  return raw ? raw.slice(0, 7) : "";
+}
+
+function _syncJoiningMonthBoundaries(form) {
+  const minMonth = _getJoiningMonthMin(form);
+
+  _qsa(form, ".js-joining-month-boundary").forEach((field) => {
+    if (!(field instanceof HTMLInputElement)) return;
+
+    if (minMonth) field.setAttribute("min", minMonth);
+    else field.removeAttribute("min");
+
+    if (minMonth && field.value && field.value < minMonth) {
+      field.value = "";
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+}
+
+function _bindJoiningMonthBoundaries(form) {
+  _syncJoiningMonthBoundaries(form);
+
+  const joiningDate = _qs(form, 'input[name="hrmis_joining_date"]');
+  if (!(joiningDate instanceof HTMLInputElement)) return;
+  if (joiningDate.dataset.hrmisJoiningMonthBound === "1") return;
+
+  joiningDate.dataset.hrmisJoiningMonthBound = "1";
+
+  const sync = () => _syncJoiningMonthBoundaries(form);
+  joiningDate.addEventListener("input", sync);
+  joiningDate.addEventListener("change", sync);
+}
+
 function _getCurrentPostingFieldsToValidate(form) {
   const fields = [];
   const status = _getCurrentPostingStatus(form);
@@ -583,6 +620,37 @@ function _getCurrentPostingFieldsToValidate(form) {
     return fields.filter(Boolean);
   }
 
+  if (status === "deputation") {
+    const deputationBox = _qs(form, "#deputation_box");
+    if (!deputationBox) {
+      return fields.filter(Boolean);
+    }
+
+    const district = _qs(
+      deputationBox,
+      'select[name="frontend_deputation_posting_district_id"]',
+    );
+    const department = _qs(
+      deputationBox,
+      'input[name="frontend_deputation_department"]',
+    );
+    const designation = _qs(
+      deputationBox,
+      'input[name="frontend_deputation_designation"]',
+    );
+    const startMonth = _qs(
+      deputationBox,
+      'input[name="frontend_deputation_start"]',
+    );
+
+    fields.push(district, department, designation);
+    if (startMonth && String(startMonth.value || "").trim()) {
+      fields.push(startMonth);
+    }
+
+    return fields.filter(Boolean);
+  }
+
   if (status === "reported_to_health_department") {
     const reportedBox = _qs(form, "#reported_to_hd_box");
     if (!reportedBox) {
@@ -621,11 +689,16 @@ function _bindCurrentPostingClearHandlers(form) {
     '#current_posting_box select[name="posting_facility_id"]',
     '#current_posting_box select[name="hrmis_designation"]',
     '#current_posting_box input[name="current_posting_start"]',
+    '#deputation_box select[name="frontend_deputation_posting_district_id"]',
+    '#deputation_box input[name="frontend_deputation_department"]',
+    '#deputation_box input[name="frontend_deputation_designation"]',
+    '#deputation_box input[name="frontend_deputation_start"]',
     '#allowed_to_work_box select[name="allowed_district_id"]',
     '#allowed_to_work_box select[name="allowed_facility_id"]',
     '#allowed_to_work_box select[name="allowed_designation_id"]',
     '#allowed_to_work_box input[name="allowed_start_month"]',
     'input[name="allowed_to_work"]',
+    'input[name="hrmis_joining_date"]',
   ];
 
   selectors.forEach((sel) => {
@@ -1173,6 +1246,8 @@ function _bind() {
   const form = _qs(document, "#profile_update_form");
   const btn = _qs(document, "#btn_open_confirm_modal");
   if (!form || !btn) return;
+
+  _bindJoiningMonthBoundaries(form);
 
   if (btn.dataset.hrmisFullGuardBound === "1") return;
   btn.dataset.hrmisFullGuardBound = "1";

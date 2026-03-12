@@ -1829,7 +1829,34 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             
             if empty("hrmis_designation"):
                 errors.append("Designation is required.")
-            
+
+        elif status == "deputation":
+            if empty("frontend_deputation_posting_district_id"):
+                errors.append("Posting District is required.")
+            if empty("frontend_deputation_department"):
+                errors.append("Department is required.")
+            if empty("frontend_deputation_designation"):
+                errors.append("Designation is required.")
+
+            join_raw = (
+                (post.get("hrmis_joining_date") or "").strip()
+                or getattr(req, "hrmis_joining_date", False)
+                or getattr(employee, "hrmis_joining_date", False)
+                or ""
+            )
+            join_dt = fields.Date.to_date(join_raw) if join_raw else None
+
+            deputation_start_raw = (post.get("frontend_deputation_start") or "").strip()
+            deputation_start_str = self._month_to_date(deputation_start_raw) if deputation_start_raw else False
+            deputation_start_dt = fields.Date.to_date(deputation_start_str) if deputation_start_str else None
+
+            if deputation_start_raw and not deputation_start_dt:
+                errors.append("Deputation Start month is invalid.")
+            elif join_dt and deputation_start_dt:
+                join_month_start = join_dt.replace(day=1)
+                deputation_month_start = deputation_start_dt.replace(day=1)
+                if deputation_month_start < join_month_start:
+                    errors.append("Deputation Start cannot be before the joining month.")
 
         # Allowed to Work conditional block
         if (post.get("allowed_to_work") or "").strip():
@@ -2036,6 +2063,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "hrmis_employee_id": post.get("hrmis_employee_id"),
             "hrmis_cnic": post.get("hrmis_cnic"),
             "hrmis_father_name": post.get("hrmis_father_name"),
+            "hrmis_current_status_frontend": (post.get("hrmis_current_status_frontend") or "").strip() or "currently_posted",
             "gender": post.get("gender"),
             "birthday": post.get("birthday"),
             "hrmis_commission_date": post.get("hrmis_commission_date"),
@@ -2714,6 +2742,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return m2o_int(raw_id)
 
         allowed_to_work = bool(post.get("allowed_to_work"))
+        deputation_district_id = m2o_int(post.get("frontend_deputation_posting_district_id"))
 
         # -------------------------------------------------------
         # ✅ Suspension (compute FIRST so it can be referenced safely)
@@ -2784,6 +2813,12 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         
         vals = {
             "status": status,
+
+            # Deputation
+            "deputation_posting_district_id": deputation_district_id,
+            "deputation_department": (post.get("frontend_deputation_department") or "").strip() or False,
+            "deputation_designation": (post.get("frontend_deputation_designation") or "").strip() or False,
+            "deputation_start": self._month_to_date(post.get("frontend_deputation_start") or "") or False,
 
             # Suspension
             "suspension_date": post.get("frontend_suspension_date") or False,

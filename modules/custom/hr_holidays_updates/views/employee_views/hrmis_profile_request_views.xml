@@ -288,6 +288,14 @@ PDF uploaded:
                     <div class="hrmis-panel mb-1">
                       <div class="px-3 pt-1 pb-1">
                         <fieldset t-att-disabled="'disabled' if not is_draft else None" style="border:0; padding:0; margin:0;">
+                          <t t-set="posting_status_rec" t-value="req.posting_status_id[:1] if req and req.posting_status_id else False"/>
+                          <t t-set="current_status_val" t-value="(request.params.get('hrmis_current_status_frontend') or (posting_status_rec and posting_status_rec.status) or (req and req.hrmis_current_status_frontend) or '')"/>
+                          <t t-set="joining_date_value" t-value="request.params.get('hrmis_joining_date') or (req and req.hrmis_joining_date) or current_employee.hrmis_joining_date or ''"/>
+                          <t t-set="joining_month_min" t-value="str(joining_date_value)[:7] if joining_date_value else ''"/>
+                          <t t-set="deputation_district_val" t-value="request.params.get('frontend_deputation_posting_district_id') or (posting_status_rec and posting_status_rec.deputation_posting_district_id) or ''"/>
+                          <t t-set="deputation_department_val" t-value="request.params.get('frontend_deputation_department') or (posting_status_rec and posting_status_rec.deputation_department) or ''"/>
+                          <t t-set="deputation_designation_val" t-value="request.params.get('frontend_deputation_designation') or (posting_status_rec and posting_status_rec.deputation_designation) or ''"/>
+                          <t t-set="deputation_start_val" t-value="request.params.get('frontend_deputation_start') or ((posting_status_rec and posting_status_rec.deputation_start) and str(posting_status_rec.deputation_start)[:7]) or ''"/>
                           <!--    CURRENT STATUS    -->
                           <div class="hrmis-leave-row-wrap d-flex align-items-stretch" style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
                             <div class="hrmis-form__grid pt-1 pb-3" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
@@ -297,12 +305,13 @@ STATUS
                                   <span class="req">*</span>
                                 </label>
                                 <select class="hrmis-input js-no-search js-status-pretty" name="hrmis_current_status_frontend" t-att-required="'required' if is_draft else None" t-att-disabled="'disabled' if not is_draft else None">
-                                  <option value="" selected="selected" hidden="hidden">Select Status</option>
-                                  <option value="currently_posted">Currently Posted</option>
-                                  <option value="suspended">Suspended</option>
-                                  <option value="on_leave">On Leave</option>
-                                  <option value="eol_pgship">EOL (PGship)</option>
-                                  <option value="reported_to_health_department">Reported to Health Department</option>
+                                  <option value="" hidden="hidden" t-att-selected="not current_status_val">Select Status</option>
+                                  <option value="currently_posted" t-att-selected="current_status_val == 'currently_posted'">Currently Posted</option>
+                                  <option value="deputation" t-att-selected="current_status_val == 'deputation'">Deputation</option>
+                                  <option value="suspended" t-att-selected="current_status_val == 'suspended'">Suspended</option>
+                                  <option value="on_leave" t-att-selected="current_status_val == 'on_leave'">On Leave</option>
+                                  <option value="eol_pgship" t-att-selected="current_status_val == 'eol_pgship'">EOL (PGship)</option>
+                                  <option value="reported_to_health_department" t-att-selected="current_status_val == 'reported_to_health_department'">Reported to Health Department</option>
                                 </select>
                               </div>
                             </div>
@@ -797,6 +806,47 @@ START (MONTH/YEAR)
                                       <input type="checkbox" name="allowed_to_work" value="1" class="form-check-input js-allowed-to-work-toggle" id="allowed_to_work_checkbox" data-target="#allowed_to_work_box"/>
                                       <label for="allowed_to_work_checkbox" style="margin:0; font-weight:600; gap: 12px">ALLOWED TO WORK</label>
                                     </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <!--    ================= DEPUTATION BOX =================    -->
+                          <div id="deputation_box" class="js-status-box" data-status="deputation" style="display:none;">
+                            <div class="hrmis-leave-row-wrap d-flex align-items-stretch" style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
+                              <div class="hrmis-card p-3" style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
+                                <div class="hrmis-form__grid pt-3 pb-2" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
+                                  <div class="hrmis-field" style="grid-column: span 6;">
+                                    <label>
+POSTING DISTRICT
+                                      <span class="req">*</span>
+                                    </label>
+                                    <select class="hrmis-input" name="frontend_deputation_posting_district_id" t-att-required="'required' if is_draft else None">
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not deputation_district_val">Select District</option>
+                                      <t t-foreach="districts" t-as="d">
+                                        <option t-att-value="d.get('id')" t-att-selected="str(d.get('id')) == str(deputation_district_val)">
+                                          <t t-esc="d.get('name')"/>
+                                        </option>
+                                      </t>
+                                    </select>
+                                  </div>
+                                  <div class="hrmis-field" style="grid-column: span 6;">
+                                    <label>
+DEPARTMENT
+                                      <span class="req">*</span>
+                                    </label>
+                                    <input class="hrmis-input" type="text" name="frontend_deputation_department" placeholder="Enter Department" t-att-required="'required' if is_draft else None" t-att-value="deputation_department_val"/>
+                                  </div>
+                                  <div class="hrmis-field" style="grid-column: span 6;">
+                                    <label>
+DESIGNATION
+                                      <span class="req">*</span>
+                                    </label>
+                                    <input class="hrmis-input" type="text" name="frontend_deputation_designation" placeholder="Enter Designation" t-att-required="'required' if is_draft else None" t-att-value="deputation_designation_val"/>
+                                  </div>
+                                  <div class="hrmis-field" style="grid-column: span 6;">
+                                    <label>START (MONTH/YEAR)</label>
+                                    <input class="hrmis-input js-joining-month-boundary" type="month" name="frontend_deputation_start" t-att-min="joining_month_min or None" t-att-value="deputation_start_val"/>
                                   </div>
                                 </div>
                               </div>

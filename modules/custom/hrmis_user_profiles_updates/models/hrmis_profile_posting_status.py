@@ -19,6 +19,7 @@ class HrmisProfilePostingStatus(models.Model):
     status = fields.Selection(
         [
             ("currently_posted", "Currently Posted"),
+            ("deputation", "Deputation"),
             ("suspended", "Suspended"),
             ("on_leave", "On Leave"),
             ("eol_pgship", "EOL (PGship)"),
@@ -27,6 +28,19 @@ class HrmisProfilePostingStatus(models.Model):
         string="Current Status",
         required=True,
         default="currently_posted",
+    )
+
+    # -----------------------
+    # Deputation details (XML)
+    # -----------------------
+    deputation_posting_district_id = fields.Integer(
+        string="Deputation Posting District ID",
+    )
+    deputation_department = fields.Char(string="Deputation Department")
+    deputation_designation = fields.Char(string="Deputation Designation")
+    deputation_start = fields.Date(
+        string="Deputation Start Month",
+        help="Store as first day of month (YYYY-MM-01).",
     )
 
     # -----------------------
@@ -180,6 +194,11 @@ class HrmisProfilePostingStatus(models.Model):
     # -----------------------
     @api.constrains(
         "status",
+        "request_id",
+        "deputation_posting_district_id",
+        "deputation_department",
+        "deputation_designation",
+        "deputation_start",
         "suspension_date",
         "suspension_reporting_to",
         "suspension_reporting_district_id",
@@ -196,6 +215,34 @@ class HrmisProfilePostingStatus(models.Model):
     )
     def _check_required_by_status(self):
         for r in self:
+            # -----------------------
+            # Deputation
+            # -----------------------
+            if r.status == "deputation":
+                if not r.deputation_posting_district_id:
+                    raise ValidationError(
+                        "Posting District is required when status is Deputation."
+                    )
+                if not (r.deputation_department or "").strip():
+                    raise ValidationError(
+                        "Department is required when status is Deputation."
+                    )
+                if not (r.deputation_designation or "").strip():
+                    raise ValidationError(
+                        "Designation is required when status is Deputation."
+                    )
+
+                if r.deputation_start and r.request_id and r.request_id.hrmis_joining_date:
+                    join_date = fields.Date.to_date(r.request_id.hrmis_joining_date)
+                    deputation_start = fields.Date.to_date(r.deputation_start)
+                    if join_date and deputation_start:
+                        join_month_start = join_date.replace(day=1)
+                        deputation_month_start = deputation_start.replace(day=1)
+                        if deputation_month_start < join_month_start:
+                            raise ValidationError(
+                                "Deputation Start cannot be before the joining month."
+                            )
+
             # -----------------------
             # Suspended
             # -----------------------
@@ -247,6 +294,12 @@ class HrmisProfilePostingStatus(models.Model):
     @api.onchange("status")
     def _onchange_status(self):
         for r in self:
+            if r.status != "deputation":
+                r.deputation_posting_district_id = False
+                r.deputation_department = False
+                r.deputation_designation = False
+                r.deputation_start = False
+
             if r.status != "eol_pgship":
                 r.eol_institute_id = False
                 r.eol_institute_code = False

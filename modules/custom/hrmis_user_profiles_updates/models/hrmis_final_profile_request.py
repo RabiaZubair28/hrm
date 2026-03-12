@@ -172,6 +172,7 @@ class EmployeeProfileRequest(models.Model):
 
     hrmis_current_status_frontend = fields.Selection([
         ("currently_posted", "Currently Posted"),
+        ("deputation", "Deputation"),
         ("suspended", "Suspended"),
         ("on_leave", "On Leave"),
         ("eol_pgship", "EOL (PGship)"),
