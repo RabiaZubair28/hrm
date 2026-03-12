@@ -2842,8 +2842,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "eol_primary_designation_id": m2o_int(post.get("frontend_eol_primary_designation_id")),
             "eol_primary_bps": int(post.get("frontend_eol_primary_bps") or 0) if (post.get("frontend_eol_primary_bps") or "").strip() else 0,
 
-            # Deputation
-            "deputation_start": post.get("frontend_deputation_start") or False,
+             # Deputation
+            "deputation_start": self._month_to_date(post.get("frontend_deputation_start") or "") or False,
             "deputation_department": (post.get("frontend_deputation_department") or "").strip() or False,
             "deputation_district_id": deputation_district_id,
             "deputation_designation": (post.get("frontend_deputation_designation") or "").strip() or False,

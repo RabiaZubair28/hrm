@@ -14,7 +14,7 @@
             <a class="hrmis-tab hrmis-pr-tab" id="hrmis_pr_tab_leave" data-bs-toggle="tab" href="#hrmis_pr_leave_history" role="tab" aria-controls="hrmis_pr_leave_history" aria-selected="false">Leaves</a>
           </div>
           <!--     Body     -->
-          <div class="hrmis-panel__body hrmis-pr-shell__body">
+          <div class="hrmis-panel__body hrmis-pr-shell__body" style="background-color:#ffff">
             <div id="draft_save_msg" style="display:none;"/>
             <t t-if="info">
               <div class="hrmis_server_msg" data-type="success" style="display:none;">
