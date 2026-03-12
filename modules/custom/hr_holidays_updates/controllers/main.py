@@ -1831,8 +1831,11 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 errors.append("Designation is required.")
 
         elif status == "deputation":
-            if empty("frontend_deputation_start"):
+            deputation_start = (post.get("frontend_deputation_start") or "").strip()
+            if not deputation_start:
                 errors.append("Deputation Start Date is required.")
+            elif not self._month_to_date(deputation_start):
+                errors.append("Deputation Start Date must be a valid month.")
             if empty("frontend_deputation_department"):
                 errors.append("Deputation Department is required.")
             if empty("frontend_deputation_district_id"):
@@ -2841,7 +2844,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "eol_primary_bps": int(post.get("frontend_eol_primary_bps") or 0) if (post.get("frontend_eol_primary_bps") or "").strip() else 0,
 
             # Deputation
-            "deputation_start": post.get("frontend_deputation_start") or False,
+            "deputation_start": self._month_to_date(post.get("frontend_deputation_start") or "") or False,
             "deputation_department": (post.get("frontend_deputation_department") or "").strip() or False,
             "deputation_district_id": deputation_district_id,
         }
