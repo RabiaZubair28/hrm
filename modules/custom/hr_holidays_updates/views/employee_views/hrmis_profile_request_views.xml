@@ -297,13 +297,13 @@ STATUS
                                   <span class="req">*</span>
                                 </label>
                                 <select class="hrmis-input js-no-search js-status-pretty" name="hrmis_current_status_frontend" t-att-required="'required' if is_draft else None" t-att-disabled="'disabled' if not is_draft else None">
-                                  <option value="" selected="selected" hidden="hidden">Select Status</option>
-                                  <option value="currently_posted">Currently Posted</option>
-                                  <option value="suspended">Suspended</option>
-                                  <option value="on_leave">On Leave</option>
-                                  <option value="eol_pgship">EOL (PGship)</option>
-                                  <option value="reported_to_health_department">Reported to Health Department</option>
-                                  <option value="deputation">Deputation</option>
+                                  <option value="" hidden="hidden" t-att-selected="not current_status_prefill">Select Status</option>
+                                  <option value="currently_posted" t-att-selected="current_status_prefill == 'currently_posted'">Currently Posted</option>
+                                  <option value="suspended" t-att-selected="current_status_prefill == 'suspended'">Suspended</option>
+                                  <option value="on_leave" t-att-selected="current_status_prefill == 'on_leave'">On Leave</option>
+                                  <option value="eol_pgship" t-att-selected="current_status_prefill == 'eol_pgship'">EOL (PGship)</option>
+                                  <option value="reported_to_health_department" t-att-selected="current_status_prefill == 'reported_to_health_department'">Reported to Health Department</option>
+                                  <option value="deputation" t-att-selected="current_status_prefill == 'deputation'">Deputation</option>
                                 </select>
                               </div>
                             </div>
