@@ -2729,7 +2729,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         susp_bps_val = int(post.get("frontend_reporting_bps") or 0) if (post.get("frontend_reporting_bps") or "").strip() else 0
 
         susp_designation_id = _resolve_designation_other(
-            post.get("frontend_reporting_designation_id"),
+            post.get("hrmis_designation"),
             post.get("frontend_reporting_designation_other_name"),
             susp_bps_val,
             susp_facility_id,

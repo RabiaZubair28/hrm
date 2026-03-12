@@ -33,7 +33,7 @@ class ResUsers(models.Model):
             vals["password"] = vals["temp_password"]
             vals["is_temp_password"] = True
 
-        role = vals.pop("hrmis_role", False)
+        role = vals.get("hrmis_role", False)
 
         # FORCE internal user
         internal_group = self.env.ref("base.group_user")
@@ -78,7 +78,7 @@ class ResUsers(models.Model):
             vals["password"] = vals["temp_password"]
             vals["is_temp_password"] = True
 
-        role = vals.pop("hrmis_role", False)
+        role = vals.get("hrmis_role", False)
 
         res = super().write(vals)
 

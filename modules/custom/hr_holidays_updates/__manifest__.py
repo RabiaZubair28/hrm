@@ -46,6 +46,11 @@
             'hr_holidays_updates/static/src/js/hrmis_other_option.js',
             'hrmis_user_profiles_updates/static/src/js/hrmis_profile_validation.js',
             'hrmis_user_profiles_updates/static/src/js/hrmis_extra_validations.js',
+            'hr_holidays_updates/static/src/js/hrmis_profile_request_tabs_guard.js',
+            'hr_holidays_updates/static/src/js/hrmis_reset_prev_status.js',
+            
+
+            
             
         ],
     },

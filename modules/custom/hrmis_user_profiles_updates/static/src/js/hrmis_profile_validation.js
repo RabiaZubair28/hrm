@@ -430,6 +430,40 @@ function _enhanceSelect(select) {
   input.className = select.className;
   input.autocomplete = "off";
   input.placeholder = "Type to search…";
+  input.style.paddingRight = "64px"; // room for clear + dropdown arrow
+
+  const clearBtn = document.createElement("button");
+  clearBtn.type = "button";
+  clearBtn.className = "hrmis-combobox-clear";
+  clearBtn.setAttribute("aria-label", "Clear selection");
+  clearBtn.innerHTML = "&times;";
+  clearBtn.style.position = "absolute";
+  clearBtn.style.right = "12px";
+  clearBtn.style.top = "50%";
+  clearBtn.style.transform = "translateY(-50%)";
+  clearBtn.style.border = "0";
+  clearBtn.style.background = "transparent";
+  clearBtn.style.cursor = "pointer";
+  clearBtn.style.fontSize = "18px";
+  clearBtn.style.lineHeight = "1";
+  clearBtn.style.color = "#6c757d";
+  clearBtn.style.padding = "0 4px";
+  clearBtn.style.display = "none";
+  clearBtn.style.zIndex = "60";
+
+  const arrow = document.createElement("div");
+  arrow.className = "hrmis-combobox-arrow";
+  arrow.innerHTML = "&#9662;";
+  arrow.style.position = "absolute";
+  arrow.style.right = "12px";
+  arrow.style.top = "50%";
+  arrow.style.transform = "translateY(-50%)";
+  arrow.style.pointerEvents = "none";
+  arrow.style.color = "#6c757d";
+  arrow.style.fontSize = "12px";
+  arrow.style.zIndex = "55";
+  arrow.style.transition = "opacity 0.15s";
+clearBtn.style.transition = "opacity 0.15s";
 
   const dd = document.createElement("div");
   dd.className = "hrmis-combobox-dd";
@@ -449,11 +483,14 @@ function _enhanceSelect(select) {
   const parent = select.parentNode;
   parent.insertBefore(wrap, select);
   wrap.appendChild(input);
+  wrap.appendChild(clearBtn);
+  wrap.appendChild(arrow);
   wrap.appendChild(select);
   wrap.appendChild(dd);
 
   select.style.display = "none";
   input.disabled = !!select.disabled;
+  clearBtn.disabled = !!select.disabled;
 
   // keep reference so _showError() can highlight the visible input
   select._hrmisComboboxInput = input;
@@ -468,24 +505,49 @@ function _enhanceSelect(select) {
     });
   }
 
-  function setDisplayFromSelect() {
-    const selOpt = select.options[select.selectedIndex];
-    input.value =
-      selOpt && selOpt.value ? (selOpt.textContent || "").trim() : "";
-  }
   function selectedLabel() {
     const selOpt = select.options[select.selectedIndex];
     return selOpt && selOpt.value ? (selOpt.textContent || "").trim() : "";
   }
 
-  function clearSelection() {
-    // reset select + visible input
-    select.selectedIndex = 0;
-    input.value = "";
-    _clearError(select);
-    _clearError(input);
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+  function toggleClearButton() {
+  const hasValue = !input.disabled && (select.value || "").trim();
+
+  clearBtn.style.display = hasValue ? "block" : "none";
+  arrow.style.display = hasValue ? "none" : "block";
+}
+
+  function setDisplayFromSelect() {
+    const selOpt = select.options[select.selectedIndex];
+    input.value =
+      selOpt && selOpt.value ? (selOpt.textContent || "").trim() : "";
+    toggleClearButton();
   }
+
+function clearSelection() {
+  // hard clear select
+  select.value = "";
+  select.selectedIndex = -1;
+
+  // if browser keeps old value, force placeholder/empty option
+  const emptyOpt = Array.from(select.options || []).find((o) => !o.value);
+  if (emptyOpt) {
+    emptyOpt.selected = true;
+    select.value = "";
+  }
+
+  // hard clear visible input
+  input.value = "";
+
+  _clearError(select);
+  _clearError(input);
+  toggleClearButton();
+
+  // notify everything listening
+  select.dispatchEvent(new Event("input", { bubbles: true }));
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
   function rebuildDD(query) {
     const q = (query || "").trim().toLowerCase();
     dd.innerHTML = "";
@@ -512,11 +574,12 @@ function _enhanceSelect(select) {
       item.style.margin = "4px";
       item.textContent = (opt.textContent || "").trim();
 
-      item.addEventListener(
-        "mouseenter",
-        () => (item.style.background = "#f3f4f6"),
-      );
-      item.addEventListener("mouseleave", () => (item.style.background = ""));
+      item.addEventListener("mouseenter", () => {
+        item.style.background = "#f3f4f6";
+      });
+      item.addEventListener("mouseleave", () => {
+        item.style.background = "";
+      });
 
       item.addEventListener("mousedown", (e) => {
         e.preventDefault();
@@ -535,8 +598,6 @@ function _enhanceSelect(select) {
   function openDD() {
     if (input.disabled) return;
 
-    // If input currently equals selected label, treat it as "no query"
-    // so user sees full dropdown on click/focus.
     const q = (input.value || "").trim();
     const selLbl = selectedLabel();
     const effectiveQuery = q && selLbl && q === selLbl ? "" : q;
@@ -544,12 +605,11 @@ function _enhanceSelect(select) {
     rebuildDD(effectiveQuery);
     dd.style.display = "block";
   }
+
   function closeDD() {
     dd.style.display = "none";
   }
 
-  // input.addEventListener("focus", openDD);
-  // input.addEventListener("input", openDD);
   input.addEventListener("focus", () => {
     openDD();
     input.select();
@@ -567,21 +627,10 @@ function _enhanceSelect(select) {
       openDD();
       return;
     }
+    toggleClearButton();
     openDD();
   });
-  //   input.addEventListener("focus", () => {
-  //   openDD();
-  //   input.select();
-  // });
-  //   input.addEventListener("input", () => {
-  //   // If user cleared the visible input, truly clear the select too
-  //   if ((input.value || "").trim() === "") {
-  //     clearSelection();
-  //     openDD(); // optional: show full list immediately
-  //     return;
-  //   }
-  //   openDD();
-  // });
+
   input.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeDD();
@@ -593,17 +642,22 @@ function _enhanceSelect(select) {
     setTimeout(() => {
       closeDD();
 
-      // If user left it empty, don't restore from select (this was your bug #2)
-      if ((input.value || "").trim() === "") return;
+      if ((input.value || "").trim() === "") {
+        toggleClearButton();
+        return;
+      }
 
-      // Otherwise, restore label from select (normal behavior)
       setDisplayFromSelect();
     }, 120);
   });
 
-  // document.addEventListener("click", (e) => {
-  //   if (!wrap.contains(e.target)) closeDD();
-  // });
+clearBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  clearSelection();
+  closeDD();
+  input.focus();
+});
 
   select.addEventListener("change", setDisplayFromSelect);
 
@@ -1890,7 +1944,7 @@ function _applyPostingBpsMaxFromCurrent(form, row) {
   const currentBps = _currentBpsValue(form);
   if (currentBps !== null && currentBps >= 1)
     bpsInp.setAttribute("max", String(currentBps));
-  else bpsInp.setAttribute("max", "22");
+  else bpsInp.setAttribute("max", "20");
 }
 
 function _syncPostingBpsConstraints(form) {
@@ -1999,7 +2053,7 @@ function _applyPromoBpsToMaxFromCurrent(form, row) {
   const currentBps = _currentBpsValue(form);
   if (currentBps !== null && currentBps >= 1)
     to.setAttribute("max", String(currentBps));
-  else to.setAttribute("max", "22");
+  else to.setAttribute("max", "20");
 }
 function _applyPromoToMinFromFrom(row) {
   const from = _qs(row, 'input[name="promotion_bps_from[]"]');
@@ -2007,8 +2061,8 @@ function _applyPromoToMinFromFrom(row) {
   if (!from || !to) return;
 
   const f = _normInt(from.value);
-  if (f !== null) to.setAttribute("min", String(Math.min(22, f + 1)));
-  else to.setAttribute("min", "1");
+  if (f !== null) to.setAttribute("min", String(Math.min(20, f + 1)));
+  else to.setAttribute("min", "16");
 }
 function _setPromoDateMinMax(form, row) {
   const date = _qs(row, 'input[name="promotion_date[]"]');
@@ -2055,16 +2109,16 @@ function _validatePromoRow(form, row) {
   if (f === null) {
     _showError(from, "BPS From is required");
     ok = false;
-  } else if (f < 1 || f > 22) {
-    _showError(from, "BPS From must be 1 to 22");
+  } else if (f < 16 || f > 20) {
+    _showError(from, "BPS From must be 16 to 20");
     ok = false;
   }
 
   if (t === null) {
     _showError(to, "BPS To is required");
     ok = false;
-  } else if (t < 1 || t > 22) {
-    _showError(to, "BPS To must be 1 to 22");
+  } else if (t < 16 || t > 20) {
+    _showError(to, "BPS To must be 16 to 20");
     ok = false;
   }
 
@@ -2966,6 +3020,14 @@ function _initHRMISValidations() {
   _initFrontendStatusToggle(form);
 
   _digitsOnly(_qs(form, '[name="hrmis_bps"]'), { maxLen: 2 });
+  
+  _digitsOnly(_qs(form, '[name="posting_bps[]"]'), { maxLen: 2 });
+  _digitsOnly(_qs(form, '[name="promotion_bps_from[]"]'), { maxLen: 2 });
+  _digitsOnly(_qs(form, '[name="promotion_bps_to[]"]'), { maxLen: 2 });
+
+
+
+
   _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
 
   // PMDC conditional required (depends on Cadre)
@@ -3615,3 +3677,4 @@ if (document.readyState === "loading") {
   _initHRMIS();
 }
 window.addEventListener("pageshow", _initHRMIS);
+

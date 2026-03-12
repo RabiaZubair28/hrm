@@ -37,41 +37,52 @@
     </template>
     <template id="hrmis_manage_requests" name="HRMIS Manage Requests (Section Officer)">
         <t t-call="hr_holidays_updates.hrmis_ui_layout">
-            <div class="hrmis-panel">
+            <div class="hrmis-panel hrmis-pr-shell hrmis-pr-shell--manage hrmis-profile-request">
                 <!-- Tabs -->
-                <div class="hrmis-panel__header hrmis-panel__header--tabs hrmis-panel__header--tabs--manage"
-                     >
+                <div
+                    class="hrmis-panel__header hrmis-panel__header--tabs hrmis-panel__header--tabs--manage hrmis-pr-tabs hrmis-tabs--profile hrmis-tabs--profile-request"
+                    role="tablist" aria-label="Manage request sections">
                     <t t-if="tab in ('leave','history')">
-                        <a t-attf-class="hrmis-tab hrmis-tab--manage #{'is-active' if tab == 'leave' else ''}"
+                        <a t-attf-class="hrmis-tab hrmis-tab--manage hrmis-pr-tab #{'active is-active' if tab == 'leave' else ''}"
                            t-att-href="'/hrmis/manage/requests?tab=leave'"
-                          >
+                           t-att-aria-current="'page' if tab == 'leave' else None"
+                           t-att-aria-selected="'true' if tab == 'leave' else 'false'"
+                           role="tab">
                             Leave Requests
                         </a>
-                        <a t-attf-class="hrmis-tab hrmis-tab--manage #{'is-active' if tab == 'history' else ''}"
+                        <a t-attf-class="hrmis-tab hrmis-tab--manage hrmis-pr-tab #{'active is-active' if tab == 'history' else ''}"
                            t-att-href="'/hrmis/manage/requests?tab=history'"
-                          >
+                           t-att-aria-current="'page' if tab == 'history' else None"
+                           t-att-aria-selected="'true' if tab == 'history' else 'false'"
+                           role="tab">
                             Leave Status
                         </a>
                     </t>
                     <t t-else="">
-                        <a t-attf-class="hrmis-tab hrmis-tab--manage #{'is-active' if tab == 'transfer_requests' else ''}"
+                        <a t-attf-class="hrmis-tab hrmis-tab--manage hrmis-pr-tab #{'active is-active' if tab == 'transfer_requests' else ''}"
                            t-att-href="'/hrmis/manage/requests?tab=transfer_requests'"
-                          >
+                           t-att-aria-current="'page' if tab == 'transfer_requests' else None"
+                           t-att-aria-selected="'true' if tab == 'transfer_requests' else 'false'"
+                           role="tab">
                             Transfer Requests
-                           
                         </a>
-                        <a t-attf-class="hrmis-tab hrmis-tab--manage #{'is-active' if tab == 'transfer_status' else ''}"
+                        <a t-attf-class="hrmis-tab hrmis-tab--manage hrmis-pr-tab #{'active is-active' if tab == 'transfer_status' else ''}"
                            t-att-href="'/hrmis/manage/requests?tab=transfer_status'"
-                          >
+                           t-att-aria-current="'page' if tab == 'transfer_status' else None"
+                           t-att-aria-selected="'true' if tab == 'transfer_status' else 'false'"
+                           role="tab">
                             Transfer Status
                         </a>
-                        <a t-attf-class="hrmis-tab hrmis-tab--manage #{'is-active' if tab == 'transfer_vacancies' else ''}"
-                           t-att-href="'/hrmis/manage/requests?tab=transfer_vacancies'">
+                        <a t-attf-class="hrmis-tab hrmis-tab--manage hrmis-pr-tab #{'active is-active' if tab == 'transfer_vacancies' else ''}"
+                           t-att-href="'/hrmis/manage/requests?tab=transfer_vacancies'"
+                           t-att-aria-current="'page' if tab == 'transfer_vacancies' else None"
+                           t-att-aria-selected="'true' if tab == 'transfer_vacancies' else 'false'"
+                           role="tab">
                             Vacancies
                         </a>
                     </t>
                 </div>
-                <div class="hrmis-panel__body">
+                <div class="hrmis-panel__body hrmis-pr-shell__body">
                     <!-- Leave Requests -->
                     <t t-if="tab == 'leave'">
                         <t t-if="success or error">
@@ -382,18 +393,15 @@
                         </t>
                     </t>
                     <t t-if="tab == 'transfer_requests'">
-                        <!-- Alerts -->
                         <t t-if="success or error">
                             <div t-attf-class="hrmis-alert #{'hrmis-alert--success' if success else 'hrmis-alert--error'}"
-             style="margin-bottom:20px; border: 2px solid black;font-weight:bold;">
+                                style="margin-bottom:20px; border: 2px solid black;font-weight:bold;">
                                 <t t-esc="success or error"/>
                             </div>
                         </t>
-                        <!-- Filters -->
                         <div class="hrmis-filters">
-                            <input type="text"
-               class="hrmis-filter__search"
-               placeholder="Search (min 3 characters)..."/>
+                            <input type="text" class="hrmis-filter__search"
+                                placeholder="Search (min 3 characters)..."/>
                             <select class="hrmis-filter__select" data-filter="date">
                                 <option value="">All Dates</option>
                                 <option value="today">Today</option>
@@ -401,13 +409,20 @@
                                 <option value="week">Last Week</option>
                             </select>
                         </div>
-                        <!-- Empty -->
                         <t t-if="not transfer_requests">
-                            <div class="hrmis-empty">No transfer requests pending your action.</div>
+                            <div class="hrmis-leave-history-ui">
+                                <div class="hrmis-leave-history-empty" role="status" aria-live="polite">
+                                    <div aria-hidden="true"
+                                        style="display:flex; justify-content:center; align-items:center; ">
+                                        <img src="https://res.cloudinary.com/dxokfhkhu/image/upload/v1772995560/ICONS_1_-02_vwl7on.svg"
+                                            alt="No data"
+                                            style="width:120px; height:auto; opacity:0.7;" />
+                                    </div>
+                                    <div class="hrmis-leave-history-empty__text">No transfer requests pending needsyour action.</div>
+                                </div>
+                            </div>
                         </t>
-                        <!-- List -->
                         <t t-else="">
-                            <!-- CSS-only modal (opens via URL fragment + :target) -->
                             <style>
                                 .hrmis-modal { display:none; position:fixed; inset:0; z-index:1000; }
                                 .hrmis-modal:target { display:flex; }
@@ -423,124 +438,139 @@
                                 .hrmis-modal__section { margin-top:12px; }
                                 .hrmis-modal__actions { display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-top:14px; flex-wrap:wrap; }
                             </style>
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover align-middle mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width:60px;">#</th>
-                                            <th>Staff</th>
-                                            <th>Current Posting</th>
-                                            <th>Requested Posting</th>
-                                            <th>Designation</th>
-                                            <th style="white-space:nowrap;">Vacant Posts</th>
-                                            <th style="min-width:260px;">Last Comment</th>
-                                            <th class="text-end" style="width:140px;">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <t t-foreach="range(len(transfer_requests))" t-as="idx0">
-                                            <t t-set="tr" t-value="transfer_requests[idx0]"/>
-                                            <t t-set="vac" t-value="vacancy_by_transfer_id.get(tr.id, {}) if vacancy_by_transfer_id else {}"/>
-                                            <t t-set="vacant_num" t-value="(vac and (vac.get('vacant') or 0)) or 0"/>
-                                            <t t-set="can_designation" t-value="can_approve_by_transfer_id and can_approve_by_transfer_id.get(tr.id)"/>
-                                            <t t-set="can_accept" t-value="bool(can_designation and (vacant_num &gt; 0))"/>
-                                            <!-- Row -->
-                                            <tr style="cursor:pointer;"
-                                                t-att-data-status="tr.state"
-                                                t-att-data-date="(str(tr.submitted_on or tr.create_date)[:10] if (tr.submitted_on or tr.create_date) else '')"
-                                                t-att-data-search="
-                                                    '%s %s %s %s %s' % (
-                                                        tr.employee_id.name or '',
-                                                        tr.name or '',
-                                                        (tr.required_facility_id.name if tr.required_facility_id else ''),
-                                                        (tr.required_district_id.name if tr.required_district_id else ''),
-                                                        (tr.employee_id.hrmis_designation.name if (tr.employee_id and tr.employee_id.hrmis_designation) else '')
-                                                    )
-                                                "
-                                                t-att-data-href="'/hrmis/manage/history/%s?tab=transfer' % tr.employee_id.id"
-                                                t-attf-onclick="window.location.href='/hrmis/manage/history/{{ tr.employee_id.id }}?tab=transfer'">
-                                                <td>
-                                                    <t t-esc="idx0 + 1"/>
-                                                </td>
-                                                <td>
-                                                    <div class="fw-semibold text-dark">
-                                                        <a t-att-href="'/hrmis/manage/history/%s?tab=transfer' % tr.employee_id.id"
-                                                            onclick="event.stopPropagation();"
-                                                            class="text-decoration-none text-dark">
-                                                            <t t-esc="tr.employee_id.name"/>
-                                                        </a>
-                                                    </div>
-                                                    <div class="small text-muted">
-                                                        <t t-esc="tr.name or ''"/>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div>
-                                                        <t t-esc="(tr.current_facility_id and tr.current_facility_id.name) or '-'"/>
-                                                    </div>
-                                                    <div class="small text-muted">
-                                                        <t t-esc="(tr.current_district_id and tr.current_district_id.name) or '-'"/>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div>
-                                                        <t t-esc="(tr.required_facility_id and tr.required_facility_id.name) or '-'"/>
-                                                    </div>
-                                                    <div class="small text-muted">
-                                                        <t t-esc="(tr.required_district_id and tr.required_district_id.name) or '-'"/>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div>
-                                                        <t t-esc="(tr.required_designation_id and tr.required_designation_id.name) or '-'"/>
-                                                    </div>
-                                                    <div class="small text-muted">
-                                                        Emp:
-                                                        <t t-esc="(tr.employee_id.hrmis_designation and tr.employee_id.hrmis_designation.name) or '-'"/>
-                                                    </div>
-                                                    <t t-if="not (can_approve_by_transfer_id and can_approve_by_transfer_id.get(tr.id))">
-                                                        <div class="small fw-semibold text-danger">
-                                                            Not available in requested facility
-                                                        </div>
-                                                    </t>
-                                                </td>
-                                                <td style="white-space:nowrap;">
-                                                    <span class="fw-semibold">
-                                                        <t t-esc="(vac.get('vacant') if vac else 0)"/>
-                                                    </span>
-                                                        /
-                                                    <t t-esc="(vac.get('total') if vac else 0)"/>
-                                                    <div class="small text-muted">
-                                                        Occupied:
-                                                        <t t-esc="(vac.get('occupied') if vac else 0)"/>
-                                                    </div>
-                                                </td>
-                                                <td style="white-space:normal; word-break:break-word;">
-                                                    <t t-set="last_c" t-value="last_comment_by_tr_id.get(tr.id) if last_comment_by_tr_id else False"/>
-                                                    <t t-if="last_c">
-                                                        <div style="font-size:12px; color:#444; line-height:1.25;">
-                                                            <div style="font-weight:700; color:#222;">
-                                                                <t t-esc="last_c.get('user_name') or ''"/>
-                                                            </div>
-                                                            <div style="white-space:normal; word-break:break-word;">
-                                                                <t t-esc="last_c.get('comment') or ''"/>
-                                                            </div>
-                                                        </div>
-                                                    </t>
-                                                    <t t-else="">
-                                                        <span class="text-muted small">—</span>
-                                                    </t>
-                                                </td>
-                                                <td class="text-end">
-                                                    <a class="hrmis-btn hrmis-btn--outline"
-                                                        t-att-href="'#tr-modal-%s' % tr.id"
-                                                        onclick="event.stopPropagation();">
-                                                        Proceed
+                            <t t-set="grid_tr"
+                                t-value="'display:grid; grid-template-columns: 35px 2.2fr 1.55fr 1.55fr 1.15fr 1.25fr 1.1fr 2.5fr; column-gap: 12px; align-items: start;'"/>
+                            <div class="hrmis-table">
+                                <div class="hrmis-table__head" t-att-style="grid_tr">
+                                    <div style="width:35px; max-width:35px; text-wrap: wrap">#</div>
+                                    <div style="text-wrap: wrap">Staff / Facility / District</div>
+                                    <div style="text-wrap: wrap">Current Posting</div>
+                                    <div style="text-wrap: wrap">Requested Posting</div>
+                                    <div style="text-wrap: wrap">Submitted On</div>
+                                    <div style="text-wrap: wrap">Designation</div>
+                                    <div style="text-wrap: wrap">Vacant Posts</div>
+                                    <div style="text-wrap: wrap">Comments / Actions</div>
+                                </div>
+                                <div class="hrmis-table__body">
+                                    <t t-foreach="range(len(transfer_requests))" t-as="idx0">
+                                        <t t-set="tr" t-value="transfer_requests[idx0]"/>
+                                        <t t-set="vac" t-value="vacancy_by_transfer_id.get(tr.id, {}) if vacancy_by_transfer_id else {}"/>
+                                        <t t-set="vacant_num" t-value="(vac and (vac.get('vacant') or 0)) or 0"/>
+                                        <t t-set="can_designation" t-value="can_approve_by_transfer_id and can_approve_by_transfer_id.get(tr.id)"/>
+                                        <t t-set="can_accept" t-value="bool(can_designation and (vacant_num &gt; 0))"/>
+                                        <div class="hrmis-table__row hrmis-manage-table__row"
+                                            style="cursor:pointer; margin-top:20px"
+                                            t-att-style="grid_tr"
+                                            t-att-data-status="tr.state"
+                                            t-att-data-date="(str(tr.submitted_on or tr.create_date)[:10] if (tr.submitted_on or tr.create_date) else '')"
+                                            t-att-data-search="
+                                                '%s %s %s %s %s %s' % (
+                                                    tr.employee_id.name or '',
+                                                    tr.name or '',
+                                                    (tr.current_facility_id.name if tr.current_facility_id else ''),
+                                                    (tr.required_facility_id.name if tr.required_facility_id else ''),
+                                                    (tr.required_district_id.name if tr.required_district_id else ''),
+                                                    (tr.employee_id.hrmis_designation.name if (tr.employee_id and tr.employee_id.hrmis_designation) else '')
+                                                )
+                                            "
+                                            t-att-data-href="'/hrmis/manage/history/%s?tab=transfer' % tr.employee_id.id"
+                                            t-attf-onclick="window.location.href='/hrmis/manage/history/{{ tr.employee_id.id }}?tab=transfer'">
+                                            <div class="hrmis-leave-row_cell hrmis-leave-row_sno" style="text-wrap: wrap;">
+                                                <t t-esc="idx0 + 1"/>
+                                            </div>
+                                            <div class="hrmis-leave-row__cell" style="text-decoration:none; cursor:pointer; text-wrap: wrap;">
+                                                <div class="strong" style="color:#000; text-wrap: wrap;">
+                                                    <a t-att-href="'/hrmis/manage/history/%s?tab=transfer' % tr.employee_id.id"
+                                                        onclick="event.stopPropagation();"
+                                                        style="text-decoration:none; color:#000; cursor:pointer;">
+                                                        <t t-esc="tr.employee_id.name"/> /
                                                     </a>
-                                                </td>
-                                            </tr>
-                                            <!-- Modal OUTSIDE table row (valid HTML) -->
-                                            <div class="hrmis-modal" t-att-id="'tr-modal-%s' % tr.id">
+                                                    <a t-att-href="'/hrmis/manage/history/%s?tab=transfer' % tr.employee_id.id"
+                                                        onclick="event.stopPropagation();"
+                                                        style="text-decoration:none; color:#000; cursor:pointer;">
+                                                        <t t-esc="(('facility_id' in tr.employee_id._fields and tr.employee_id.facility_id and tr.employee_id.facility_id.name) or ('hrmis_facility_id' in tr.employee_id._fields and tr.employee_id.hrmis_facility_id and tr.employee_id.hrmis_facility_id.name) or 'Facility name')"/> /
+                                                    </a>
+                                                    <a t-att-href="'/hrmis/manage/history/%s?tab=transfer' % tr.employee_id.id"
+                                                        onclick="event.stopPropagation();"
+                                                        style="text-decoration:none; color:#000; cursor:pointer;">
+                                                        <t t-esc="(('district_id' in tr.employee_id._fields and tr.employee_id.district_id and tr.employee_id.district_id.name) or ('hrmis_district_id' in tr.employee_id._fields and tr.employee_id.hrmis_district_id and tr.employee_id.hrmis_district_id.name) or 'District name')"/>
+                                                    </a>
+                                                </div>
+                                                <div class="sub" style="color:#666; text-wrap: wrap;">
+                                                    <t t-esc="tr.name or ''"/>
+                                                </div>
+                                            </div>
+                                            <div class="hrmis-leave-row__cell" style="text-wrap: wrap;">
+                                                <div>
+                                                    <t t-esc="(tr.current_facility_id and tr.current_facility_id.name) or '-'"/>
+                                                </div>
+                                                <div class="sub" style="color:#666; text-wrap: wrap;">
+                                                    <t t-esc="(tr.current_district_id and tr.current_district_id.name) or '-'"/>
+                                                </div>
+                                            </div>
+                                            <div class="hrmis-leave-row__cell" style="text-wrap: wrap;">
+                                                <div>
+                                                    <t t-esc="(tr.required_facility_id and tr.required_facility_id.name) or '-'"/>
+                                                </div>
+                                                <div class="sub" style="color:#666; text-wrap: wrap;">
+                                                    <t t-esc="(tr.required_district_id and tr.required_district_id.name) or '-'"/>
+                                                </div>
+                                            </div>
+                                            <div class="hrmis-leave-row__cell" style="text-wrap: wrap;">
+                                                <t t-esc="(str(tr.submitted_on or tr.create_date)[:19] if (tr.submitted_on or tr.create_date) else '')"/>
+                                            </div>
+                                            <div class="hrmis-leave-row__cell" style="text-wrap: wrap;">
+                                                <div>
+                                                    <t t-esc="(tr.required_designation_id and tr.required_designation_id.name) or '-'"/>
+                                                </div>
+                                                <div class="sub" style="color:#666; text-wrap: wrap;">
+                                                    Emp:
+                                                    <t t-esc="(tr.employee_id.hrmis_designation and tr.employee_id.hrmis_designation.name) or '-'"/>
+                                                </div>
+                                                <t t-if="not (can_approve_by_transfer_id and can_approve_by_transfer_id.get(tr.id))">
+                                                    <div class="sub" style="color:#a00; font-weight:700; text-wrap: wrap;">
+                                                        Not available in requested facility
+                                                    </div>
+                                                </t>
+                                            </div>
+                                            <div class="hrmis-leave-row__cell" style="text-wrap: wrap;">
+                                                <span class="fw-semibold">
+                                                    <t t-esc="(vac.get('vacant') if vac else 0)"/>
+                                                </span>
+                                                /
+                                                <t t-esc="(vac.get('total') if vac else 0)"/>
+                                                <div class="sub" style="color:#666; text-wrap: wrap;">
+                                                    Occupied:
+                                                    <t t-esc="(vac.get('occupied') if vac else 0)"/>
+                                                </div>
+                                            </div>
+                                            <div class="hrmis-leave-row__actions" style="display:flex; flex-direction:column; gap:8px; text-wrap: wrap;">
+                                                <t t-set="last_c" t-value="last_comment_by_tr_id.get(tr.id) if last_comment_by_tr_id else False"/>
+                                                <t t-if="last_c">
+                                                    <div class="hrmis-comments" style="padding:4px 0; border-bottom:1px solid #eee;">
+                                                        <div class="hrmis-comment" style="font-size:12px; line-height:1.3;">
+                                                            <strong>
+                                                                <t t-esc="last_c.get('user_name') or ''"/>
+                                                            </strong>:
+                                                            <t t-esc="last_c.get('comment') or ''"/>
+                                                        </div>
+                                                    </div>
+                                                </t>
+                                                <t t-else="">
+                                                    <div class="hrmis-comments" style="padding:4px 0; border-bottom:1px solid #eee;">
+                                                        <div class="hrmis-comment" style="font-size:12px; line-height:1.3; color:#666;">
+                                                            No comments yet.
+                                                        </div>
+                                                    </div>
+                                                </t>
+                                                <a class="hrmis-btn hrmis-btn--outline"
+                                                    t-att-href="'#tr-modal-%s' % tr.id"
+                                                    onclick="event.stopPropagation();">
+                                                    Proceed
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="hrmis-modal" t-att-id="'tr-modal-%s' % tr.id">
                                                 <t t-set="vac_m" t-value="vacancy_by_transfer_id.get(tr.id, {}) if vacancy_by_transfer_id else {}"/>
                                                 <t t-set="vacant_num_m" t-value="(vac_m and (vac_m.get('vacant') or 0)) or 0"/>
                                                 <t t-set="is_last" t-value="is_last_approver_by_tr_id.get(tr.id)"/>
@@ -678,9 +708,8 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                        </t>
-                                    </tbody>
-                                </table>
+                                    </t>
+                                </div>
                             </div>
                         </t>
                     </t>
@@ -709,84 +738,124 @@
                             </select>
                         </div>
                         <t t-if="not transfer_requests">
-                            <div class="hrmis-empty">No transfer requests found.</div>
+                            <div class="hrmis-leave-history-ui">
+                                <div class="hrmis-leave-history-empty" role="status" aria-live="polite">
+                                    <div aria-hidden="true"
+                                        style="display:flex; justify-content:center; align-items:center; ">
+                                        <img src="https://res.cloudinary.com/dxokfhkhu/image/upload/v1772995560/ICONS_1_-02_vwl7on.svg"
+                                            alt="No data"
+                                            style="width:120px; height:auto; opacity:0.7;" />
+                                    </div>
+                                    <div class="hrmis-leave-history-empty__text">No transfer requests found.</div>
+                                </div>
+                            </div>
                         </t>
                         <t t-else="">
-                            <t t-set="grid_ts"
-                            t-value="'display:grid; grid-template-columns: 50px 2.3fr 1.7fr 1.5fr 1.2fr 1.2fr 1.1fr 140px; column-gap: 12px; align-items: start;'"/>
-                            <div class="hrmis-table__head" t-att-style="grid_ts">
-                                <div>#</div>
-                                <div>Staff</div>
-                                <div>Requested Posting</div>
-                                <div>Designation</div>
-                                <div>Status</div>
-                                <div>Pending With</div>
-                                <div>Vacant Posts</div>
-                                <div>Notifications</div>
-                            </div>
-                            <t t-foreach="range(len(transfer_requests))" t-as="idx0">
-                                <t t-set="tr" t-value="transfer_requests[idx0]"/>
-                                <t t-set="vac" t-value="vacancy_by_transfer_id.get(tr.id, {}) if vacancy_by_transfer_id else {}"/>
-                                <div class="hrmis-table__row hrmis-manage-table__row"
-                                 t-att-style="grid_ts"
-                                 style="margin-top:12px; cursor:pointer;"
-                                 t-att-data-status="tr.state"
-                                 t-att-data-date="(str(tr.submitted_on or tr.create_date)[:10] if (tr.submitted_on or tr.create_date) else '')"
-                                 t-att-data-search="
-                                    '%s %s %s %s %s' % (
-                                        tr.employee_id.name or '',
-                                        tr.name or '',
-                                        (tr.required_facility_id.name if tr.required_facility_id else ''),
-                                        (tr.required_district_id.name if tr.required_district_id else ''),
-                                        (tr.employee_id.hrmis_designation.name if (tr.employee_id and tr.employee_id.hrmis_designation) else '')
-                                    )
-                                 "
-                               >
-                                    <div>
-                                        <t t-esc="idx0 + 1"/>
+                            <div class="hrmis-leave-history-ui">
+                                <t t-set="grid_ts"
+                                    t-value="'display:grid; grid-template-columns: 50px 2.25fr 1.7fr 1.5fr 1.1fr 1.3fr 1.1fr 140px; column-gap: 12px; align-items: start;'"/>
+                                <div class="hrmis-table hrmis-pr-table hrmis-pr-table--leave">
+                                    <div class="hrmis-table__head hrmis-pr-table__head" t-att-style="grid_ts">
+                                        <div>#</div>
+                                        <div>Staff / Facility / District</div>
+                                        <div>Requested Posting</div>
+                                        <div>Designation</div>
+                                        <div>Status</div>
+                                        <div>Pending With</div>
+                                        <div>Vacant Posts</div>
+                                        <div>Notifications</div>
                                     </div>
-                                    <div>
-                                        <div class="strong" style="color:#000;">
-                                            <a t-att-href="'/hrmis/manage/history/%s?tab=transfer' % tr.employee_id.id"
-                                           onclick="event.stopPropagation();"
-                                           style="text-decoration:none; color:#000;"
-                                             t-att-data-href="'/hrmis/manage/history/%s?tab=transfer' % tr.employee_id.id"
-                                 t-attf-onclick="window.location.href='/hrmis/manage/history/{{ tr.employee_id.id }}?tab=transfer'">
-                                                <t t-esc="tr.employee_id.name"/>
-                                            </a>
+                                    <div class="hrmis-table__body js-hrmis-pager-body">
+                                        <t t-foreach="range(len(transfer_requests))" t-as="idx0">
+                                            <t t-set="tr" t-value="transfer_requests[idx0]"/>
+                                            <t t-set="vac" t-value="vacancy_by_transfer_id.get(tr.id, {}) if vacancy_by_transfer_id else {}"/>
+                                            <t t-set="state_display">
+                                                <t t-if="tr.state == 'submitted'">Pending</t>
+                                                <t t-elif="tr.state == 'approved'">Approved</t>
+                                                <t t-elif="tr.state == 'rejected'">Rejected</t>
+                                                <t t-elif="tr.state == 'draft'">Draft</t>
+                                                <t t-else=""><t t-esc="tr.state"/></t>
+                                            </t>
+                                            <t t-set="state_class">
+                                                <t t-if="tr.state == 'submitted'">hrmis-status--pending</t>
+                                                <t t-elif="tr.state == 'approved'">hrmis-status--approved</t>
+                                                <t t-elif="tr.state == 'rejected'">hrmis-status--rejected</t>
+                                                <t t-else="">hrmis-status</t>
+                                            </t>
+                                            <div class="hrmis-table__row hrmis-pr-table__row hrmis-manage-table__row"
+                                                t-att-style="grid_ts"
+                                                t-att-data-status="'confirm' if tr.state == 'submitted' else ('validate' if tr.state == 'approved' else ('refuse' if tr.state == 'rejected' else tr.state))"
+                                                t-att-data-date="(str(tr.submitted_on or tr.create_date)[:10] if (tr.submitted_on or tr.create_date) else '')"
+                                                t-att-data-search="
+                                                    '%s %s %s %s %s' % (
+                                                        tr.employee_id.name or '',
+                                                        tr.name or '',
+                                                        (tr.required_facility_id.name if tr.required_facility_id else ''),
+                                                        (tr.required_district_id.name if tr.required_district_id else ''),
+                                                        (tr.employee_id.hrmis_designation.name if (tr.employee_id and tr.employee_id.hrmis_designation) else '')
+                                                    )
+                                                ">
+                                                <div>
+                                                    <t t-esc="idx0 + 1"/>
+                                                </div>
+                                                <div>
+                                                    <div class="strong" style="text-wrap: wrap;">
+                                                        <a t-att-href="'/hrmis/manage/history/%s?tab=transfer' % tr.employee_id.id"
+                                                            onclick="event.stopPropagation();"
+                                                            style="text-decoration:none; color:#000;">
+                                                            <t t-esc="tr.employee_id.name"/>,
+                                                            <t t-esc="(('facility_id' in tr.employee_id._fields and tr.employee_id.facility_id and tr.employee_id.facility_id.name) or ('hrmis_facility_id' in tr.employee_id._fields and tr.employee_id.hrmis_facility_id and tr.employee_id.hrmis_facility_id.name) or 'Facility name')"/>
+                                                        </a>
+                                                    </div>
+                                                    <div class="sub">
+                                                        <t t-esc="(('district_id' in tr.employee_id._fields and tr.employee_id.district_id and tr.employee_id.district_id.name) or ('hrmis_district_id' in tr.employee_id._fields and tr.employee_id.hrmis_district_id and tr.employee_id.hrmis_district_id.name) or 'District name')"/>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <t t-esc="(tr.required_facility_id and tr.required_facility_id.name) or '-'"/>
+                                                    <div class="sub" style="color:#666;">
+                                                        <t t-esc="(tr.required_district_id and tr.required_district_id.name) or '-'"/>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <t t-esc="(tr.required_designation_id and tr.required_designation_id.name) or '-'"/>
+                                                </div>
+                                                <div>
+                                                    <div t-attf-class="hrmis-status #{state_class}">
+                                                        <t t-esc="state_display"/>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <t t-esc="tr.pending_with or '-'"/>
+                                                </div>
+                                                <div>
+                                                    <t t-esc="(vac.get('vacant') if vac else 0)"/> /
+                                                    <t t-esc="(vac.get('total') if vac else 0)"/>
+                                                </div>
+                                                <div class="hrmis-btn-placeholder" style="text-align:center;">
+                                                    <a class="hrmis-btn hrmis-btn--outline"
+                                                        t-att-href="'/hrmis/manage/history/%s?tab=transfer' % tr.employee_id.id">
+                                                        View
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </t>
+                                    </div>
+                                    <div class="hrmis-table-footer js-hrmis-pager-footer"
+                                        data-page-size="5" aria-label="Pagination">
+                                        <div class="hrmis-table-footer__info js-hrmis-pager-info">Showing
+                                            0-0 of 0</div>
+                                        <div class="hrmis-pagination js-hrmis-pager-controls">
+                                            <button type="button"
+                                                class="hrmis-pager-btn js-hrmis-pager-prev"
+                                                aria-label="Previous page">‹</button>
+                                            <button type="button"
+                                                class="hrmis-pager-btn js-hrmis-pager-next"
+                                                aria-label="Next page">›</button>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <t t-esc="(tr.required_facility_id and tr.required_facility_id.name) or '-'"/>
-                                        <div class="sub" style="color:#666;">
-                                            <t t-esc="(tr.required_district_id and tr.required_district_id.name) or '-'"/>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <t t-esc="(tr.required_designation_id and tr.required_designation_id.name) or '-'"/>
-                                    </div>
-                                    <div>
-                                        <t t-if="tr.state == 'draft'">Draft</t>
-                                        <t t-elif="tr.state == 'submitted'">Pending</t>
-                                        <t t-elif="tr.state == 'approved'">Approved</t>
-                                        <t t-elif="tr.state == 'rejected'">Rejected</t>
-                                        <t t-else="">
-                                            <t t-esc="tr.state"/></t>
-                                    </div>
-                                    <div>
-                                        <t t-esc="tr.pending_with or '-'"/>
-                                    </div>
-                                    <div>
-                                        <t t-esc="(vac.get('vacant') if vac else 0)"/> /
-                                        <t t-esc="(vac.get('total') if vac else 0)"/>
-                                    </div>
-                                    <!-- Notifications column (NO ROW CLICK) -->
-                                    <div class="hrmis-btn-placeholder"
-                        style="text-align:center;">
-                                        <!-- child templates will inject buttons here -->
                                     </div>
                                 </div>
-                            </t>
+                            </div>
                         </t>
                     </t>
                     <t t-if="tab == 'history'">

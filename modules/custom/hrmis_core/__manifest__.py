@@ -4,7 +4,9 @@
     "category": "HRMIS",
     "summary": "Central core services for HRMIS (API clients, enums, shared utilities).",
     "depends": ["base"],
-    "data": [],
+    "data": [
+        # "views/ir_module_views.xml",
+    ],
     "installable": True,
     "application": False,
     "license": "LGPL-3",

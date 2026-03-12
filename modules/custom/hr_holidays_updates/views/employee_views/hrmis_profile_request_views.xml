@@ -357,7 +357,7 @@ DESIGNATION
                                         </option>
                                       </t>
                                     </select>
-                                    <div style="font-size:12px; color:#888; margin-top:4px;"> Select Karachi if you are from Secondary/Tertiary facility, otherwise select Karachi East, West, Etc </div>
+                                    
                                   </div>
                                   <div class="hrmis-field" id="frontend_reporting_facility_wrap" style="grid-column: span 6; display:none;">
                                     <label> FACILITY <span style="color: #c92222">*</span></label>
@@ -462,7 +462,7 @@ DESIGNATION
                                         </option>
                                       </t>
                                     </select>
-                                    <div style="font-size:12px; color:#888; margin-top:4px;"> Select Karachi if you are from Secondary/Tertiary facility, otherwise select Karachi East, West, Etc </div>
+                                    
                                   </div>
                                   <div class="hrmis-field" id="frontend_onleave_facility_wrap" style="grid-column: span 6; display:none;">
                                     <label> FACILITY <span style="color: #c92222">*</span></label>
@@ -608,7 +608,7 @@ DEGREE
                                     <input type="date" class="hrmis-input" name="frontend_eol_start"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label>STATUS</label>
+                                    <label>STATUS<span class="req">*</span></label>
                                     <select class="hrmis-input" name="frontend_eol_status">
                                       <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Status</option>
                                       <option value="ongoing">Ongoing</option>
@@ -636,7 +636,7 @@ SUSTANTIVE POSTING DISTRICT
                                         </option>
                                       </t>
                                     </select>
-                                    <div style="font-size:12px; color:#888; margin-top:4px;"> Select Karachi if you are from Secondary/Tertiary facility, otherwise select Karachi East, West, Etc </div>
+                                    
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
@@ -730,7 +730,7 @@ SUBSTANTIVE POSTING DISTRICT
                                         </option>
                                       </t>
                                     </select>
-                                    <div style="font-size:12px; color:#888; margin-top:4px;"> Select Karachi if you are from Secondary/Tertiary facility, otherwise select Karachi East, West, Etc </div>
+                                    
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
@@ -820,10 +820,10 @@ ALLOWED TO WORK DISTRICT
                                         </option>
                                       </t>
                                     </select>
-                                    <div style="font-size:12px; color:#888; margin-top:4px;"> Select Karachi if you are from Secondary/Tertiary facility, otherwise select Karachi East, West, Etc </div>
+                                    
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
-                                    <label>ALLOWED TO WORK FACILITY</label>
+                                    <label>ALLOWED TO WORK FACILITY<span class="req">*</span></label>
                                     <select class="hrmis-input js-hrmis-facility js-current-facility js-other-select" name="allowed_facility_id" data-enable-search="1" data-other-name="allowed_work_facility_other_name" required="required">
                                       <option value="">Select Facility</option>
                                       <t t-foreach="facilities" t-as="f">
@@ -942,7 +942,7 @@ DISTRICT
                                       </option>
                                     </t>
                                   </select>
-                                  <div style="font-size:12px; color:#888; margin-top:4px;">Select Karachi if you are from Secondary/Tertiary facility, otherwise select Karachi East, West, Etc</div>
+                                  
                                 </div>
                                 <!--      IMPORTANT NOTE BELOW ABOUT FACILITY FIELD NAME      -->
                                 <div class="hrmis-field" style="grid-column: span 6;">
@@ -986,7 +986,7 @@ FACILITY
 BPS
                                     <span class="req">*</span>
                                   </label>
-                                  <input class="hrmis-input" type="number" min="1" max="22" name="posting_bps[]" required="required" t-att-value="p.get('bps') or ''"/>
+                                  <input class="hrmis-input" type="number" min="16" max="20" name="posting_bps[]" required="required"  oninput="if (this.value > 20) this.value = 20; if (this.value !== '' &amp;&amp; this.value &lt; 16) this.value = 16" t-att-value="p.get('bps') or ''"/>
                                 </div>
                                 <div class="hrmis-field" style="grid-column: span 6;">
                                   <label>
@@ -1045,7 +1045,7 @@ DISTRICT
                                     </option>
                                   </t>
                                 </select>
-                                <div style="font-size:12px; color:#888; margin-top:4px;">Select Karachi if you are from Secondary/Tertiary facility, otherwise select Karachi East, West, Etc</div>
+                                
                               </div>
                               <div class="hrmis-field" style="grid-column: span 6;">
                                 <label>
@@ -1079,7 +1079,7 @@ FACILITY
 BPS
                                   <span class="req">*</span>
                                 </label>
-                                <input class="hrmis-input js-hrmis-bps" type="number" min="1" max="22" name="posting_bps[]" required="required"/>
+                                <input class="hrmis-input js-hrmis-bps" type="number" min="16" max="20" name="posting_bps[]" required="required"  oninput="if (this.value > 20) this.value = 20; if (this.value !== '' &amp;&amp; this.value &lt; 16) this.value = 16"/>
                               </div>
                               <div class="hrmis-field" style="grid-column: span 6;">
                                 <label>
@@ -1466,14 +1466,14 @@ END (MONTH/YEAR)
 BPS FROM
                                         <span class="req">*</span>
                                       </label>
-                                      <input class="hrmis-input" type="number" min="1" max="22" name="promotion_bps_from[]" required="required" t-att-value="pr.get('bps_from') or ''"/>
+                                      <input class="hrmis-input" type="number" min="16" max="20" name="promotion_bps_from[]" required="required"  oninput="if (this.value > 20) this.value = 20; if (this.value !== '' &amp;&amp; this.value &lt; 16) this.value = 16" t-att-value="pr.get('bps_from') or ''"/>
                                     </div>
                                     <div class="hrmis-field" style="grid-column: span 6;">
                                       <label>
 BPS TO
                                         <span class="req">*</span>
                                       </label>
-                                      <input class="hrmis-input" type="number" min="1" max="22" name="promotion_bps_to[]" required="required" t-att-value="pr.get('bps_to') or ''"/>
+                                      <input class="hrmis-input" type="number" min="16" max="20" name="promotion_bps_to[]" required="required"  oninput="if (this.value > 20) this.value = 20; if (this.value !== '' &amp;&amp; this.value &lt; 16) this.value = 16" t-att-value="pr.get('bps_to') or ''"/>
                                     </div>
                                     <div class="hrmis-field" style="grid-column: span 6;">
                                       <label>
@@ -1502,14 +1502,14 @@ PROMOTION DATE (MONTH/YEAR)
 BPS FROM
                                     <span class="req">*</span>
                                   </label>
-                                  <input class="hrmis-input" type="number" min="1" max="22" name="promotion_bps_from[]" required="required"/>
+                                  <input class="hrmis-input" type="number" min="16" max="20" name="promotion_bps_from[]"  oninput="if (this.value > 20) this.value = 20; if (this.value !== '' &amp;&amp; this.value &lt; 16) this.value = 16" required="required"/>
                                 </div>
                                 <div class="hrmis-field" style="grid-column: span 6;">
                                   <label>
 BPS TO
                                     <span class="req">*</span>
                                   </label>
-                                  <input class="hrmis-input" type="number" min="1" max="22" name="promotion_bps_to[]" required="required"/>
+                                  <input class="hrmis-input" type="number" min="16" max="20" name="promotion_bps_to[]" required="required"  oninput="if (this.value > 20) this.value = 20; if (this.value !== '' &amp;&amp; this.value &lt; 16) this.value = 16"/>
                                 </div>
                                 <div class="hrmis-field" style="grid-column: span 6;">
                                   <label>
@@ -1549,24 +1549,26 @@ PROMOTION DATE (MONTH/YEAR)
                                     </button>
                                   </t>
                                   <div class="hrmis-form__grid pt-3 pb-2" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
-                                    <div class="hrmis-field" style="grid-column: span 6;">
-                                      <label>
+                                  <div class="hrmis-field" style="grid-column: span 6;">
+  <label>
 LEAVE TYPE
-                                        <span class="req">*</span>
-                                      </label>
-                                      <select class="hrmis-input" name="leave_type_id[]" required="required">
-                                        <option value="" disabled="disabled" hidden="hidden" t-att-selected="not l.get('leave_type_id')">Select Leave Type</option>
-                                        <t t-set="emp_gender" t-value="((req.gender or current_employee.gender or '') or '').lower()"/>
-                                        <t t-foreach="env['hr.leave.type'].sudo().search([], order='name')" t-as="lt">
-                                          <t t-set="lt_name" t-value="(lt.name or '').lower()"/>
-                                          <t t-if=" ('casual' not in lt_name) and ('compensatory' not in lt_name) and ('paid time off' not in lt_name) and ('sick time off' not in lt_name) and ('lpr' not in lt_name) and (lt_name.strip() != 'unpaid') and (emp_gender != 'male' or ('maternity' not in lt_name)) ">
-                                            <option t-att-value="lt.id" t-att-selected="l.get('leave_type_id') == lt.id">
-                                              <t t-esc="lt.name"/>
-                                            </option>
-                                          </t>
-                                        </t>
-                                      </select>
-                                    </div>
+    <span class="req">*</span>
+  </label>
+  <select class="hrmis-input" name="leave_type_id[]" required="required">
+    <option value="" selected="selected" disabled="disabled" hidden="hidden">
+      Select Leave Type
+    </option>
+    <t t-set="emp_gender" t-value="((req.gender or current_employee.gender or '') or '').lower()"/>
+    <t t-foreach="env['hr.leave.type'].sudo().search([], order='name')" t-as="lt">
+      <t t-set="lt_name" t-value="(lt.name or '').lower()"/>
+      <t t-if="('casual' not in lt_name) and ('compensatory' not in lt_name) and ('paid time off' not in lt_name) and ('sick time off' not in lt_name) and ('lpr' not in lt_name) and (lt_name.strip() != 'unpaid') and (emp_gender != 'male' or ('maternity' not in lt_name))">
+        <option t-att-value="lt.id">
+          <t t-esc="lt.name"/>
+        </option>
+      </t>
+    </t>
+  </select>
+</div>
                                     <div class="hrmis-field" style="grid-column: span 6;">
                                       <label>
 STARTING DATE
@@ -1601,7 +1603,7 @@ ENDING DATE
 LEAVE TYPE
                                     <span class="req">*</span>
                                   </label>
-                                  <select class="hrmis-input" name="leave_type_id[]" required="required" disabled="disabled">
+                                  <select class="hrmis-input" name="leave_type_id[]" required="required">
                                     <option value="" disabled="disabled" selected="selected" hidden="hidden">Select Leave Type</option>
                                     <t t-set="emp_gender" t-value="((req.gender or current_employee.gender or '') or '').lower()"/>
                                     <t t-foreach="env['hr.leave.type'].sudo().search([], order='name')" t-as="lt">

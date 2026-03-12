@@ -254,6 +254,9 @@
                     </aside>
                     <div class="hrmis-main">
                         <div class="hrmis-topbar">
+                                                         <div class="hrmis-warning-msg">
+    It is better to resign than to lie.
+</div>
                             <div class="hrmis-topbar__left">
                                 <button class="hrmis-nav-toggle js-hrmis-nav-toggle" type="button"
                                     aria-label="Toggle menu" aria-expanded="false">
@@ -261,9 +264,7 @@
          style="width:20px; height:20px; display:block;" />
                                 </button>
                                 <div style="display: flex; flex-direction: column; ">
-                                    <div class="hrmis-warning-msg">
-    It is better to resign than to lie.
-</div>
+       
                                     <div class="hrmis-panel__title hrmis-pr-title"> Welcome
                                         <t
                                             t-esc="request.env.user.name" /> !
@@ -1119,24 +1120,28 @@
                 style="max-width: 100%; height: auto; border: 1px solid #eee; border-radius: 12px;" />
         </div>
     </template>
-    <template id="hrmis_transfer_requests" name="HRMIS Transfer Requests">
+   <template id="hrmis_transfer_requests" name="HRMIS Transfer Requests">
         <t t-call="hr_holidays_updates.hrmis_ui_layout">
-            <div class="hrmis-panel">
+            <div
+                class="hrmis-split hrmis-split--leave-request hrmis-leave-page hrmis--profile-request">
                 <div
-                    class="hrmis-panel__header hrmis-panel__header--tabs hrmis-panel__header--tabs--leave">
-                    <a t-attf-class="hrmis-tab #{'is-active' if tab == 'new' else ''}"
-                        t-att-href="'/hrmis/transfer?tab=new'">New Transfer Request</a>
-                    <a t-attf-class="hrmis-tab #{'active is-active' if tab == 'history' else ''}"
-                        t-att-href="'/hrmis/transfer?tab=history'">Transfer History</a>
-                </div>
-                <t t-if="tab == 'history'">
-                    <div class="hrmis-panel__body">
-                        <t t-call="hr_holidays_updates.hrmis_under_construction_block" />
+                    class="hrmis-panel mb-1 hrmis-pr-shell hrmis-pr-shell--leave hrmis-profile-request">
+                    <div
+                        class="hrmis-panel__header hrmis-panel__header--tabs hrmis-panel__header--tabs--leave">
+                        <a t-attf-class="hrmis-tab #{'is-active' if tab == 'new' else ''}"
+                            t-att-href="'/hrmis/transfer?tab=new'">New Transfer Request</a>
+                        <a t-attf-class="hrmis-tab #{'active is-active' if tab == 'history' else ''}"
+                            t-att-href="'/hrmis/transfer?tab=history'">Transfer History</a>
                     </div>
-                </t>
-                <t t-if="tab == 'new'">
-                    <t t-call="hrmis_transfer.hrmis_new_transfer_request" />
-                </t>
+                    <t t-if="tab == 'history'">
+                        <div class="hrmis-panel__body">
+                            <t t-call="hr_holidays_updates.hrmis_under_construction_block" />
+                        </div>
+                    </t>
+                    <t t-if="tab == 'new'">
+                        <t t-call="hrmis_transfer.hrmis_new_transfer_request" />
+                    </t>
+                </div>
             </div>
         </t>
     </template>
