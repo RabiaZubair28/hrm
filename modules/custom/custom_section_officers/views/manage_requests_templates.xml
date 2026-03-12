@@ -37,41 +37,52 @@
     </template>
     <template id="hrmis_manage_requests" name="HRMIS Manage Requests (Section Officer)">
         <t t-call="hr_holidays_updates.hrmis_ui_layout">
-            <div class="hrmis-panel">
+            <div class="hrmis-panel hrmis-pr-shell hrmis-pr-shell--manage hrmis-profile-request">
                 <!-- Tabs -->
-                <div class="hrmis-panel__header hrmis-panel__header--tabs hrmis-panel__header--tabs--manage"
-                     >
+                <div
+                    class="hrmis-panel__header hrmis-panel__header--tabs hrmis-panel__header--tabs--manage hrmis-pr-tabs hrmis-tabs--profile hrmis-tabs--profile-request"
+                    role="tablist" aria-label="Manage request sections">
                     <t t-if="tab in ('leave','history')">
-                        <a t-attf-class="hrmis-tab hrmis-tab--manage #{'is-active' if tab == 'leave' else ''}"
+                        <a t-attf-class="hrmis-tab hrmis-tab--manage hrmis-pr-tab #{'active is-active' if tab == 'leave' else ''}"
                            t-att-href="'/hrmis/manage/requests?tab=leave'"
-                          >
+                           t-att-aria-current="'page' if tab == 'leave' else None"
+                           t-att-aria-selected="'true' if tab == 'leave' else 'false'"
+                           role="tab">
                             Leave Requests
                         </a>
-                        <a t-attf-class="hrmis-tab hrmis-tab--manage #{'is-active' if tab == 'history' else ''}"
+                        <a t-attf-class="hrmis-tab hrmis-tab--manage hrmis-pr-tab #{'active is-active' if tab == 'history' else ''}"
                            t-att-href="'/hrmis/manage/requests?tab=history'"
-                          >
+                           t-att-aria-current="'page' if tab == 'history' else None"
+                           t-att-aria-selected="'true' if tab == 'history' else 'false'"
+                           role="tab">
                             Leave Status
                         </a>
                     </t>
                     <t t-else="">
-                        <a t-attf-class="hrmis-tab hrmis-tab--manage #{'is-active' if tab == 'transfer_requests' else ''}"
+                        <a t-attf-class="hrmis-tab hrmis-tab--manage hrmis-pr-tab #{'active is-active' if tab == 'transfer_requests' else ''}"
                            t-att-href="'/hrmis/manage/requests?tab=transfer_requests'"
-                          >
+                           t-att-aria-current="'page' if tab == 'transfer_requests' else None"
+                           t-att-aria-selected="'true' if tab == 'transfer_requests' else 'false'"
+                           role="tab">
                             Transfer Requests
-                           
                         </a>
-                        <a t-attf-class="hrmis-tab hrmis-tab--manage #{'is-active' if tab == 'transfer_status' else ''}"
+                        <a t-attf-class="hrmis-tab hrmis-tab--manage hrmis-pr-tab #{'active is-active' if tab == 'transfer_status' else ''}"
                            t-att-href="'/hrmis/manage/requests?tab=transfer_status'"
-                          >
+                           t-att-aria-current="'page' if tab == 'transfer_status' else None"
+                           t-att-aria-selected="'true' if tab == 'transfer_status' else 'false'"
+                           role="tab">
                             Transfer Status
                         </a>
-                        <a t-attf-class="hrmis-tab hrmis-tab--manage #{'is-active' if tab == 'transfer_vacancies' else ''}"
-                           t-att-href="'/hrmis/manage/requests?tab=transfer_vacancies'">
+                        <a t-attf-class="hrmis-tab hrmis-tab--manage hrmis-pr-tab #{'active is-active' if tab == 'transfer_vacancies' else ''}"
+                           t-att-href="'/hrmis/manage/requests?tab=transfer_vacancies'"
+                           t-att-aria-current="'page' if tab == 'transfer_vacancies' else None"
+                           t-att-aria-selected="'true' if tab == 'transfer_vacancies' else 'false'"
+                           role="tab">
                             Vacancies
                         </a>
                     </t>
                 </div>
-                <div class="hrmis-panel__body">
+                <div class="hrmis-panel__body hrmis-pr-shell__body">
                     <!-- Leave Requests -->
                     <t t-if="tab == 'leave'">
                         <t t-if="success or error">
@@ -399,7 +410,17 @@
                             </select>
                         </div>
                         <t t-if="not transfer_requests">
-                            <div class="hrmis-empty">No transfer requests pending your action.</div>
+                            <div class="hrmis-leave-history-ui">
+                                <div class="hrmis-leave-history-empty" role="status" aria-live="polite">
+                                    <div aria-hidden="true"
+                                        style="display:flex; justify-content:center; align-items:center; ">
+                                        <img src="https://res.cloudinary.com/dxokfhkhu/image/upload/v1772995560/ICONS_1_-02_vwl7on.svg"
+                                            alt="No data"
+                                            style="width:120px; height:auto; opacity:0.7;" />
+                                    </div>
+                                    <div class="hrmis-leave-history-empty__text">No transfer requests pending your action.</div>
+                                </div>
+                            </div>
                         </t>
                         <t t-else="">
                             <style>
@@ -717,7 +738,17 @@
                             </select>
                         </div>
                         <t t-if="not transfer_requests">
-                            <div class="hrmis-empty">No transfer requests found.</div>
+                            <div class="hrmis-leave-history-ui">
+                                <div class="hrmis-leave-history-empty" role="status" aria-live="polite">
+                                    <div aria-hidden="true"
+                                        style="display:flex; justify-content:center; align-items:center; ">
+                                        <img src="https://res.cloudinary.com/dxokfhkhu/image/upload/v1772995560/ICONS_1_-02_vwl7on.svg"
+                                            alt="No data"
+                                            style="width:120px; height:auto; opacity:0.7;" />
+                                    </div>
+                                    <div class="hrmis-leave-history-empty__text">No transfer requests found.</div>
+                                </div>
+                            </div>
                         </t>
                         <t t-else="">
                             <div class="hrmis-leave-history-ui">
