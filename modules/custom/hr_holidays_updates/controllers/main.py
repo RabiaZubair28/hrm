@@ -1373,8 +1373,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return False, str(e)
 
     def _render_profile_form(self, env, employee, req, *, error=None, success=None, info=None, prefer_draft=False):
-        if req and req.exists():
-            req = env["hrmis.employee.profile.request"].sudo().browse(req.id).exists()
         max_dob_str, max_today_str, max_past_str = self._build_max_date_strings(env)
         pre_fill = self._build_prefill_dict(employee, req)
         designations_unique = self._get_unique_designations(env)
@@ -3161,7 +3159,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
         return {
             "status": status_rec.status or "",
-            "current_posting_start": (req.current_posting_start or "")[:7] if req else "",
             "suspension_date": self._yd(status_rec.suspension_date),
             "suspension_reporting_to": status_rec.suspension_reporting_to or "",
             "suspension_reporting_district_id": status_rec.suspension_reporting_district_id or 0,
