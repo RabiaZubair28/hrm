@@ -7,6 +7,7 @@
  * - When CURRENT STATUS changes, reset fields from all non-selected status boxes
  * - Supports:
  *   - Currently Posted
+ *   - Deputation
  *   - Suspended
  *   - On Leave
  *   - EOL (PGship)
@@ -193,6 +194,7 @@ function _bind() {
 
   const statusBoxes = {
     currently_posted: _qs(document, "#current_posting_box"),
+    deputation: _qs(document, "#deputation_box"),
     suspended: _qs(document, "#suspension_box"),
     on_leave: _qs(document, "#on_leave_box"),
     eol_pgship: _qs(document, "#eol_box"),

@@ -906,13 +906,29 @@ function _cloneFromTemplate(tplSelector, containerSelector) {
  * --------------------------------------------------------- */
 function _validateCurrentPostingStart(form) {
   const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date
-  const currentStart = _qs(form, '[name="current_posting_start"]'); // YYYY-MM
+  const status =
+    (_qs(form, 'select[name="hrmis_current_status_frontend"]')?.value || "").trim();
+  if (
+    status !== "currently_posted" &&
+    status !== "eol_pgship" &&
+    status !== "deputation"
+  ) {
+    return true;
+  }
+  const currentStart =
+    status === "deputation"
+      ? _qs(form, '#deputation_box [name="deputation_start"]')
+      : status === "eol_pgship"
+        ? _qs(form, '#eol_box [name="current_posting_start"]')
+        : _qs(form, '#current_posting_box [name="current_posting_start"]'); // YYYY-MM
   if (!joining || !currentStart) return true;
 
   _clearError(currentStart);
 
   const joiningVal = (joining.value || "").trim();
   const currentVal = (currentStart.value || "").trim();
+  const fieldLabel =
+    status === "deputation" ? "Deputation Start" : "Current Posting Start";
 
   if (_isEmpty(joiningVal)) {
     _showError(currentStart, "Please select Joining Date first");
@@ -926,24 +942,18 @@ function _validateCurrentPostingStart(form) {
   }
 
   if (_isEmpty(currentVal) || !_isValidMonth(currentVal)) {
-    _showError(currentStart, "Current Posting Start is required (YYYY-MM)");
+    _showError(currentStart, `${fieldLabel} is required (YYYY-MM)`);
     return false;
   }
 
   if (_monthToIndex(currentVal) < _monthToIndex(joiningMonth)) {
-    _showError(
-      currentStart,
-      "Current Posting Start cannot be before Joining Month",
-    );
+    _showError(currentStart, `${fieldLabel} cannot be before Joining Month`);
     return false;
   }
 
   const tm = _todayMonth();
   if (_monthToIndex(currentVal) > _monthToIndex(tm)) {
-    _showError(
-      currentStart,
-      "Current Posting Start cannot be after current month",
-    );
+    _showError(currentStart, `${fieldLabel} cannot be after current month`);
     return false;
   }
 
@@ -3057,23 +3067,48 @@ function _initHRMISValidations() {
 
   // Current Posting Start: prevent future months
   const cpsInput = _qs(form, '[name="current_posting_start"]');
+  const deputationInput = _qs(form, '[name="deputation_start"]');
+  const currentStatusInput = _qs(
+    form,
+    'select[name="hrmis_current_status_frontend"]',
+  );
   if (cpsInput) cpsInput.setAttribute("max", _todayMonth());
+  if (deputationInput) deputationInput.setAttribute("max", _todayMonth());
 
   // Require Joining before enabling current posting start (UX)
-  if (joiningInput && cpsInput) {
+  if (joiningInput && (cpsInput || deputationInput)) {
     const toggle = () => {
       const hasJoining = !_isEmpty(joiningInput.value);
-      cpsInput.disabled = !hasJoining;
+      const joiningMonth = (joiningInput.value || "").trim().slice(0, 7);
+      if (cpsInput) cpsInput.disabled = !hasJoining;
+      if (deputationInput) deputationInput.disabled = !hasJoining;
 
       if (!hasJoining) {
-        cpsInput.value = "";
-        _clearError(cpsInput);
-        _setHint(
-          cpsInput,
-          "Enter Joining Date first to enable Current Posting Start.",
-        );
+        if (cpsInput) {
+          cpsInput.value = "";
+          cpsInput.removeAttribute("min");
+          _clearError(cpsInput);
+          _setHint(
+            cpsInput,
+            "Enter Joining Date first to enable Current Posting Start.",
+          );
+        }
+        if (deputationInput) {
+          deputationInput.value = "";
+          deputationInput.removeAttribute("min");
+          _clearError(deputationInput);
+          _setHint(
+            deputationInput,
+            "Enter Joining Date first to enable Deputation Start.",
+          );
+        }
       } else {
-        _setHint(cpsInput, "");
+        if (cpsInput && _isValidMonth(joiningMonth))
+          cpsInput.setAttribute("min", joiningMonth);
+        if (deputationInput && _isValidMonth(joiningMonth))
+          deputationInput.setAttribute("min", joiningMonth);
+        if (cpsInput) _setHint(cpsInput, "");
+        if (deputationInput) _setHint(deputationInput, "");
         _validateCurrentPostingStart(form);
       }
     };
@@ -3086,10 +3121,14 @@ function _initHRMISValidations() {
       _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
       _syncPostingBpsConstraints(form);
     });
+    currentStatusInput?.addEventListener("change", toggle);
 
     cpsInput.addEventListener("change", () => {
       _validateCurrentPostingStart(form);
       _postingRows().forEach((r) => _syncPostingRowDateConstraints(form, r));
+    });
+    deputationInput?.addEventListener("change", () => {
+      _validateCurrentPostingStart(form);
     });
 
     toggle();

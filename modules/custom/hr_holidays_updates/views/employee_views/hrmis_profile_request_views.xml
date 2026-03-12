@@ -299,6 +299,7 @@ STATUS
                                 <select class="hrmis-input js-no-search js-status-pretty" name="hrmis_current_status_frontend" t-att-required="'required' if is_draft else None" t-att-disabled="'disabled' if not is_draft else None">
                                   <option value="" selected="selected" hidden="hidden">Select Status</option>
                                   <option value="currently_posted">Currently Posted</option>
+                                  <option value="deputation">Deputation</option>
                                   <option value="suspended">Suspended</option>
                                   <option value="on_leave">On Leave</option>
                                   <option value="eol_pgship">EOL (PGship)</option>
@@ -797,6 +798,50 @@ START (MONTH/YEAR)
                                       <input type="checkbox" name="allowed_to_work" value="1" class="form-check-input js-allowed-to-work-toggle" id="allowed_to_work_checkbox" data-target="#allowed_to_work_box"/>
                                       <label for="allowed_to_work_checkbox" style="margin:0; font-weight:600; gap: 12px">ALLOWED TO WORK</label>
                                     </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <!--    ================= DEPUTATION BOX =================    -->
+                          <div id="deputation_box" class="js-status-box" data-status="deputation" style="display:none;">
+                            <div class="hrmis-leave-row-wrap d-flex align-items-stretch" style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
+                              <div class="hrmis-card p-3" style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
+                                <div class="hrmis-form__grid pt-3 pb-2" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
+                                  <div class="hrmis-field" style="grid-column: span 6;">
+                                    <label>
+POSTING DISTRICT
+                                      <span class="req">*</span>
+                                    </label>
+                                    <select class="hrmis-input js-hrmis-district" name="deputation_district_id" required="required">
+                                      <option value="" selected="selected" disabled="disabled" hidden="hidden">Select District</option>
+                                      <t t-foreach="districts" t-as="d">
+                                        <option t-att-value="d.get('id')">
+                                          <t t-esc="d.get('name')"/>
+                                        </option>
+                                      </t>
+                                    </select>
+                                  </div>
+                                  <div class="hrmis-field" style="grid-column: span 6;">
+                                    <label>
+DEPARTMENT
+                                      <span class="req">*</span>
+                                    </label>
+                                    <input class="hrmis-input" type="text" name="deputation_department" required="required" placeholder="Enter Department"/>
+                                  </div>
+                                  <div class="hrmis-field" style="grid-column: span 6;">
+                                    <label>
+DESIGNATION
+                                      <span class="req">*</span>
+                                    </label>
+                                    <input class="hrmis-input" type="text" name="hrmis_designation" required="required" placeholder="Enter Designation"/>
+                                  </div>
+                                  <div class="hrmis-field" style="grid-column: span 6;">
+                                    <label>
+START (MONTH/YEAR)
+                                      <span class="req">*</span>
+                                    </label>
+                                    <input class="hrmis-input" type="month" name="deputation_start" required="required"/>
                                   </div>
                                 </div>
                               </div>
