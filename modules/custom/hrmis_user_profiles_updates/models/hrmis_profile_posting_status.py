@@ -23,6 +23,7 @@ class HrmisProfilePostingStatus(models.Model):
             ("on_leave", "On Leave"),
             ("eol_pgship", "EOL (PGship)"),
             ("reported_to_health_department", "Reported to Health Department"),
+            ("deputation", "Deputation"),
         ],
         string="Current Status",
         required=True,
@@ -174,7 +175,10 @@ class HrmisProfilePostingStatus(models.Model):
         string="Allowed To Work Start Month",
         help="Store as first day of month (YYYY-MM-01).",
     )
-
+    #Deputation details
+    deputation_start = fields.Date(string="Deputation Start Date")
+    deputation_department = fields.Char(string="Deputation Department")
+    deputation_district_id = fields.Integer(string="Deputation District ID")
     # -----------------------
     # Validation (optional but recommended)
     # -----------------------

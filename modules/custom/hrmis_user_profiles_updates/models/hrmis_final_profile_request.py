@@ -176,6 +176,7 @@ class EmployeeProfileRequest(models.Model):
         ("on_leave", "On Leave"),
         ("eol_pgship", "EOL (PGship)"),
         ("reported_to_health_department", "Reported to Health Department"),
+        ("deputation", "Deputation"),
     ], default="currently_posted")
 
     posting_status_id = fields.One2many(

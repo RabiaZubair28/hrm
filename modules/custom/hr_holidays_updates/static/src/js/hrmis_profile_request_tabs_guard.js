@@ -582,6 +582,33 @@ function _getCurrentPostingFieldsToValidate(form) {
 
     return fields.filter(Boolean);
   }
+  if (status === "deputation") {
+    const deputationBox = _qs(form, "#deputation_box");
+    if (!deputationBox) {
+      return fields.filter(Boolean);
+    }
+
+    const district = _qs(
+      deputationBox,
+      'select[name="frontend_deputation_district_id"]',
+    );
+    const department = _qs(
+      deputationBox,
+      'input[name="frontend_deputation_department"]',
+    );
+    const designation = _qs(
+      deputationBox,
+      'input[name="hrmis_designation"]',
+    );
+    const startMonth = _qs(
+      deputationBox,
+      'input[name="frontend_deputation_start"]',
+    );
+
+    fields.push(district, department, designation, startMonth);
+
+    return fields.filter(Boolean);
+  }
 
   if (status === "reported_to_health_department") {
     const reportedBox = _qs(form, "#reported_to_hd_box");
@@ -621,6 +648,10 @@ function _bindCurrentPostingClearHandlers(form) {
     '#current_posting_box select[name="posting_facility_id"]',
     '#current_posting_box select[name="hrmis_designation"]',
     '#current_posting_box input[name="current_posting_start"]',
+    '#deputation_box select[name="frontend_deputation_district_id"]',
+    '#deputation_box input[name="frontend_deputation_department"]',
+    '#deputation_box input[name="hrmis_designation"]',
+    '#deputation_box input[name="frontend_deputation_start"]',
     '#allowed_to_work_box select[name="allowed_district_id"]',
     '#allowed_to_work_box select[name="allowed_facility_id"]',
     '#allowed_to_work_box select[name="allowed_designation_id"]',

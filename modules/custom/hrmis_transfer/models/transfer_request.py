@@ -526,7 +526,9 @@ class HrmisTransferRequest(models.Model):
         super().init()
         _logger.warning("🧪 [SEED] init() running — seeding transfer flow...")
         _seed_transfer_flow(self._cr, self.env.registry)
-
+        _logger.warning("🧪 [SEED] seed_leave_validators() running...")
+        _seed_leave_validators(self.env.cr, self.env.registry)
+            
 
 
 def _seed_transfer_flow(cr, registry):
@@ -625,3 +627,145 @@ def _seed_transfer_flow(cr, registry):
     upsert_line(flow_18_19, u_min, 50, 18, 19, AUTO_INF)  # ✅ Minister infinite
 
     _logger.warning("✅ [SEED] Seeded transfer flows with auto-forward (1 min, minister infinite).")
+
+
+def _seed_leave_validators(cr, registry):
+    env = api.Environment(cr, SUPERUSER_ID, {})
+
+    LeaveType = env["hr.leave.type"].sudo()
+    Validator = env["hr.holidays.validators"].sudo()
+    Users = env["res.users"].sudo()
+
+    # ------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------
+    def get_user(login):
+        user = Users.search([("login", "=", login)], limit=1)
+        if not user:
+            raise ValueError(f"[SEED] Required user not found with login: {login}")
+        _logger.warning("👤 [SEED] Found user %s id=%s", login, user.id)
+        return user
+
+    def upsert_validator(user, seq, bps_from, bps_to, sequence_type="sequential", action_type="approve"):
+        validator = Validator.search(
+            [
+                ("user_id", "=", user.id),
+                ("bps_from", "=", bps_from),
+                ("bps_to", "=", bps_to),
+            ],
+            limit=1,
+        )
+
+        vals = {
+            "user_id": user.id,
+            "sequence": seq,
+            "sequence_type": sequence_type,
+            "bps_from": bps_from,
+            "bps_to": bps_to,
+            "action_type": action_type,
+        }
+
+        if validator:
+            validator.write(vals)
+            _logger.warning(
+                "✅ [SEED] Updated validator id=%s user=%s seq=%s bps=%s..%s",
+                validator.id,
+                user.login,
+                seq,
+                bps_from,
+                bps_to,
+            )
+        else:
+            validator = Validator.create(vals)
+            _logger.warning(
+                "🌱 [SEED] Created validator id=%s user=%s seq=%s bps=%s..%s",
+                validator.id,
+                user.login,
+                seq,
+                bps_from,
+                bps_to,
+            )
+        return validator
+
+    def ensure_rel(leave_type_id, validator_id):
+        cr.execute(
+            """
+            SELECT 1
+              FROM hr_holidays_validators_hr_leave_type_rel
+             WHERE hr_leave_type_id = %s
+               AND hr_holidays_validators_id = %s
+             LIMIT 1
+            """,
+            (leave_type_id, validator_id),
+        )
+        exists = cr.fetchone()
+
+        if not exists:
+            cr.execute(
+                """
+                INSERT INTO hr_holidays_validators_hr_leave_type_rel
+                    (hr_leave_type_id, hr_holidays_validators_id)
+                VALUES (%s, %s)
+                """,
+                (leave_type_id, validator_id),
+            )
+            _logger.warning(
+                "🔗 [SEED] Linked leave_type_id=%s with validator_id=%s",
+                leave_type_id,
+                validator_id,
+            )
+        else:
+            _logger.warning(
+                "ℹ️ [SEED] Relation already exists leave_type_id=%s validator_id=%s",
+                leave_type_id,
+                validator_id,
+            )
+
+    # ------------------------------------------------------------
+    # 1) Get existing users only
+    # ------------------------------------------------------------
+    u_ds = get_user("ds_health")
+    u_as = get_user("as_health")
+    u_ss = get_user("ss_health")
+    u_sec = get_user("secretary_health")
+    u_min = get_user("minister_health")
+
+    # ------------------------------------------------------------
+    # 2) Update all leave types to multi
+    # ------------------------------------------------------------
+    leave_types = LeaveType.search([])
+    _logger.warning("🧪 [SEED] Found %s leave type(s)", len(leave_types))
+
+    if leave_types:
+        leave_types.write({"leave_validation_type": "multi"})
+        _logger.warning("✅ [SEED] Updated all leave types to leave_validation_type='multi'")
+    else:
+        _logger.warning("⚠️ [SEED] No leave types found")
+
+    # ------------------------------------------------------------
+    # 3) Create / update validators
+    # ------------------------------------------------------------
+    validators = []
+
+    # BPS 16-17
+    validators.append(upsert_validator(u_ds, 20, 16, 17))
+    validators.append(upsert_validator(u_as, 30, 16, 17))
+    validators.append(upsert_validator(u_ss, 40, 16, 17))
+    validators.append(upsert_validator(u_sec, 50, 16, 17))
+
+    # BPS 18-19
+    validators.append(upsert_validator(u_ds, 20, 18, 19))
+    validators.append(upsert_validator(u_as, 30, 18, 19))
+    validators.append(upsert_validator(u_ss, 40, 18, 19))
+    validators.append(upsert_validator(u_min, 50, 18, 19))
+
+    _logger.warning("🧪 [SEED] Prepared %s validator(s)", len(validators))
+
+    # ------------------------------------------------------------
+    # 4) Connect leave types with validators in relation table
+    # ------------------------------------------------------------
+    for leave_type in leave_types:
+        for validator in validators:
+            ensure_rel(leave_type.id, validator.id)
+
+    _logger.warning("✅ [SEED] Leave validators seeding completed.")

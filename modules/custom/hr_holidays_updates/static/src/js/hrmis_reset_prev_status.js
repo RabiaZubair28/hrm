@@ -193,7 +193,9 @@ function _bind() {
 
   const statusBoxes = {
     currently_posted: _qs(document, "#current_posting_box"),
+    deputation: _qs(document, "#deputation_box"),
     suspended: _qs(document, "#suspension_box"),
+    deputation: _qs(document, "#deputation_box"),
     on_leave: _qs(document, "#on_leave_box"),
     eol_pgship: _qs(document, "#eol_box"),
     reported_to_health_department: _qs(document, "#reported_to_hd_box"),
