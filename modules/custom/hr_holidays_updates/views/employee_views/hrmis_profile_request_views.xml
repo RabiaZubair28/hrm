@@ -297,13 +297,13 @@ STATUS
                                   <span class="req">*</span>
                                 </label>
                                 <select class="hrmis-input js-no-search js-status-pretty" name="hrmis_current_status_frontend" t-att-required="'required' if is_draft else None" t-att-disabled="'disabled' if not is_draft else None">
-                                  <option value="" hidden="hidden" t-att-selected="not (posting_status_prefill or {}).get('status')">Select Status</option>
-                                  <option value="currently_posted" t-att-selected="(posting_status_prefill or {}).get('status') == 'currently_posted'">Currently Posted</option>
-                                  <option value="suspended" t-att-selected="(posting_status_prefill or {}).get('status') == 'suspended'">Suspended</option>
-                                  <option value="on_leave" t-att-selected="(posting_status_prefill or {}).get('status') == 'on_leave'">On Leave</option>
-                                  <option value="eol_pgship" t-att-selected="(posting_status_prefill or {}).get('status') == 'eol_pgship'">EOL (PGship)</option>
-                                  <option value="reported_to_health_department" t-att-selected="(posting_status_prefill or {}).get('status') == 'reported_to_health_department'">Reported to Health Department</option>
-                                  <option value="deputation" t-att-selected="(posting_status_prefill or {}).get('status') == 'deputation'">Deputation</option>
+                                  <option value="" selected="selected" hidden="hidden">Select Status</option>
+                                  <option value="currently_posted">Currently Posted</option>
+                                  <option value="suspended">Suspended</option>
+                                  <option value="on_leave">On Leave</option>
+                                  <option value="eol_pgship">EOL (PGship)</option>
+                                  <option value="reported_to_health_department">Reported to Health Department</option>
+                                  <option value="deputation">Deputation</option>
                                 </select>
                               </div>
                             </div>
@@ -913,9 +913,9 @@ POSTING DISTRICT
                                       <span class="req">*</span>
                                     </label>
                                     <select class="hrmis-input js-hrmis-district" name="frontend_deputation_district_id" required="required">
-                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not (posting_status_prefill or {}).get('deputation_district_id')">Select District</option>
+                                      <option value="" selected="selected" disabled="disabled" hidden="hidden">Select District</option>
                                       <t t-foreach="districts" t-as="d">
-                                        <option t-att-value="d.get('id')" t-att-selected="(posting_status_prefill or {}).get('deputation_district_id') == d.get('id')">
+                                        <option t-att-value="d.get('id')">
                                           <t t-esc="d.get('name')"/>
                                         </option>
                                       </t>
@@ -926,21 +926,21 @@ POSTING DISTRICT
 DEPARTMENT
                                       <span class="req">*</span>
                                     </label>
-                                    <input class="hrmis-input" type="text" name="frontend_deputation_department" required="required" placeholder="Enter Department" t-att-value="(posting_status_prefill or {}).get('deputation_department') or ''"/>
+                                    <input class="hrmis-input" type="text" name="frontend_deputation_department" required="required" placeholder="Enter Department"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
 DESIGNATION
                                       <span class="req">*</span>
                                     </label>
-                                    <input class="hrmis-input" type="text" name="hrmis_designation" required="required" placeholder="Enter Designation" t-att-value="(posting_status_prefill or {}).get('deputation_designation') or ''"/>
+                                    <input class="hrmis-input" type="text" name="hrmis_designation" required="required" placeholder="Enter Designation"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
 START (MONTH/YEAR)
                                       <span class="req">*</span>
                                     </label>
-                                    <input class="hrmis-input" type="month" name="frontend_deputation_start" required="required" t-att-value="(posting_status_prefill or {}).get('deputation_start') or ''"/>
+                                    <input class="hrmis-input" type="month" name="frontend_deputation_start" required="required"/>
                                   </div>
                                 </div>
                               </div>

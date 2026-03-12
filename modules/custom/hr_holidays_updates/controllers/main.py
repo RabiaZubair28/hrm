@@ -1414,9 +1414,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         ctx["selected_district_id"] = selected_district_id
 
         ctx = self._with_prefill_ctx(env, employee, ctx, prefer_draft=prefer_draft)
-        ctx["posting_status_prefill"] = self._build_posting_status_prefill(
-            env, employee, req, prefer_draft=prefer_draft
-        )
 
         ctx["hrmis_profile_prefill_json"] = json.dumps({
             "qual": ctx.get("prefill_qual_rows") or [],
@@ -1598,41 +1595,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "qualification_date": req.qualification_date or employee.qualification_date or "",
             "year_qualification": req.year_qualification or employee.year_qualification or "",
             "date_promotion": req.date_promotion or employee.date_promotion or "",
-        }
-
-    def _build_posting_status_prefill(self, env, employee, req, *, prefer_draft=False):
-        if prefer_draft:
-            return {
-                "status": (request.params.get("hrmis_current_status_frontend") or "").strip(),
-                "deputation_district_id": self._safe_int(
-                    request.params.get("frontend_deputation_district_id")
-                ) or False,
-                "deputation_department": (
-                    request.params.get("frontend_deputation_department") or ""
-                ).strip(),
-                "deputation_designation": (
-                    request.params.get("hrmis_designation") or ""
-                ).strip(),
-                "deputation_start": (
-                    request.params.get("frontend_deputation_start") or ""
-                ).strip(),
-            }
-
-        status_rec = env["hrmis.profile.posting.status"].sudo().search(
-            [("request_id", "=", req.id)], limit=1
-        )
-        designation_name = (
-            req.hrmis_designation.name
-            if req.hrmis_designation
-            else (employee.hrmis_designation.name if employee.hrmis_designation else "")
-        )
-
-        return {
-            "status": (status_rec.status or req.hrmis_current_status_frontend or "").strip(),
-            "deputation_district_id": status_rec.deputation_district_id or False,
-            "deputation_department": status_rec.deputation_department or "",
-            "deputation_designation": designation_name,
-            "deputation_start": self._ym(status_rec.deputation_start),
         }
    
 
@@ -2113,7 +2075,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "hrmis_address": post.get("hrmis_address"),
             "hrmis_postal_code": post.get("hrmis_postal_code"),
             "current_posting_start": self._month_to_date(post.get("current_posting_start") or "") or False,
-            "hrmis_current_status_frontend": (post.get("hrmis_current_status_frontend") or "").strip() or False,
             
         }
         return vals
