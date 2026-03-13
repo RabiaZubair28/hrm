@@ -794,7 +794,7 @@ START (MONTH/YEAR)
                                     <t t-if="req and ('current_posting_start' in req._fields)">
                                       <t t-set="cps_val" t-value="status_prefill.get('current_posting_start') or (req.current_posting_start[:7] if req.current_posting_start else '')"/>
 </t>
-                                    <input class="hrmis-input js-current-post-start" type="month" name="frontend_current_posting_start" required="required" t-att-value="cps_val"/>
+                                    <input class="hrmis-input js-current-post-start" type="month" name="current_posting_start" required="required" t-att-value="cps_val"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6; display: flex">
                                     <div style="display:flex; align-items:center; justify-content:center; margin-top:10px; gap: 12px">

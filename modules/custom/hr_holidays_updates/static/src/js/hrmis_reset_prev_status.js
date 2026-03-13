@@ -231,12 +231,8 @@ function _bind() {
         (cb) => cb instanceof HTMLInputElement && cb.checked,
       );
 
-      if (allowedBox) {
-        if (activeToggle) {
-          _showElement(allowedBox);
-        } else {
-          _hideElement(allowedBox);
-        }
+      if (!activeToggle && allowedBox) {
+        _hideElement(allowedBox);
       }
     }
   };

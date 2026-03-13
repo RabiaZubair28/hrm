@@ -432,10 +432,7 @@ function _getCurrentPostingFieldsToValidate(form) {
     const district = _qs(currentPostingBox, 'select[name="district_id"]');
     const facility = _qs(currentPostingBox, 'select[name="posting_facility_id"]');
     const designation = _qs(currentPostingBox, 'select[name="hrmis_designation"]');
-    const startMonth = _qs(
-      currentPostingBox,
-      'input[name="frontend_current_posting_start"]',
-    );
+    const startMonth = _qs(currentPostingBox, 'input[name="current_posting_start"]');
 
     fields.push(district, facility, designation, startMonth);
 
@@ -560,7 +557,7 @@ function _getCurrentPostingFieldsToValidate(form) {
     );
     const startMonth = _qs(
       eolBox,
-      'input[name="frontend_current_posting_start"]',
+      'input[name="current_posting_start"]',
     );
     const status = _qs(
       eolBox,
@@ -650,7 +647,7 @@ function _bindCurrentPostingClearHandlers(form) {
     '#current_posting_box select[name="district_id"]',
     '#current_posting_box select[name="posting_facility_id"]',
     '#current_posting_box select[name="hrmis_designation"]',
-    '#current_posting_box input[name="frontend_current_posting_start"]',
+    '#current_posting_box input[name="current_posting_start"]',
     '#deputation_box select[name="frontend_deputation_district_id"]',
     '#deputation_box input[name="frontend_deputation_department"]',
     '#deputation_box input[name="frontend_deputation_designation"]',

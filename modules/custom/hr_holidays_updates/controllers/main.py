@@ -2076,11 +2076,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "hrmis_email": post.get("hrmis_email"),
             "hrmis_address": post.get("hrmis_address"),
             "hrmis_postal_code": post.get("hrmis_postal_code"),
-            "current_posting_start": (
-                (post.get("frontend_current_posting_start") or "").strip()
-                or (post.get("current_posting_start") or "").strip()
-                or False
-            ),
+            "current_posting_start": (post.get("current_posting_start") or "").strip() or False,
             "hrmis_current_status_frontend": (post.get("hrmis_current_status_frontend") or "").strip() or False,
             
         }
