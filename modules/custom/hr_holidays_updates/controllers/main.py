@@ -1373,6 +1373,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return False, str(e)
 
     def _render_profile_form(self, env, employee, req, *, error=None, success=None, info=None, prefer_draft=False):
+        env.flush_all()
+        env.invalidate_all()
         if req and req.exists():
             req = env["hrmis.employee.profile.request"].sudo().browse(req.id).exists()
         max_dob_str, max_today_str, max_past_str = self._build_max_date_strings(env)
@@ -2081,6 +2083,24 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             
         }
         return vals
+
+    def _resolve_current_posting_start_from_form(self, post, form):
+        status = (post.get("hrmis_current_status_frontend") or "").strip()
+        all_values = [
+            (v or "").strip()
+            for v in (form.getlist("current_posting_start") or [])
+            if (v or "").strip()
+        ]
+        if not all_values:
+            return (post.get("current_posting_start") or "").strip() or False
+
+        if status == "eol_pgship":
+            return all_values[0]
+
+        if status == "currently_posted":
+            return all_values[-1]
+
+        return all_values[-1]
 
     # -------------------------------------------------------------------------
     # Histories parsing (same validations/messages)
@@ -3560,6 +3580,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         message_override = None
         form = request.httprequest.form
         post = self._normalize_main_facility_from_form(post, form)
+        post = dict(post)
+        post["current_posting_start"] = self._resolve_current_posting_start_from_form(post, form)
         # 1) Employee
         employee, resp = self._get_current_employee_or_error(env)
         if resp:
@@ -3762,6 +3784,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
         # Keep your normalize bridge exactly like submit
         post = self._normalize_main_facility_from_form(post, form)
+        post = dict(post)
+        post["current_posting_start"] = self._resolve_current_posting_start_from_form(post, form)
 
         # 1) Employee
         employee, resp = self._get_current_employee_or_error(env)
