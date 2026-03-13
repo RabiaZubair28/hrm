@@ -3697,6 +3697,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
         # 13) Success
         success_msg = message_override or "Profile update request submitted successfully."
+        env.flush_all()
+        env.invalidate_all()
+        req = env["hrmis.employee.profile.request"].sudo().browse(req.id).exists()
         return self._render_profile_form(env, employee, req, success=success_msg)
 
 #     @http.route(
