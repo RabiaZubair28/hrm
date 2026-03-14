@@ -819,7 +819,7 @@ ALLOWED TO WORK DISTRICT
                                     <select class="hrmis-input js-hrmis-district js-current-district" name="allowed_district_id">
                                       <option value="" t-att-selected="not status_prefill.get('allowed_district_id')">Select District</option>
                                       <t t-foreach="districts" t-as="d">
-                                            <option t-att-value="d.get('id')" t-att-selected="status_prefill.get('allowed_district_id') == d.get('id')">
+                                            <option t-att-value="d.get('id')" t-att-selected="'selected' if ('%s' % (status_prefill.get('allowed_district_id') or '')) == ('%s' % (d.get('id') or '')) else None">
                                                 <t t-esc="d.get('name')"/>
                                         </option>
                                       </t>
@@ -833,7 +833,7 @@ ALLOWED TO WORK DISTRICT
                                       <t t-foreach="facilities" t-as="f">
                                             <option t-att-value="f.get('id')"
                                                     t-att-data-district-id="f.get('district_id') or ''"
-                                                    t-att-selected="status_prefill.get('allowed_facility_id') == f.get('id')">
+                                                    t-att-selected="'selected' if ('%s' % (status_prefill.get('allowed_facility_id') or '')) == ('%s' % (f.get('id') or '')) else None">
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
@@ -858,7 +858,7 @@ DESIGNATION
                                         <t t-if="'facility_id' in des._fields and des.facility_id">
                                           <t t-set="des_fac_id" t-value="des.facility_id.id"/>
 </t>
-                                        <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-data-facility-id="des_fac_id" t-att-selected="status_prefill.get('allowed_designation_id') == des.id">
+                                        <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-data-facility-id="des_fac_id" t-att-selected="'selected' if ('%s' % (status_prefill.get('allowed_designation_id') or '')) == ('%s' % (des.id or '')) else None">
                                           <t t-esc="des.name"/>
                                         </option>
                                       </t>
