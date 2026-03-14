@@ -839,12 +839,16 @@ ALLOWED TO WORK DISTRICT
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
-                                      <option value="__other__">Other</option>
+                                      <option value="__other__"
+                                              t-att-selected="status_prefill.get('allowed_facility_id') == '__other__'">
+                                        <t t-esc="status_prefill.get('allowed_work_facility_other_name') or 'Other'"/>
+                                      </option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input" 
 				      type="text" 
 				      name="allowed_work_facility_other_name" 
+				      t-att-value="status_prefill.get('allowed_work_facility_other_name') or ''"
 				      placeholder="Enter Facility"/>
                                     </div>
                                   </div>
@@ -864,10 +868,13 @@ DESIGNATION
                                           <t t-esc="des.name"/>
                                         </option>
                                       </t>
-                                      <option value="__other__">Other</option>
+                                      <option value="__other__"
+                                              t-att-selected="status_prefill.get('allowed_designation_id') == '__other__'">
+                                        <t t-esc="status_prefill.get('allowed_work_designation_other_name') or 'Other'"/>
+                                      </option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input" type="text" name="allowed_work_designation_other_name" placeholder="Enter Designation"/>
+                                      <input class="hrmis-input js-other-input" type="text" name="allowed_work_designation_other_name" t-att-value="status_prefill.get('allowed_work_designation_other_name') or ''" placeholder="Enter Designation"/>
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
@@ -1020,8 +1027,8 @@ FACILITY
                                     </t>
 
                                     <option value="__other__"
-                                            t-att-selected="(p.get('facility_other_name') or '').strip() and not p.get('facility_id')">
-                                      Other
+                                            t-att-selected="str(p.get('facility_id') or '') == '__other__'">
+                                      <t t-esc="p.get('facility_other_name') or 'Other'"/>
                                     </option>
                                   </select>
                                   <div class="js-other-wrap" style="display:none; margin-top:6px;">
@@ -1052,7 +1059,9 @@ DESIGNATION
                                         <t t-esc="des.name"/>
                                       </option>
                                     </t>
-                                    <option value="__other__" t-att-selected="(p.get('designation_other_name') or '').strip() and not p.get('designation_id')"> Other </option>
+                                    <option value="__other__" t-att-selected="str(p.get('designation_id') or '') == '__other__'">
+                                      <t t-esc="p.get('designation_other_name') or 'Other'"/>
+                                    </option>
                                   </select>
                                   <div class="js-other-wrap" style="display:none; margin-top:6px;">
                                     <input class="hrmis-input js-other-input" type="text" name="posting_designation_other_name[]" t-att-value="p.get('designation_other_name') or ''" placeholder="Enter Designation" disabled="disabled"/>

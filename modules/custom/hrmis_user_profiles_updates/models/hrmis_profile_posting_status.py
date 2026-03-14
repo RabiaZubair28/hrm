@@ -165,11 +165,17 @@ class HrmisProfilePostingStatus(models.Model):
     allowed_facility_id = fields.Integer(
         string="Allowed To Work Facility ID",
     )
+    allowed_facility_other_name = fields.Char(
+        string="Allowed To Work Other Facility",
+    )
 
     allowed_bps = fields.Integer(string="Allowed To Work BPS")
     allowed_designation_id = fields.Many2one(
         "hrmis.designation",
         string="Allowed To Work Designation",
+    )
+    allowed_designation_other_name = fields.Char(
+        string="Allowed To Work Other Designation",
     )
     allowed_start_month = fields.Date(
         string="Allowed To Work Start Month",
