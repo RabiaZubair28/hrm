@@ -1416,12 +1416,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         ctx["selected_district_id"] = selected_district_id
 
         ctx = self._with_prefill_ctx(env, employee, req, ctx, prefer_draft=prefer_draft)
-        ctx["posting_status_prefill"] = self._attach_posting_status_labels(
-            env,
-            self._load_request_posting_status(req),
-            districts,
-            all_facilities,
-        )
+        ctx["posting_status_prefill"] = self._load_request_posting_status(req)
 
         ctx["hrmis_profile_prefill_json"] = json.dumps({
             "qual": ctx.get("prefill_qual_rows") or [],
@@ -3153,13 +3148,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return ""
 
     def _load_request_posting_status(self, req):
-        status_rec = False
-        if req and req.exists():
-            status_rec = req.env["hrmis.profile.posting.status"].sudo().search(
-                [("request_id", "=", req.id)],
-                order="id desc",
-                limit=1,
-            )
+        status_rec = req.posting_status_id[:1] if req and req.exists() else False
         if not status_rec:
             return {}
 
@@ -3201,36 +3190,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "deputation_district_id": status_rec.deputation_district_id or 0,
             "deputation_designation": status_rec.deputation_designation or "",
         }
-
-    def _attach_posting_status_labels(self, env, status_prefill, districts, facilities):
-        status_prefill = dict(status_prefill or {})
-        if not status_prefill:
-            return status_prefill
-
-        def _name_from_options(options, wanted_id):
-            wanted = str(wanted_id or "").strip()
-            if not wanted:
-                return ""
-            for option in options or []:
-                if str(option.get("id") or "").strip() == wanted:
-                    return option.get("name") or ""
-            return ""
-
-        status_prefill["allowed_district_name"] = _name_from_options(
-            districts, status_prefill.get("allowed_district_id")
-        )
-        status_prefill["allowed_facility_name"] = _name_from_options(
-            facilities, status_prefill.get("allowed_facility_id")
-        )
-
-        allowed_designation_id = status_prefill.get("allowed_designation_id")
-        if allowed_designation_id:
-            designation = env["hrmis.designation"].sudo().browse(allowed_designation_id).exists()
-            status_prefill["allowed_designation_name"] = designation.name if designation else ""
-        else:
-            status_prefill["allowed_designation_name"] = ""
-
-        return status_prefill
 
     def _load_employee_histories(self, env, employee):
         Qual = env["hrmis.qualification.history"].sudo()
