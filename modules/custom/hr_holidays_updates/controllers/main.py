@@ -1372,7 +1372,11 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 employee.sudo().write({"parent_id": old_parent_id})
             return False, str(e)
 
-    def _render_profile_form(self, env, employee, req, *, error=None, success=None, info=None, prefer_draft=False):
+    def _render_profile_form(self, env, employee, req, *, error=None, success=None, info=None, prefer_draft=False, status_prefill_override=None):
+        env.flush_all()
+        env.invalidate_all()
+        if req and req.exists():
+            req = env["hrmis.employee.profile.request"].sudo().browse(req.id).exists()
         max_dob_str, max_today_str, max_past_str = self._build_max_date_strings(env)
         pre_fill = self._build_prefill_dict(employee, req)
         designations_unique = self._get_unique_designations(env)
@@ -1413,7 +1417,13 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         ctx["facilities_meta_json"] = json.dumps(facilities_meta)
         ctx["selected_district_id"] = selected_district_id
 
-        ctx = self._with_prefill_ctx(env, employee, ctx, prefer_draft=prefer_draft)
+        ctx = self._with_prefill_ctx(env, employee, req, ctx, prefer_draft=prefer_draft)
+        status_prefill_source = (
+            status_prefill_override
+            if status_prefill_override is not None
+            else self._load_request_posting_status(req)
+        )
+        ctx["posting_status_prefill"] = self._load_request_posting_status(req)
 
         ctx["hrmis_profile_prefill_json"] = json.dumps({
             "qual": ctx.get("prefill_qual_rows") or [],
@@ -2073,10 +2083,29 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "hrmis_email": post.get("hrmis_email"),
             "hrmis_address": post.get("hrmis_address"),
             "hrmis_postal_code": post.get("hrmis_postal_code"),
-            "current_posting_start": self._month_to_date(post.get("current_posting_start") or "") or False,
+            "current_posting_start": (post.get("current_posting_start") or "").strip() or False,
+            "hrmis_current_status_frontend": (post.get("hrmis_current_status_frontend") or "").strip() or False,
             
         }
         return vals
+
+    def _resolve_current_posting_start_from_form(self, post, form):
+        status = (post.get("hrmis_current_status_frontend") or "").strip()
+        all_values = [
+            (v or "").strip()
+            for v in (form.getlist("current_posting_start") or [])
+            if (v or "").strip()
+        ]
+        if not all_values:
+            return (post.get("current_posting_start") or "").strip() or False
+
+        if status == "eol_pgship":
+            return all_values[0]
+
+        if status == "currently_posted":
+            return all_values[-1]
+
+        return all_values[-1]
 
     # -------------------------------------------------------------------------
     # Histories parsing (same validations/messages)
@@ -3143,6 +3172,50 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         except Exception:
             return ""
 
+    def _load_request_posting_status(self, req):
+        status_rec = req.posting_status_id[:1] if req and req.exists() else False
+        if not status_rec:
+            return {}
+
+        def _m2o_value(record, code_field=None):
+            if record:
+                return record.id
+            if code_field:
+                return code_field or ""
+            return ""
+
+        return {
+            "status": status_rec.status or "",
+            "current_posting_start": (req.current_posting_start or "")[:7] if req else "",
+            "suspension_date": self._yd(status_rec.suspension_date),
+            "suspension_reporting_to": status_rec.suspension_reporting_to or "",
+            "suspension_reporting_district_id": status_rec.suspension_reporting_district_id or 0,
+            "suspension_reporting_facility_id": status_rec.suspension_reporting_facility_id or 0,
+            "suspension_reporting_designation_id": status_rec.suspension_reporting_designation_id.id if status_rec.suspension_reporting_designation_id else 0,
+            "onleave_type_id": status_rec.onleave_type_id.id if status_rec.onleave_type_id else 0,
+            "onleave_start": self._yd(status_rec.onleave_start),
+            "onleave_end": self._yd(status_rec.onleave_end),
+            "onleave_reporting_to": status_rec.onleave_reporting_to or "",
+            "onleave_reporting_district_id": status_rec.onleave_reporting_district_id or 0,
+            "onleave_reporting_facility_id": status_rec.onleave_reporting_facility_id or 0,
+            "eol_institute_value": _m2o_value(status_rec.eol_institute_id, status_rec.eol_institute_code),
+            "eol_degree": "__other__" if status_rec.eol_degree == "other" else (status_rec.eol_degree or ""),
+            "eol_degree_other_name": status_rec.eol_degree_other_name or "",
+            "eol_specialization_value": _m2o_value(status_rec.eol_specialization_id, status_rec.eol_specialization_code),
+            "eol_status": status_rec.eol_status or "",
+            "eol_start": self._yd(status_rec.eol_start),
+            "eol_end": self._yd(status_rec.eol_end),
+            "allowed_to_work": bool(status_rec.allowed_to_work),
+            "allowed_district_id": status_rec.allowed_district_id or 0,
+            "allowed_facility_id": status_rec.allowed_facility_id or 0,
+            "allowed_designation_id": status_rec.allowed_designation_id.id if status_rec.allowed_designation_id else 0,
+            "allowed_start_month": self._ym(status_rec.allowed_start_month),
+            "deputation_start": self._ym(status_rec.deputation_start),
+            "deputation_department": status_rec.deputation_department or "",
+            "deputation_district_id": status_rec.deputation_district_id or 0,
+            "deputation_designation": status_rec.deputation_designation or "",
+        }
+
     def _load_employee_histories(self, env, employee):
         Qual = env["hrmis.qualification.history"].sudo()
         Post = env["hrmis.posting.history"].sudo()
@@ -3155,23 +3228,90 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         leave_recs = Leave.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
 
         prefill_qual = [{
-            "degree": (q.degree or ""),
-            "specialization": (q.specialization or ""),
-            "training_institute_id": q.training_institute_id.id if q.training_institute_id else 0,
-            "training_institute_code": q.qual_institute_code or "",
-            "training_institute_other_name": q.training_institute_other_name or "",
+            "degree": "__other__" if q.degree == "other" else (q.degree or ""),
+            "degree_other": q.degree_other_name or "",
+            "specialization": "__other__" if q.specialization == "other" else (q.specialization or ""),
+            "specialization_other": q.specialization_other_name or "",
+            "institute_id": q.training_institute_id.id if q.training_institute_id else 0,
+            "institute_code": q.qual_institute_code or "",
+            "institute_other": q.training_institute_other_name or "",
             "start_month": self._ym(q.start_date),
-            "end_month": self._ym(q.end_date) if q.end_date else "",
-            "completed": bool(q.end_date),
+            "end_month": self._ym(q.end_date),
+            "status": q.status or ("completed" if q.end_date else "ongoing"),
         } for q in qual_recs]
 
         prefill_post = [{
             "district_id": q.district_id.id if q.district_id else 0,
             "facility_id": q.facility_id.id if getattr(q, "facility_id", False) else 0,
+            "facility_other_name": q.facility_other_name or "",
             "designation_id": q.designation_id.id if q.designation_id else 0,
+            "designation_other_name": "",
             "bps": int(q.bps or 0),
             "start_month": self._ym(q.start_date),
-            "end_month": self._ym(q.end_date) if q.end_date else "",
+            "end_month": self._ym(q.end_date),
+        } for q in post_recs]
+
+        prefill_promo = [{
+            "bps_from": int(p.bps_from or 0),
+            "bps_to": int(p.bps_to or 0),
+            "promotion_month": self._ym(p.promotion_date),
+        } for p in promo_recs]
+
+        prefill_leave = [{
+            "leave_type_id": q.leave_type_id.id if q.leave_type_id else 0,
+            "start_date": self._yd(q.start_date),
+            "end_date": self._yd(q.end_date),
+        } for q in leave_recs]
+
+        return {
+            "prefill_qual_rows": prefill_qual,
+            "prefill_post_rows": prefill_post,
+            "prefill_promo_rows": prefill_promo,
+            "prefill_leave_rows": prefill_leave,
+        }
+
+    def _load_request_histories(self, req):
+        if not req or not req.exists():
+            return {
+                "prefill_qual_rows": [],
+                "prefill_post_rows": [],
+                "prefill_promo_rows": [],
+                "prefill_leave_rows": [],
+            }
+
+        env = req.env
+        Qual = env["hrmis.qualification.history"].sudo()
+        Post = env["hrmis.posting.history"].sudo()
+        Promo = env["hrmis.promotion.history"].sudo()
+        Leave = env["hrmis.leave.history"].sudo()
+
+        qual_recs = Qual.search([("request_id", "=", req.id)], order="start_date asc, id asc")
+        post_recs = Post.search([("request_id", "=", req.id)], order="start_date asc, id asc")
+        promo_recs = Promo.search([("request_id", "=", req.id)], order="promotion_date asc, id asc")
+        leave_recs = Leave.search([("request_id", "=", req.id)], order="start_date asc, id asc")
+
+        prefill_qual = [{
+            "degree": "__other__" if q.degree == "other" else (q.degree or ""),
+            "degree_other": q.degree_other_name or "",
+            "specialization": "__other__" if q.specialization == "other" else (q.specialization or ""),
+            "specialization_other": q.specialization_other_name or "",
+            "institute_id": q.training_institute_id.id if q.training_institute_id else 0,
+            "institute_code": q.qual_institute_code or "",
+            "institute_other": q.training_institute_other_name or "",
+            "start_month": self._ym(q.start_date),
+            "end_month": self._ym(q.end_date),
+            "status": q.status or ("completed" if q.end_date else "ongoing"),
+        } for q in qual_recs]
+
+        prefill_post = [{
+            "district_id": q.district_id.id if q.district_id else 0,
+            "facility_id": q.facility_id.id if q.facility_id else 0,
+            "facility_other_name": q.facility_other_name or "",
+            "designation_id": q.designation_id.id if q.designation_id else 0,
+            "designation_other_name": "",
+            "bps": int(q.bps or 0),
+            "start_month": self._ym(q.start_date),
+            "end_month": self._ym(q.end_date),
         } for q in post_recs]
 
         prefill_promo = [{
@@ -3294,18 +3434,28 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "draft_leave_rows": draft_leave,
         }
 
-    def _with_prefill_ctx(self, env, employee, ctx, *, prefer_draft=False):
-        db = self._load_employee_histories(env, employee)
+    def _with_prefill_ctx(self, env, employee, req, ctx, *, prefer_draft=False):
+        employee_prefill = self._load_employee_histories(env, employee)
+        request_prefill = self._load_request_histories(req)
+
+        request_has_rows = any(request_prefill.get(key) for key in (
+            "prefill_qual_rows",
+            "prefill_post_rows",
+            "prefill_promo_rows",
+            "prefill_leave_rows",
+        ))
+        use_request_rows = bool(req and req.exists() and (req.state != "draft" or request_has_rows))
+        base_prefill = request_prefill if use_request_rows else employee_prefill
 
         if prefer_draft:
             draft = self._draft_histories_from_post()
-            ctx["prefill_qual_rows"] = draft["draft_qual_rows"] or db["prefill_qual_rows"]
-            ctx["prefill_post_rows"] = draft["draft_post_rows"] or db["prefill_post_rows"]
-            ctx["prefill_promo_rows"] = draft["draft_promo_rows"] or db["prefill_promo_rows"]
-            ctx["prefill_leave_rows"] = draft["draft_leave_rows"] or db["prefill_leave_rows"]
+            ctx["prefill_qual_rows"] = draft["draft_qual_rows"] or base_prefill["prefill_qual_rows"]
+            ctx["prefill_post_rows"] = draft["draft_post_rows"] or base_prefill["prefill_post_rows"]
+            ctx["prefill_promo_rows"] = draft["draft_promo_rows"] or base_prefill["prefill_promo_rows"]
+            ctx["prefill_leave_rows"] = draft["draft_leave_rows"] or base_prefill["prefill_leave_rows"]
             return ctx
 
-        ctx.update(db)
+        ctx.update(base_prefill)
         return ctx
 
     
@@ -3435,6 +3585,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         message_override = None
         form = request.httprequest.form
         post = self._normalize_main_facility_from_form(post, form)
+        post = dict(post)
+        post["current_posting_start"] = self._resolve_current_posting_start_from_form(post, form)
         # 1) Employee
         employee, resp = self._get_current_employee_or_error(env)
         if resp:
@@ -3637,6 +3789,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
         # Keep your normalize bridge exactly like submit
         post = self._normalize_main_facility_from_form(post, form)
+        post = dict(post)
+        post["current_posting_start"] = self._resolve_current_posting_start_from_form(post, form)
 
         # 1) Employee
         employee, resp = self._get_current_employee_or_error(env)

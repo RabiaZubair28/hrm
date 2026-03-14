@@ -32,6 +32,7 @@
               </div>
             </t>
             <t t-set="is_draft" t-value="req and (req.state == 'draft')"/>
+            <t t-set="status_prefill" t-value="posting_status_prefill or {}"/>
             <form t-att-class="'hrmis-form ' + ('is-draft' if req.state == 'draft' else 'is-submitted')" id="profile_update_form" method="post" enctype="multipart/form-data" action="/hrmis/profile/request/submit" t-att-onsubmit="'return false;' if req.state != 'draft' else None">
               <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
               <input type="hidden" name="request_id" t-att-value="req.id"/>
@@ -297,19 +298,19 @@ STATUS
                                   <span class="req">*</span>
                                 </label>
                                 <select class="hrmis-input js-no-search js-status-pretty" name="hrmis_current_status_frontend" t-att-required="'required' if is_draft else None" t-att-disabled="'disabled' if not is_draft else None">
-                                  <option value="" selected="selected" hidden="hidden">Select Status</option>
-                                  <option value="currently_posted">Currently Posted</option>
-                                  <option value="suspended">Suspended</option>
-                                  <option value="on_leave">On Leave</option>
-                                  <option value="eol_pgship">EOL (PGship)</option>
-                                  <option value="reported_to_health_department">Reported to Health Department</option>
-                                  <option value="deputation">Deputation</option>
+                                  <option value="" hidden="hidden" t-att-selected="not status_prefill.get('status')">Select Status</option>
+                                  <option value="currently_posted" t-att-selected="status_prefill.get('status') == 'currently_posted'">Currently Posted</option>
+                                  <option value="suspended" t-att-selected="status_prefill.get('status') == 'suspended'">Suspended</option>
+                                  <option value="on_leave" t-att-selected="status_prefill.get('status') == 'on_leave'">On Leave</option>
+                                  <option value="eol_pgship" t-att-selected="status_prefill.get('status') == 'eol_pgship'">EOL (PGship)</option>
+                                  <option value="reported_to_health_department" t-att-selected="status_prefill.get('status') == 'reported_to_health_department'">Reported to Health Department</option>
+                                  <option value="deputation" t-att-selected="status_prefill.get('status') == 'deputation'">Deputation</option>
                                 </select>
                               </div>
                             </div>
                           </div>
                           <!--    ================= SUSPENSION BOX =================    -->
-                          <div id="suspension_box" class="js-status-box" data-status="suspended" style="display:none;">
+                          <div id="suspension_box" class="js-status-box" data-status="suspended" t-att-style="'display:block;' if status_prefill.get('status') == 'suspended' else 'display:none;'">
                             <div class="hrmis-leave-row-wrap d-flex align-items-stretch" style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
                               <div class="hrmis-card p-3" style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
                                 <div class="hrmis-form__grid pt-3 pb-2" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
@@ -318,7 +319,7 @@ STATUS
 SUSPENSION DATE
                                       <span class="req">*</span>
                                     </label>
-                                    <input type="date" class="hrmis-input" name="frontend_suspension_date" required="required"/>
+                                    <input type="date" class="hrmis-input" name="frontend_suspension_date" required="required" t-att-value="status_prefill.get('suspension_date') or ''"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
@@ -327,9 +328,9 @@ DESIGNATION
                                     </label>
                                     <div class="hrmis-field">
                                       <select class="hrmis-input js-other-select" name="hrmis_designation" data-enable-search="1" data-other-name="hrmis_designation_other_name" required="required">
-                                        <option value="" disabled="disabled" hidden="hidden">Select Designation</option>
+                                        <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('suspension_reporting_designation_id')">Select Designation</option>
                                         <t t-foreach="designations_unique" t-as="des">
-                                          <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-selected="req.hrmis_designation and req.hrmis_designation.id == des.id">
+                                          <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-selected="status_prefill.get('suspension_reporting_designation_id') == des.id">
                                             <t t-esc="des.name"/>
                                           </option>
                                         </t>
@@ -343,34 +344,35 @@ DESIGNATION
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>REPORTING TO</label>
                                     <select class="hrmis-input" name="frontend_reporting_to">
-                                      <option value="" selected="selected" disabled="disabled" hidden="hidden">Select</option>
-                                      <option value="health_department">Health Department</option>
-                                      <option value="facility">Facility</option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('suspension_reporting_to')">Select</option>
+                                      <option value="health_department" t-att-selected="status_prefill.get('suspension_reporting_to') == 'health_department'">Health Department</option>
+                                      <option value="facility" t-att-selected="status_prefill.get('suspension_reporting_to') == 'facility'">Facility</option>
                                     </select>
                                   </div>
-                                  <div class="hrmis-field" id="frontend_reporting_district_wrap" style="grid-column: span 6; display:none;">
+                                  <div class="hrmis-field" id="frontend_reporting_district_wrap" t-att-style="'grid-column: span 6; display:block;' if status_prefill.get('suspension_reporting_to') == 'facility' else 'grid-column: span 6; display:none;'">
                                     <label> DISTRICT <span style="color: #c92222">*</span></label>
                                     <select class="hrmis-input js-hrmis-district js-suspension-district" name="frontend_reporting_district_id">
-                                      <option value="" selected="selected" disabled="disabled" hidden="hidden">Select District</option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('suspension_reporting_district_id')">Select District</option>
                                       <t t-foreach="districts" t-as="d">
-                                            <option t-att-value="d['id']">
+                                            <option t-att-value="d['id']" t-att-selected="status_prefill.get('suspension_reporting_district_id') == d['id']">
                                                 <t t-esc="d['name']"/>
                                         </option>
                                       </t>
                                     </select>
                                     
                                   </div>
-                                  <div class="hrmis-field" id="frontend_reporting_facility_wrap" style="grid-column: span 6; display:none;">
+                                  <div class="hrmis-field" id="frontend_reporting_facility_wrap" t-att-style="'grid-column: span 6; display:block;' if status_prefill.get('suspension_reporting_to') == 'facility' else 'grid-column: span 6; display:none;'">
                                     <label> FACILITY <span style="color: #c92222">*</span></label>
                                     <div class="hrmis-field">
                                       <select class="hrmis-input js-suspension-facility js-other-select" 
 				      name="frontend_reporting_facility_id" 
 				      data-enable-search="1" 
 				      data-other-name="frontend_reporting_facility_other_name">
-                                        <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Facility</option>
+                                        <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('suspension_reporting_facility_id')">Select Facility</option>
                                         <t t-foreach="facilities" t-as="f">
                                                 <option t-att-value="f['id']"
-                                                        t-att-data-district-id="f.get('district_id') or 0">
+                                                        t-att-data-district-id="f.get('district_id') or 0"
+                                                        t-att-selected="status_prefill.get('suspension_reporting_facility_id') == f['id']">
                                                     <t t-esc="f['name']"/>
                                           </option>
                                         </t>
@@ -391,7 +393,7 @@ DESIGNATION
                             </div>
                           </div>
                           <!--    ================= ON LEAVE BOX =================    -->
-                          <div id="on_leave_box" class="js-status-box" data-status="on_leave" style="display:none;">
+                          <div id="on_leave_box" class="js-status-box" data-status="on_leave" t-att-style="'display:block;' if status_prefill.get('status') == 'on_leave' else 'display:none;'">
                             <div class="hrmis-leave-row-wrap d-flex align-items-stretch" style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
                               <div class="hrmis-card p-3" style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
                                 <div class="hrmis-form__grid pt-3 pb-2" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
@@ -401,12 +403,12 @@ LEAVE TYPE
                                       <span class="req">*</span>
                                     </label>
                                     <select class="hrmis-input" name="frontend_onleave_type" required="required">
-                                      <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Leave Type</option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('onleave_type_id')">Select Leave Type</option>
                                       <t t-set="emp_gender" t-value="((req.gender or current_employee.gender or '') or '').lower()"/>
                                       <t t-foreach="env['hr.leave.type'].sudo().search([], order='name')" t-as="lt">
                                         <t t-set="lt_name" t-value="(lt.name or '').lower()"/>
                                         <t t-if="('casual' not in lt_name) and ('compensatory' not in lt_name) and ('paid time off' not in lt_name) and ('sick time off' not in lt_name) and ('lpr' not in lt_name) and (lt_name.strip() != 'unpaid') and (emp_gender != 'male' or ('maternity' not in lt_name))">
-                                          <option t-att-value="lt.id">
+                                          <option t-att-value="lt.id" t-att-selected="status_prefill.get('onleave_type_id') == lt.id">
                                             <t t-esc="lt.name"/>
                                           </option>
                                         </t>
@@ -418,14 +420,14 @@ LEAVE TYPE
 STARTING DATE
                                       <span class="req">*</span>
                                     </label>
-                                    <input type="date" class="hrmis-input" name="frontend_onleave_start" required="required"/>
+                                    <input type="date" class="hrmis-input" name="frontend_onleave_start" required="required" t-att-value="status_prefill.get('onleave_start') or ''"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
 ENDING DATE
                                       <span class="req">*</span>
                                     </label>
-                                    <input type="date" class="hrmis-input" name="frontend_onleave_end" required="required"/>
+                                    <input type="date" class="hrmis-input" name="frontend_onleave_end" required="required" t-att-value="status_prefill.get('onleave_end') or ''"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
@@ -448,33 +450,34 @@ DESIGNATION
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>REPORTING TO</label>
                                     <select class="hrmis-input" name="frontend_onleave_reporting_to">
-                                      <option value="" selected="selected" disabled="disabled" hidden="hidden">Select</option>
-                                      <option value="health_department">Health Department</option>
-                                      <option value="facility">Facility</option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('onleave_reporting_to')">Select</option>
+                                      <option value="health_department" t-att-selected="status_prefill.get('onleave_reporting_to') == 'health_department'">Health Department</option>
+                                      <option value="facility" t-att-selected="status_prefill.get('onleave_reporting_to') == 'facility'">Facility</option>
                                     </select>
                                   </div>
-                                  <div class="hrmis-field" id="frontend_onleave_district_wrap" style="grid-column: span 6; display:none;">
+                                  <div class="hrmis-field" id="frontend_onleave_district_wrap" t-att-style="'grid-column: span 6; display:block;' if status_prefill.get('onleave_reporting_to') == 'facility' else 'grid-column: span 6; display:none;'">
                                     <label> DISTRICT <span style="color: #c92222;">*</span></label>
                                     <select class="hrmis-input js-hrmis-district js-onleave-district" name="frontend_onleave_district_id">
-                                      <option value="" selected="selected" disabled="disabled" hidden="hidden">Select District</option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('onleave_reporting_district_id')">Select District</option>
                                       <t t-foreach="districts" t-as="d">
-                                            <option t-att-value="d.get('id')">
+                                            <option t-att-value="d.get('id')" t-att-selected="status_prefill.get('onleave_reporting_district_id') == d.get('id')">
                                                 <t t-esc="d.get('name')"/>
                                         </option>
                                       </t>
                                     </select>
                                     
                                   </div>
-                                  <div class="hrmis-field" id="frontend_onleave_facility_wrap" style="grid-column: span 6; display:none;">
+                                  <div class="hrmis-field" id="frontend_onleave_facility_wrap" t-att-style="'grid-column: span 6; display:block;' if status_prefill.get('onleave_reporting_to') == 'facility' else 'grid-column: span 6; display:none;'">
                                     <label> FACILITY <span style="color: #c92222">*</span></label>
                                     <select class="hrmis-input js-hrmis-facility js-onleave-facility js-other-select" 
                                             name="frontend_onleave_facility_id"
                                             data-enable-search="1"
                                             data-other-name="frontend_onleave_facility_other_name">
-                                      <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Facility</option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('onleave_reporting_facility_id')">Select Facility</option>
                                       <t t-foreach="facilities" t-as="f">
                                           <option t-att-value="f.get('id')"
-                                                  t-att-data-district-id="f.get('district_id') or ''">
+                                                  t-att-data-district-id="f.get('district_id') or ''"
+                                                  t-att-selected="status_prefill.get('onleave_reporting_facility_id') == f.get('id')">
                                               <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
@@ -495,47 +498,47 @@ DESIGNATION
                             </div>
                           </div>
                           <!--    ================= EOL BOX =================    -->
-                          <div id="eol_box" class="js-status-box" data-status="eol_pgship" style="display:none; margin-bottom: 12px">
+                          <div id="eol_box" class="js-status-box" data-status="eol_pgship" t-att-style="'display:block; margin-bottom: 12px;' if status_prefill.get('status') == 'eol_pgship' else 'display:none; margin-bottom: 12px;'">
                             <div class="hrmis-leave-row-wrap d-flex align-items-stretch" style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
                               <div class="hrmis-card p-3" style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
                                 <div class="hrmis-form__grid pt-3 pb-2" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>TRAINING INSTITUTE</label>
                                     <select class="hrmis-input js-other-select" name="frontend_eol_institute" data-other-name="frontend_eol_institute_other_name">
-                                      <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Institute</option>
-                                      <option value="jpmc">Jinnah Postgraduate Medical Centre (JPMC)</option>
-                                      <option value="duhs">Dow University of Health Sciences (DUHS)</option>
-                                      <option value="jsmu">Jinnah Sindh Medical University (JSMU)</option>
-                                      <option value="nicvd">National Institute of Cardiovascular Diseases (NICVD)</option>
-                                      <option value="nich">National Institute of Child Health (NICH)</option>
-                                      <option value="nibd">National Institute of Blood Diseases (NIBD)</option>
-                                      <option value="pns_shifa">PNS Shifa (Military Hospital)</option>
-                                      <option value="ash">Abbasi Shaheed Hospital (ASH)</option>
-                                      <option value="sindh_qatar">Sindh Government Qatar Hospital</option>
-                                      <option value="lumhs">Liaquat University of Medical Health Sciences (LUMHS)</option>
-                                      <option value="smbbmu">Shaheed Mohtarma Benazir Bhutto Medical University (SMBBMU)</option>
-                                      <option value="pumhsw">Peoples University of Medical Health Sciences (PUMHSW)</option>
-                                      <option value="khairpur_medical">Khairpur Medical College</option>
-                                      <option value="akuh">Aga Khan University Hospital (AKUH)</option>
-                                      <option value="lnh">Liaquat National Hospital (LNH)</option>
-                                      <option value="indus">The Indus Hospital (Indus Health Network)</option>
-                                      <option value="ziauddin">Ziauddin University Hospitals</option>
-                                      <option value="baqai">Baqai Medical University</option>
-                                      <option value="patel">Patel Hospital</option>
-                                      <option value="tabba_heart">Tabba Heart Institute</option>
-                                      <option value="kidney_centre">The Kidney Centre</option>
-                                      <option value="south_city">South City Hospital</option>
-                                      <option value="civil">Dr. Ruth K.M. Pfau Civil Hospital</option>
-                                      <option value="isra">Isra University Hospital</option>
-                                      <option value="muhammad_medical">Muhammad Medical College</option>
-                                      <option value="ak_mchcc">Aga Khan Maternal and Child Care Centre</option>
-                                      <option value="red_crescent">Red Crescent General Hospital</option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('eol_institute_value')">Select Institute</option>
+                                      <option value="jpmc" t-att-selected="status_prefill.get('eol_institute_value') == 'jpmc'">Jinnah Postgraduate Medical Centre (JPMC)</option>
+                                      <option value="duhs" t-att-selected="status_prefill.get('eol_institute_value') == 'duhs'">Dow University of Health Sciences (DUHS)</option>
+                                      <option value="jsmu" t-att-selected="status_prefill.get('eol_institute_value') == 'jsmu'">Jinnah Sindh Medical University (JSMU)</option>
+                                      <option value="nicvd" t-att-selected="status_prefill.get('eol_institute_value') == 'nicvd'">National Institute of Cardiovascular Diseases (NICVD)</option>
+                                      <option value="nich" t-att-selected="status_prefill.get('eol_institute_value') == 'nich'">National Institute of Child Health (NICH)</option>
+                                      <option value="nibd" t-att-selected="status_prefill.get('eol_institute_value') == 'nibd'">National Institute of Blood Diseases (NIBD)</option>
+                                      <option value="pns_shifa" t-att-selected="status_prefill.get('eol_institute_value') == 'pns_shifa'">PNS Shifa (Military Hospital)</option>
+                                      <option value="ash" t-att-selected="status_prefill.get('eol_institute_value') == 'ash'">Abbasi Shaheed Hospital (ASH)</option>
+                                      <option value="sindh_qatar" t-att-selected="status_prefill.get('eol_institute_value') == 'sindh_qatar'">Sindh Government Qatar Hospital</option>
+                                      <option value="lumhs" t-att-selected="status_prefill.get('eol_institute_value') == 'lumhs'">Liaquat University of Medical Health Sciences (LUMHS)</option>
+                                      <option value="smbbmu" t-att-selected="status_prefill.get('eol_institute_value') == 'smbbmu'">Shaheed Mohtarma Benazir Bhutto Medical University (SMBBMU)</option>
+                                      <option value="pumhsw" t-att-selected="status_prefill.get('eol_institute_value') == 'pumhsw'">Peoples University of Medical Health Sciences (PUMHSW)</option>
+                                      <option value="khairpur_medical" t-att-selected="status_prefill.get('eol_institute_value') == 'khairpur_medical'">Khairpur Medical College</option>
+                                      <option value="akuh" t-att-selected="status_prefill.get('eol_institute_value') == 'akuh'">Aga Khan University Hospital (AKUH)</option>
+                                      <option value="lnh" t-att-selected="status_prefill.get('eol_institute_value') == 'lnh'">Liaquat National Hospital (LNH)</option>
+                                      <option value="indus" t-att-selected="status_prefill.get('eol_institute_value') == 'indus'">The Indus Hospital (Indus Health Network)</option>
+                                      <option value="ziauddin" t-att-selected="status_prefill.get('eol_institute_value') == 'ziauddin'">Ziauddin University Hospitals</option>
+                                      <option value="baqai" t-att-selected="status_prefill.get('eol_institute_value') == 'baqai'">Baqai Medical University</option>
+                                      <option value="patel" t-att-selected="status_prefill.get('eol_institute_value') == 'patel'">Patel Hospital</option>
+                                      <option value="tabba_heart" t-att-selected="status_prefill.get('eol_institute_value') == 'tabba_heart'">Tabba Heart Institute</option>
+                                      <option value="kidney_centre" t-att-selected="status_prefill.get('eol_institute_value') == 'kidney_centre'">The Kidney Centre</option>
+                                      <option value="south_city" t-att-selected="status_prefill.get('eol_institute_value') == 'south_city'">South City Hospital</option>
+                                      <option value="civil" t-att-selected="status_prefill.get('eol_institute_value') == 'civil'">Dr. Ruth K.M. Pfau Civil Hospital</option>
+                                      <option value="isra" t-att-selected="status_prefill.get('eol_institute_value') == 'isra'">Isra University Hospital</option>
+                                      <option value="muhammad_medical" t-att-selected="status_prefill.get('eol_institute_value') == 'muhammad_medical'">Muhammad Medical College</option>
+                                      <option value="ak_mchcc" t-att-selected="status_prefill.get('eol_institute_value') == 'ak_mchcc'">Aga Khan Maternal and Child Care Centre</option>
+                                      <option value="red_crescent" t-att-selected="status_prefill.get('eol_institute_value') == 'red_crescent'">Red Crescent General Hospital</option>
                                       <t t-foreach="institutes" t-as="inst">
-                                        <option t-att-value="inst.id">
+                                        <option t-att-value="inst.id" t-att-selected="status_prefill.get('eol_institute_value') == inst.id">
                                           <t t-esc="inst.name"/>
                                         </option>
                                       </t>
-                                      <option value="__other__">Other</option>
+                                      <option value="__other__" t-att-selected="status_prefill.get('eol_institute_value') == '__other__'">Other</option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input" type="text" name="frontend_eol_institute_other_name" placeholder="Enter Training Institute" disabled="disabled"/>
@@ -547,58 +550,58 @@ DEGREE
                                       <span class="req">*</span>
                                     </label>
                                     <select class="hrmis-input js-other-select" name="frontend_eol_degree" data-enable-search="1" data-other-name="frontend_eol_degree_other_name" required="required">
-                                      <option value="" disabled="disabled" selected="selected" hidden="hidden">Select Degree</option>
-                                      <option value="ms">MS</option>
-                                      <option value="md">MD</option>
-                                      <option value="fcps_1">FCPS-I</option>
-                                      <option value="fcps_2">FCPS-II</option>
-                                      <option value="mcps">MCPS</option>
-                                      <option value="mbbs">MBBS</option>
-                                      <option value="mph">MPH</option>
-                                      <option value="mba">MBA (Health Management)</option>
-                                      <option value="msph">MSPH</option>
-                                      <option value="diploma">Diploma</option>
-                                      <option value="__other__">Other</option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('eol_degree')">Select Degree</option>
+                                      <option value="ms" t-att-selected="status_prefill.get('eol_degree') == 'ms'">MS</option>
+                                      <option value="md" t-att-selected="status_prefill.get('eol_degree') == 'md'">MD</option>
+                                      <option value="fcps_1" t-att-selected="status_prefill.get('eol_degree') == 'fcps_1'">FCPS-I</option>
+                                      <option value="fcps_2" t-att-selected="status_prefill.get('eol_degree') == 'fcps_2'">FCPS-II</option>
+                                      <option value="mcps" t-att-selected="status_prefill.get('eol_degree') == 'mcps'">MCPS</option>
+                                      <option value="mbbs" t-att-selected="status_prefill.get('eol_degree') == 'mbbs'">MBBS</option>
+                                      <option value="mph" t-att-selected="status_prefill.get('eol_degree') == 'mph'">MPH</option>
+                                      <option value="mba" t-att-selected="status_prefill.get('eol_degree') == 'mba'">MBA (Health Management)</option>
+                                      <option value="msph" t-att-selected="status_prefill.get('eol_degree') == 'msph'">MSPH</option>
+                                      <option value="diploma" t-att-selected="status_prefill.get('eol_degree') == 'diploma'">Diploma</option>
+                                      <option value="__other__" t-att-selected="status_prefill.get('eol_degree') == '__other__'">Other</option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input" type="text" name="frontend_eol_degree_other_name" placeholder="Enter Degree" disabled="disabled"/>
+                                      <input class="hrmis-input js-other-input" type="text" name="frontend_eol_degree_other_name" placeholder="Enter Degree" disabled="disabled" t-att-value="status_prefill.get('eol_degree_other_name') or ''"/>
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>SPECIALIZATION</label>
                                     <select class="hrmis-input js-other-select" name="frontend_eol_specialization_id" data-other-name="frontend_eol_specialization_other_name">
-                                      <option value="" selected="selected">Select Specialization</option>
-                                      <option value="general_medicine">General Medicine</option>
-                                      <option value="family_medicine">Family Medicine</option>
-                                      <option value="emergency_medicine">Emergency Medicine</option>
-                                      <option value="pediatrics">Pediatrics</option>
-                                      <option value="pediatric_surgery">Pediatric Surgery</option>
-                                      <option value="cardiology">Cardiology</option>
-                                      <option value="neurology">Neurology</option>
-                                      <option value="psychiatry">Psychiatry</option>
-                                      <option value="dermatology">Dermatology</option>
-                                      <option value="endocrinology">Endocrinology</option>
-                                      <option value="pulmonology">Pulmonology</option>
-                                      <option value="nephrology">Nephrology</option>
-                                      <option value="gastroenterology">Gastroenterology</option>
-                                      <option value="oncology">Oncology</option>
-                                      <option value="hematology">Hematology</option>
-                                      <option value="general_surgery">General Surgery</option>
-                                      <option value="neurosurgery">Neurosurgery</option>
-                                      <option value="plastic_surgery">Plastic Surgery</option>
-                                      <option value="urology">Urology</option>
-                                      <option value="orthopedics">Orthopedics</option>
-                                      <option value="obstetrics_gynecology">Obstetrics and Gynaecology</option>
-                                      <option value="radiology">Radiology</option>
-                                      <option value="pathology">Pathology</option>
-                                      <option value="anesthesiology">Anesthesiology</option>
-                                      <option value="physiotherapy">Physiotherapy</option>
-                                      <option value="nutrition">Nutrition</option>
-                                      <option value="ophthalmology">Ophthalmology</option>
-                                      <option value="ent">ENT</option>
-                                      <option value="dentistry">Dentistry</option>
-                                      <option value="orthodontist">Orthodontist</option>
-                                      <option value="__other__">Other</option>
+                                      <option value="" t-att-selected="not status_prefill.get('eol_specialization_value')">Select Specialization</option>
+                                      <option value="general_medicine" t-att-selected="status_prefill.get('eol_specialization_value') == 'general_medicine'">General Medicine</option>
+                                      <option value="family_medicine" t-att-selected="status_prefill.get('eol_specialization_value') == 'family_medicine'">Family Medicine</option>
+                                      <option value="emergency_medicine" t-att-selected="status_prefill.get('eol_specialization_value') == 'emergency_medicine'">Emergency Medicine</option>
+                                      <option value="pediatrics" t-att-selected="status_prefill.get('eol_specialization_value') == 'pediatrics'">Pediatrics</option>
+                                      <option value="pediatric_surgery" t-att-selected="status_prefill.get('eol_specialization_value') == 'pediatric_surgery'">Pediatric Surgery</option>
+                                      <option value="cardiology" t-att-selected="status_prefill.get('eol_specialization_value') == 'cardiology'">Cardiology</option>
+                                      <option value="neurology" t-att-selected="status_prefill.get('eol_specialization_value') == 'neurology'">Neurology</option>
+                                      <option value="psychiatry" t-att-selected="status_prefill.get('eol_specialization_value') == 'psychiatry'">Psychiatry</option>
+                                      <option value="dermatology" t-att-selected="status_prefill.get('eol_specialization_value') == 'dermatology'">Dermatology</option>
+                                      <option value="endocrinology" t-att-selected="status_prefill.get('eol_specialization_value') == 'endocrinology'">Endocrinology</option>
+                                      <option value="pulmonology" t-att-selected="status_prefill.get('eol_specialization_value') == 'pulmonology'">Pulmonology</option>
+                                      <option value="nephrology" t-att-selected="status_prefill.get('eol_specialization_value') == 'nephrology'">Nephrology</option>
+                                      <option value="gastroenterology" t-att-selected="status_prefill.get('eol_specialization_value') == 'gastroenterology'">Gastroenterology</option>
+                                      <option value="oncology" t-att-selected="status_prefill.get('eol_specialization_value') == 'oncology'">Oncology</option>
+                                      <option value="hematology" t-att-selected="status_prefill.get('eol_specialization_value') == 'hematology'">Hematology</option>
+                                      <option value="general_surgery" t-att-selected="status_prefill.get('eol_specialization_value') == 'general_surgery'">General Surgery</option>
+                                      <option value="neurosurgery" t-att-selected="status_prefill.get('eol_specialization_value') == 'neurosurgery'">Neurosurgery</option>
+                                      <option value="plastic_surgery" t-att-selected="status_prefill.get('eol_specialization_value') == 'plastic_surgery'">Plastic Surgery</option>
+                                      <option value="urology" t-att-selected="status_prefill.get('eol_specialization_value') == 'urology'">Urology</option>
+                                      <option value="orthopedics" t-att-selected="status_prefill.get('eol_specialization_value') == 'orthopedics'">Orthopedics</option>
+                                      <option value="obstetrics_gynecology" t-att-selected="status_prefill.get('eol_specialization_value') == 'obstetrics_gynecology'">Obstetrics and Gynaecology</option>
+                                      <option value="radiology" t-att-selected="status_prefill.get('eol_specialization_value') == 'radiology'">Radiology</option>
+                                      <option value="pathology" t-att-selected="status_prefill.get('eol_specialization_value') == 'pathology'">Pathology</option>
+                                      <option value="anesthesiology" t-att-selected="status_prefill.get('eol_specialization_value') == 'anesthesiology'">Anesthesiology</option>
+                                      <option value="physiotherapy" t-att-selected="status_prefill.get('eol_specialization_value') == 'physiotherapy'">Physiotherapy</option>
+                                      <option value="nutrition" t-att-selected="status_prefill.get('eol_specialization_value') == 'nutrition'">Nutrition</option>
+                                      <option value="ophthalmology" t-att-selected="status_prefill.get('eol_specialization_value') == 'ophthalmology'">Ophthalmology</option>
+                                      <option value="ent" t-att-selected="status_prefill.get('eol_specialization_value') == 'ent'">ENT</option>
+                                      <option value="dentistry" t-att-selected="status_prefill.get('eol_specialization_value') == 'dentistry'">Dentistry</option>
+                                      <option value="orthodontist" t-att-selected="status_prefill.get('eol_specialization_value') == 'orthodontist'">Orthodontist</option>
+                                      <option value="__other__" t-att-selected="status_prefill.get('eol_specialization_value') == '__other__'">Other</option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input" type="text" name="frontend_eol_specialization_other_name" placeholder="Enter Specialization" disabled="disabled"/>
@@ -606,19 +609,19 @@ DEGREE
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>EOL STARTING DATE</label>
-                                    <input type="date" class="hrmis-input" name="frontend_eol_start"/>
+                                    <input type="date" class="hrmis-input" name="frontend_eol_start" t-att-value="status_prefill.get('eol_start') or ''"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>STATUS<span class="req">*</span></label>
                                     <select class="hrmis-input" name="frontend_eol_status">
-                                      <option value="" selected="selected" disabled="disabled" hidden="hidden">Select Status</option>
-                                      <option value="ongoing">Ongoing</option>
-                                      <option value="completed">Complete</option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('eol_status')">Select Status</option>
+                                      <option value="ongoing" t-att-selected="status_prefill.get('eol_status') == 'ongoing'">Ongoing</option>
+                                      <option value="completed" t-att-selected="status_prefill.get('eol_status') == 'completed'">Complete</option>
                                     </select>
                                   </div>
-                                  <div class="hrmis-field" id="frontend_eol_end_wrap" style="grid-column: span 6; display:none;">
+                                  <div class="hrmis-field" id="frontend_eol_end_wrap" t-att-style="'grid-column: span 6; display:block;' if status_prefill.get('eol_status') == 'completed' else 'grid-column: span 6; display:none;'">
                                     <label>ENDING DATE</label>
-                                    <input type="date" class="hrmis-input" name="frontend_eol_end"/>
+                                    <input type="date" class="hrmis-input" name="frontend_eol_end" t-att-value="status_prefill.get('eol_end') or ''"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
@@ -693,15 +696,15 @@ DESIGNATION
 POSTING START (MONTH/YEAR)
                                       <span class="req">*</span>
                                     </label>
-                                    <t t-set="cps_val" t-value="''"/>
+                                    <!-- <t t-set="cps_val" t-value="''"/> -->
                                     <t t-if="req and ('current_posting_start' in req._fields)">
-                                      <t t-set="cps_val" t-value="req.current_posting_start or ''"/>
+                                      <!-- <t t-set="cps_val" t-value="status_prefill.get('current_posting_start') or (req.current_posting_start[:7] if req.current_posting_start else '')"/> -->
 </t>
                                     <input class="hrmis-input js-current-post-start" type="month" name="current_posting_start" required="required" t-att-value="cps_val"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6; display: flex">
                                     <div style="display:flex; align-items:center; justify-content:center; margin-top:10px; gap: 12px">
-                                      <input type="checkbox" name="allowed_to_work" value="1" class="form-check-input js-allowed-to-work-toggle" id="allowed_to_work_checkbox" data-target="#allowed_to_work_box"/>
+                                      <input type="checkbox" name="allowed_to_work" value="1" class="form-check-input js-allowed-to-work-toggle" id="allowed_to_work_checkbox" data-target="#allowed_to_work_box" t-att-checked="'checked' if status_prefill.get('allowed_to_work') else None"/>
                                       <label for="allowed_to_work_checkbox" style="margin:0; font-weight:600; gap: 12px"> ALLOWED TO WORK </label>
                                     </div>
                                   </div>
@@ -710,7 +713,7 @@ POSTING START (MONTH/YEAR)
                             </div>
                           </div>
                           <!--    ================= CURRENTLY POSTED BOX =================    -->
-                          <div id="current_posting_box" class="js-status-box" data-status="currently_posted" style="display:none;">
+                          <div id="current_posting_box" class="js-status-box" data-status="currently_posted" t-att-style="'display:block;' if status_prefill.get('status') == 'currently_posted' else 'display:none;'">
                             <div class="hrmis-leave-row-wrap d-flex align-items-stretch" style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
                               <div class="hrmis-card p-3" style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
                                 <div class="hrmis-form__grid pt-3 pb-2" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
@@ -787,15 +790,15 @@ DESIGNATION
 START (MONTH/YEAR)
                                       <span class="req">*</span>
                                     </label>
-                                    <t t-set="cps_val" t-value="''"/>
+                                    <!-- <t t-set="cps_val" t-value="''"/> -->
                                     <t t-if="req and ('current_posting_start' in req._fields)">
-                                      <t t-set="cps_val" t-value="req.current_posting_start or ''"/>
+                                      <!-- <t t-set="cps_val" t-value="status_prefill.get('current_posting_start') or (req.current_posting_start[:7] if req.current_posting_start else '')"/> -->
 </t>
-                                    <input class="hrmis-input js-current-post-start" type="month" name="current_posting_start" required="required" t-att-value="cps_val"/>
+                                    <input class="hrmis-input js-current-post-start" type="month" name="current_posting_start" required="required" t-att-value="req.current_posting_start or ''"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6; display: flex">
                                     <div style="display:flex; align-items:center; justify-content:center; margin-top:10px; gap: 12px">
-                                      <input type="checkbox" name="allowed_to_work" value="1" class="form-check-input js-allowed-to-work-toggle" id="allowed_to_work_checkbox" data-target="#allowed_to_work_box"/>
+                                      <input type="checkbox" name="allowed_to_work" value="1" class="form-check-input js-allowed-to-work-toggle" id="allowed_to_work_checkbox" data-target="#allowed_to_work_box" t-att-checked="'checked' if status_prefill.get('allowed_to_work') else None"/>
                                       <label for="allowed_to_work_checkbox" style="margin:0; font-weight:600; gap: 12px">ALLOWED TO WORK</label>
                                     </div>
                                   </div>
@@ -804,7 +807,7 @@ START (MONTH/YEAR)
                             </div>
                           </div>
                           <!--    ================= ALLOWED TO WORK BOX =================    -->
-                          <div id="allowed_to_work_box" style="display:none; margin-top:15px;">
+                          <div id="allowed_to_work_box" t-att-style="'display:block; margin-top:15px;' if status_prefill.get('allowed_to_work') else 'display:none; margin-top:15px;'">
                             <div class="hrmis-leave-row-wrap d-flex align-items-stretch">
                               <div class="hrmis-card p-3" style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
                                 <div class="hrmis-form__grid pt-3 pb-2" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
@@ -814,22 +817,25 @@ ALLOWED TO WORK DISTRICT
                                       <span class="req">*</span>
                                     </label>
                                     <select class="hrmis-input js-hrmis-district js-current-district" name="allowed_district_id">
-                                      <option value="">Select District</option>
+                                      <option value="" t-att-selected="not status_prefill.get('allowed_district_id')">Select District</option>
                                       <t t-foreach="districts" t-as="d">
-                                            <option t-att-value="d.get('id')">
+                                      <option t-att-value="d.get('id')" t-att-selected="status_prefill.get('allowed_district_id') == d.get('id')">
                                                 <t t-esc="d.get('name')"/>
                                         </option>
                                       </t>
                                     </select>
+
+
                                     
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>ALLOWED TO WORK FACILITY<span class="req">*</span></label>
                                     <select class="hrmis-input js-hrmis-facility js-current-facility js-other-select" name="allowed_facility_id" data-enable-search="1" data-other-name="allowed_work_facility_other_name" required="required">
-                                      <option value="">Select Facility</option>
+                                      <option value="" t-att-selected="not status_prefill.get('allowed_facility_id')">Select Facility</option>
                                       <t t-foreach="facilities" t-as="f">
                                             <option t-att-value="f.get('id')"
-                                                    t-att-data-district-id="f.get('district_id') or ''">
+                                                    t-att-data-district-id="f.get('district_id') or ''"
+                                                    t-att-selected="status_prefill.get('allowed_facility_id') == f.get('id')">
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
@@ -848,13 +854,13 @@ DESIGNATION
                                       <span class="req">*</span>
                                     </label>
                                     <select class="hrmis-input js-other-select" name="allowed_designation_id" data-enable-search="1" data-other-name="allowed_work_designation_other_name">
-                                      <option value="">Select Designation</option>
+                                      <option value="" t-att-selected="not status_prefill.get('allowed_designation_id')">Select Designation</option>
                                       <t t-foreach="designations_unique" t-as="des">
                                         <t t-set="des_fac_id" t-value="''"/>
                                         <t t-if="'facility_id' in des._fields and des.facility_id">
                                           <t t-set="des_fac_id" t-value="des.facility_id.id"/>
 </t>
-                                        <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-data-facility-id="des_fac_id" t-att-selected="(req.hrmis_designation and req.hrmis_designation.id == des.id) or (current_employee.hrmis_designation and current_employee.hrmis_designation.id == des.id)">
+                                        <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-data-facility-id="des_fac_id" t-att-selected="status_prefill.get('allowed_designation_id') == des.id">
                                           <t t-esc="des.name"/>
                                         </option>
                                       </t>
@@ -869,14 +875,14 @@ DESIGNATION
         START (MONTH/YEAR)
         <span class="req">*</span>
     </label>
-    <input class="hrmis-input" type="month" name="allowed_start_month" required="required"/>
+    <input class="hrmis-input" type="month" name="allowed_start_month" required="required" t-att-value="status_prefill.get('allowed_start_month') or ''"/>
 </div>
                                 </div>
                               </div>
                             </div>
                           </div>
                           <!--    ================= REPORTED TO HEALTH DEPARTMENT BOX =================    -->
-                          <div id="reported_to_hd_box" class="js-status-box" data-status="reported_to_health_department" style="display:none;">
+                          <div id="reported_to_hd_box" class="js-status-box" data-status="reported_to_health_department" t-att-style="'display:block;' if status_prefill.get('status') == 'reported_to_health_department' else 'display:none;'">
                             <div class="hrmis-leave-row-wrap d-flex align-items-stretch" style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
                               <div class="hrmis-card p-3" style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
                                 <div class="hrmis-form__grid pt-3 pb-2" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
@@ -903,7 +909,7 @@ DESIGNATION
                             </div>
                           </div>
 <!--    ================= DEPUTATION BOX =================    -->
-                          <div id="deputation_box" class="js-status-box" data-status="deputation" style="display:none;">
+                          <div id="deputation_box" class="js-status-box" data-status="deputation" t-att-style="'display:block;' if status_prefill.get('status') == 'deputation' else 'display:none;'">
                             <div class="hrmis-leave-row-wrap d-flex align-items-stretch" style="gap:10px; border: 2px solid black; margin-bottom: 12px;">
                               <div class="hrmis-card p-3" style="flex:1; border:1px solid #f0f0f0; background:#fafafa;">
                                 <div class="hrmis-form__grid pt-3 pb-2" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 15px 15px; width: 100%">
@@ -913,9 +919,9 @@ POSTING DISTRICT
                                       <span class="req">*</span>
                                     </label>
                                     <select class="hrmis-input js-hrmis-district" name="frontend_deputation_district_id" required="required">
-                                      <option value="" selected="selected" disabled="disabled" hidden="hidden">Select District</option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('deputation_district_id')">Select District</option>
                                       <t t-foreach="districts" t-as="d">
-                                        <option t-att-value="d.get('id')">
+                                        <option t-att-value="d.get('id')" t-att-selected="status_prefill.get('deputation_district_id') == d.get('id')">
                                           <t t-esc="d.get('name')"/>
                                         </option>
                                       </t>
@@ -926,21 +932,21 @@ POSTING DISTRICT
 DEPARTMENT
                                       <span class="req">*</span>
                                     </label>
-                                    <input class="hrmis-input" type="text" name="frontend_deputation_department" required="required" placeholder="Enter Department"/>
+                                    <input class="hrmis-input" type="text" name="frontend_deputation_department" required="required" placeholder="Enter Department" t-att-value="status_prefill.get('deputation_department') or ''"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
 DESIGNATION
                                       <span class="req">*</span>
                                     </label>
-                                    <input class="hrmis-input" type="text" name="frontend_deputation_designation" required="required" placeholder="Enter Designation"/>
+                                    <input class="hrmis-input" type="text" name="frontend_deputation_designation" required="required" placeholder="Enter Designation" t-att-value="status_prefill.get('deputation_designation') or ''"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
 START (MONTH/YEAR)
                                       <span class="req">*</span>
                                     </label>
-                                    <input class="hrmis-input" type="month" name="frontend_deputation_start" required="required"/>
+                                    <input class="hrmis-input" type="month" name="frontend_deputation_start" required="required" t-att-value="status_prefill.get('deputation_start') or ''"/>
                                   </div>
                                 </div>
                               </div>
@@ -983,7 +989,7 @@ DISTRICT
 				    </option>
                                     <t t-foreach="districts" t-as="d">
                                       <option t-att-value="d.get('id')"
-                                              t-att-selected="p.get('district_id') == d.get('id')">
+                                              t-att-selected="str(p.get('district_id') or '') == str(d.get('id') or '')">
                                         <t t-esc="d.get('name')"/>
                                       </option>
                                     </t>
@@ -1008,7 +1014,7 @@ FACILITY
                                     <t t-foreach="facilities" t-as="f">
                                       <option t-att-value="f.get('id')"
                                               t-att-data-district-id="f.get('district_id') or ''"
-                                              t-att-selected="p.get('facility_id') == f.get('id')">
+                                              t-att-selected="str(p.get('facility_id') or '') == str(f.get('id') or '')">
                                         <t t-esc="f.get('name')"/>
                                       </option>
                                     </t>
@@ -1042,7 +1048,7 @@ DESIGNATION
                                   <select class="hrmis-input js-other-select" name="posting_designation_id[]" data-enable-search="1" data-other-name="posting_designation_other_name[]" required="required">
                                     <option value="" disabled="disabled" hidden="hidden" t-att-selected="not p.get('designation_id') and not (p.get('designation_other_name') or '').strip()"> Select Designation </option>
                                     <t t-foreach="designations_unique" t-as="des">
-                                      <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-selected="p.get('designation_id') == des.id">
+                                      <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-selected="str(p.get('designation_id') or '') == str(des.id or '')">
                                         <t t-esc="des.name"/>
                                       </option>
                                     </t>
@@ -1601,14 +1607,14 @@ LEAVE TYPE
     <span class="req">*</span>
   </label>
   <select class="hrmis-input" name="leave_type_id[]" required="required">
-    <option value="" selected="selected" disabled="disabled" hidden="hidden">
+    <option value="" disabled="disabled" hidden="hidden" t-att-selected="not l.get('leave_type_id')">
       Select Leave Type
     </option>
     <t t-set="emp_gender" t-value="((req.gender or current_employee.gender or '') or '').lower()"/>
     <t t-foreach="env['hr.leave.type'].sudo().search([], order='name')" t-as="lt">
       <t t-set="lt_name" t-value="(lt.name or '').lower()"/>
       <t t-if="('casual' not in lt_name) and ('compensatory' not in lt_name) and ('paid time off' not in lt_name) and ('sick time off' not in lt_name) and ('lpr' not in lt_name) and (lt_name.strip() != 'unpaid') and (emp_gender != 'male' or ('maternity' not in lt_name))">
-        <option t-att-value="lt.id">
+        <option t-att-value="lt.id" t-att-selected="l.get('leave_type_id') == lt.id">
           <t t-esc="lt.name"/>
         </option>
       </t>
