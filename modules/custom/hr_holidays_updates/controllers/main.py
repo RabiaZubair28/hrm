@@ -1372,7 +1372,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 employee.sudo().write({"parent_id": old_parent_id})
             return False, str(e)
 
-    def _render_profile_form(self, env, employee, req, *, error=None, success=None, info=None, prefer_draft=False):
+    def _render_profile_form(self, env, employee, req, *, error=None, success=None, info=None, prefer_draft=False, status_prefill_override=None):
         if req and req.exists():
             req = env["hrmis.employee.profile.request"].sudo().browse(req.id).exists()
         max_dob_str, max_today_str, max_past_str = self._build_max_date_strings(env)
@@ -1416,9 +1416,14 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         ctx["selected_district_id"] = selected_district_id
 
         ctx = self._with_prefill_ctx(env, employee, req, ctx, prefer_draft=prefer_draft)
+        status_prefill_source = (
+            status_prefill_override
+            if status_prefill_override is not None
+            else self._load_request_posting_status(req)
+        )
         ctx["posting_status_prefill"] = self._attach_allowed_to_work_labels(
             env,
-            self._load_request_posting_status(req),
+            status_prefill_source,
             districts,
             all_facilities,
         )
@@ -3223,6 +3228,18 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             facilities, status_prefill.get("allowed_facility_id")
         )
 
+        if not status_prefill["allowed_district_name"] and status_prefill.get("allowed_district_id"):
+            district = env["hrmis.district.master"].sudo().browse(
+                status_prefill.get("allowed_district_id")
+            ).exists()
+            status_prefill["allowed_district_name"] = district.name if district else ""
+
+        if not status_prefill["allowed_facility_name"] and status_prefill.get("allowed_facility_id"):
+            facility = env["hrmis.facility.type"].sudo().browse(
+                status_prefill.get("allowed_facility_id")
+            ).exists()
+            status_prefill["allowed_facility_name"] = facility.name if facility else ""
+
         designation_name = ""
         allowed_designation_id = status_prefill.get("allowed_designation_id")
         if allowed_designation_id:
@@ -3741,7 +3758,15 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         env.flush_all()
         env.invalidate_all()
         req = env["hrmis.employee.profile.request"].sudo().browse(req.id).exists()
-        return self._render_profile_form(env, employee, req, success=success_msg)
+        status_prefill_override = dict(status_vals or {})
+        status_prefill_override["allowed_start_month"] = self._ym(status_vals.get("allowed_start_month"))
+        return self._render_profile_form(
+            env,
+            employee,
+            req,
+            success=success_msg,
+            status_prefill_override=status_prefill_override,
+        )
 
 #     @http.route(
 #     "/hrmis/profile/request/submit",
