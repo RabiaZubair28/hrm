@@ -1599,8 +1599,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "hrmis_bps": req.hrmis_bps or employee.hrmis_bps or "",
             "hrmis_cadre": (req.hrmis_cadre.id if req.hrmis_cadre else (employee.hrmis_cadre.id if employee.hrmis_cadre else False)),
             "hrmis_designation": (req.hrmis_designation.id if req.hrmis_designation else (employee.hrmis_designation.id if employee.hrmis_designation else False)),
-            "district_id": (req.district_id if req.district_id else (employee.district_id.id if employee.district_id else False)),
-            "facility_id": (req.facility_id if req.facility_id else (employee.facility_id.id if employee.facility_id else False)),
+            "district_id": (req.district_id.id if req.district_id else (employee.district_id.id if employee.district_id else False)),
+            "facility_id": (req.facility_id.id if req.facility_id else (employee.facility_id.id if employee.facility_id else False)),
             "hrmis_contact_info": req.hrmis_contact_info or employee.hrmis_contact_info or "",
             "hrmis_merit_number": req.hrmis_merit_number or employee.hrmis_merit_number or "",
             "hrmis_leaves_taken": req.hrmis_leaves_taken if req.hrmis_leaves_taken is not False else (employee.hrmis_leaves_taken or 0),
@@ -1613,9 +1613,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         }
 
     def _resolve_substantive_facility_prefill(self, pre_fill, req, facilities):
-        selected_value = str(
-            (pre_fill.get("facility_id") if isinstance(pre_fill, dict) else None) or ""
-        ).strip()
+        selected_raw = pre_fill.get("facility_id") if isinstance(pre_fill, dict) else None
+        selected_value = str(getattr(selected_raw, "id", selected_raw) or "").strip()
         other_name = (
             (getattr(req, "facility_other_name", "") or "").strip()
             if req and req.exists()

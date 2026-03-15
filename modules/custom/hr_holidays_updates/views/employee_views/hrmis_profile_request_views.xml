@@ -634,12 +634,12 @@ SUSTANTIVE POSTING DISTRICT
                                     </label>
                                     <select class="hrmis-input js-hrmis-district js-current-district" name="district_id" required="required">
                                       <option value="" disabled="disabled" hidden="hidden" 
-				      t-att-selected="not (req.district_id or current_employee.district_id)"> 
+				      t-att-selected="not (pre_fill.get('district_id') or current_employee.district_id)"> 
 				      Select District 
 				      </option>
                                       <t t-foreach="districts" t-as="d">
                                             <option t-att-value="d.get('id')"
-                                                    t-att-selected="(req.district_id and req.district_id == d.get('id')) or (current_employee.district_id and current_employee.district_id.id == d.get('id'))">
+                                                    t-att-selected="(pre_fill.get('district_id') and pre_fill.get('district_id') == d.get('id')) or (not pre_fill.get('district_id') and current_employee.district_id and current_employee.district_id.id == d.get('id'))">
                                                 <t t-esc="d.get('name')"/>
                                         </option>
                                       </t>
@@ -736,12 +736,12 @@ SUBSTANTIVE POSTING DISTRICT
                                     </label>
                                     <select class="hrmis-input js-hrmis-district js-current-district" name="district_id" required="required">
                                       <option value="" disabled="disabled" hidden="hidden" 
-				      t-att-selected="not (req.district_id or current_employee.district_id)"> 
+				      t-att-selected="not (pre_fill.get('district_id') or current_employee.district_id)"> 
 				      Select District 
 				      </option>
                                       <t t-foreach="districts" t-as="d">
                                             <option t-att-value="d.get('id')"
-                                                    t-att-selected="(req.district_id and req.district_id == d.get('id')) or (current_employee.district_id and current_employee.district_id.id == d.get('id'))">
+                                                    t-att-selected="(pre_fill.get('district_id') and pre_fill.get('district_id') == d.get('id')) or (not pre_fill.get('district_id') and current_employee.district_id and current_employee.district_id.id == d.get('id'))">
                                                 <t t-esc="d.get('name')"/>
                                         </option>
                                       </t>
