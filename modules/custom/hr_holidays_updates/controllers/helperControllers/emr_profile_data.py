@@ -400,7 +400,7 @@ class EmrProfileDataMixin:
 
     def _get_all_emr_facilities(self, env, *, page=1, limit=2500):
         """
-        Temporary fallback implementation.
+        Fetch the full facilities list from EMR across all pages.
         """
         if self._use_static_emr_data():
             return self._get_static_emr_facilities(
@@ -409,19 +409,83 @@ class EmrProfileDataMixin:
                 limit=limit,
             )
 
-        fallback_district_id = 1
+        empty_meta = {
+            "page": page or 1,
+            "limit": limit,
+            "count": 0,
+            "lastPage": 1,
+        }
 
-        _logger.warning(
-            "[HRMIS][EMR] _get_all_emr_facilities is temporarily using fallback district endpoint district_id=%s",
-            fallback_district_id,
+        try:
+            start_page = max(int(page or 1), 1)
+        except Exception:
+            start_page = 1
+
+        facilities = []
+        seen_ids = set()
+        current_page = start_page
+        last_page = start_page
+
+        _logger.info(
+            "[HRMIS][EMR] Fetching all facilities page=%s limit=%s",
+            start_page,
+            limit,
         )
 
-        return self._get_emr_facilities(
-            env,
-            district_id=fallback_district_id,
-            page=page,
-            limit=limit,
+        while True:
+            resp = self._emr_get_json(
+                env,
+                "/facilities",
+                params={"page": current_page, "limit": limit},
+                cache=True,
+            )
+
+            if not resp.get("ok"):
+                return facilities, {
+                    "page": start_page,
+                    "limit": limit,
+                    "count": len(facilities),
+                    "lastPage": last_page,
+                }, resp.get("message") or "Failed to fetch facilities from EMR."
+
+            rows = self._extract_api_rows(resp)
+            meta = self._extract_api_meta(resp)
+
+            try:
+                last_page = max(int(meta.get("lastPage") or current_page), current_page)
+            except Exception:
+                last_page = current_page
+
+            for row in rows:
+                normalized = self._normalize_facility_row(row)
+                facility_id = normalized.get("id")
+                dedupe_key = facility_id if facility_id is not None else (
+                    normalized.get("name"),
+                    normalized.get("district_id"),
+                )
+                if dedupe_key in seen_ids:
+                    continue
+                seen_ids.add(dedupe_key)
+                facilities.append(normalized)
+
+            if current_page >= last_page:
+                break
+
+            current_page += 1
+
+        final_meta = {
+            "page": start_page,
+            "limit": limit,
+            "count": len(facilities),
+            "lastPage": last_page,
+        }
+
+        _logger.info(
+            "[HRMIS][EMR] All facilities fetch complete. count=%s last_page=%s",
+            len(facilities),
+            last_page,
         )
+        return facilities, final_meta, None
 
     def _filter_facilities_by_district(self, facilities, district_id=None):
         if not district_id:
