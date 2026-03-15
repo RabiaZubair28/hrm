@@ -6,6 +6,12 @@ function _qs(root, sel) {
 function _qsa(root, sel) {
   return root ? Array.from(root.querySelectorAll(sel)) : [];
 }
+function _getProfileRequestForm() {
+  return _qs(document, "#profile_update_form");
+}
+function _isSubmittedView() {
+  return !!_getProfileRequestForm()?.classList?.contains("is-submitted");
+}
 function _isEmpty(v) {
   return v === null || v === undefined || String(v).trim() === "";
 }
@@ -242,6 +248,8 @@ async function _fetchFacilities(districtIdRaw) {
  * CURRENT posting filters
  * ---------------------------- */
 function _initCurrentPostingFilters() {
+  if (_isSubmittedView()) return;
+
   const districtSelect =
     _qs(document, "select.js-current-district") ||
     _qs(document, 'select[name="district_id"]');
@@ -306,10 +314,15 @@ function _initCurrentPostingFilters() {
 
   async function refreshFacilities() {
     const selectedDistrictId = String(districtSelect.value || "").trim();
+    const previouslySelectedValue = String(facilitySelect.value || "").trim();
+    const scope =
+      facilitySelect.closest(".js-status-box") ||
+      facilitySelect.closest(".hrmis-form__grid") ||
+      document;
 
     // immediate empty facility to prevent sticky UI
     _resetFacilitySelect(facilitySelect);
-    _toggleOtherFacilityInScope(document, facilitySelect);
+    _toggleOtherFacilityInScope(scope, facilitySelect);
 
     // district empty -> no fetch
     if (_isEmpty(selectedDistrictId)) {
@@ -320,15 +333,24 @@ function _initCurrentPostingFilters() {
     const facilities = await _fetchFacilities(selectedDistrictId);
     _appendFacilitiesToSelect(facilitySelect, facilities);
 
-    // keep empty after filling
-    facilitySelect.selectedIndex = 0;
-    facilitySelect.value = "";
-    if (facilitySelect.options?.[0]) facilitySelect.options[0].selected = true;
+    const hasPreviousSelection =
+      previouslySelectedValue &&
+      Array.from(facilitySelect.options || []).some(
+        (opt) => String(opt.value || "").trim() === previouslySelectedValue,
+      );
+
+    if (hasPreviousSelection) {
+      facilitySelect.value = previouslySelectedValue;
+    } else {
+      facilitySelect.selectedIndex = 0;
+      facilitySelect.value = "";
+      if (facilitySelect.options?.[0]) facilitySelect.options[0].selected = true;
+    }
 
     if (facilitySelect._hrmisRefreshCombobox)
       facilitySelect._hrmisRefreshCombobox();
 
-    _toggleOtherFacilityInScope(document, facilitySelect);
+    _toggleOtherFacilityInScope(scope, facilitySelect);
     filterDesignations();
   }
 
@@ -529,6 +551,8 @@ function _initStatusBoxFacilityFilters() {
 let __hrmis_init_done = false;
 
 function _initFilters() {
+  if (_isSubmittedView()) return;
+
   // allow re-run safely without duplicating listeners too much
   // (we still guard by __hrmis_init_done for first run)
   _initCurrentPostingFilters();
