@@ -1416,6 +1416,11 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         ctx["facilities_json"] = json.dumps(all_facilities)
         ctx["facilities_meta_json"] = json.dumps(facilities_meta)
         ctx["selected_district_id"] = selected_district_id
+        (
+            ctx["substantive_facility_prefill_value"],
+            ctx["substantive_facility_prefill_other_name"],
+            ctx["substantive_facility_prefill_has_match"],
+        ) = self._resolve_substantive_facility_prefill(pre_fill, req, all_facilities)
 
         ctx = self._with_prefill_ctx(env, employee, req, ctx, prefer_draft=prefer_draft)
         status_prefill_source = (
@@ -1423,7 +1428,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             if status_prefill_override is not None
             else self._load_request_posting_status(req)
         )
-        ctx["posting_status_prefill"] = self._load_request_posting_status(req)
+        ctx["posting_status_prefill"] = status_prefill_source or {}
 
         ctx["hrmis_profile_prefill_json"] = json.dumps({
             "qual": ctx.get("prefill_qual_rows") or [],
@@ -1606,6 +1611,30 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "year_qualification": req.year_qualification or employee.year_qualification or "",
             "date_promotion": req.date_promotion or employee.date_promotion or "",
         }
+
+    def _resolve_substantive_facility_prefill(self, pre_fill, req, facilities):
+        selected_value = str(
+            (pre_fill.get("facility_id") if isinstance(pre_fill, dict) else None) or ""
+        ).strip()
+        other_name = (
+            (getattr(req, "facility_other_name", "") or "").strip()
+            if req and req.exists()
+            else ""
+        )
+
+        facility_ids = {
+            str((f or {}).get("id") or "").strip()
+            for f in (facilities or [])
+            if str((f or {}).get("id") or "").strip()
+        }
+
+        if selected_value and selected_value in facility_ids:
+            return selected_value, "", True
+
+        if other_name:
+            return OTHER_TOKEN, other_name, False
+
+        return "", "", False
    
 
     @http.route("/hrmis/profile/request", type="http", auth="user", website=True, methods=["GET"], csrf=False)
@@ -2052,6 +2081,12 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return 0.0
 
     def _build_req_vals(self, post, *, bps, cadre_id, designation_id, district_id, facility_id, approver_emp, posted_taken):
+        raw_facility_value = (post.get("posting_facility_id") or post.get("facility_id") or "").strip()
+        facility_other_name = (
+            (post.get("facility_other_name") or "").strip()
+            if self._is_other(raw_facility_value)
+            else False
+        )
         vals = {
             "hrmis_employee_id": post.get("hrmis_employee_id"),
             "hrmis_cnic": post.get("hrmis_cnic"),
@@ -2065,6 +2100,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "hrmis_designation": designation_id,
             "district_id": district_id,
             "facility_id": facility_id,
+            "facility_other_name": facility_other_name or False,
             "hrmis_contact_info": post.get("hrmis_contact_info"),
             "hrmis_merit_number": post.get("hrmis_merit_number"),
             "hrmis_leaves_taken": posted_taken,  # fallback (server recalcs below)
@@ -2683,7 +2719,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 "employee_id": employee.id,
                 "district_id": district_id,
                 "facility_id": facility_id or False,
+                "facility_other_name": raw_fac_other if self._is_other(raw_facility) else False,
                 "designation_id": designation_id,
+                "designation_other_name": raw_des_other if self._is_other(raw_desig) else False,
                 "bps": bps_val,
                 "start_date": s,
                 "end_date": e or False,
@@ -2794,26 +2832,40 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             eol_degree = eol_degree_raw or False
             eol_degree_other_name = False
         eol_institute_id, eol_institute_code = _m2o_or_code(inst_raw)
-        
+        eol_institute_other_name = False
         if inst_other:
-            inst = env["hrmis.training.institute"].sudo().create({"name": inst_other})
-            eol_institute_id = inst.id
-            eol_institute_code = False 
+            eol_institute_id = False
+            eol_institute_code = False
+            eol_institute_other_name = inst_other
 
         eol_specialization_id, eol_specialization_code = _m2o_or_code(spec_raw)
-
+        eol_specialization_other_name = False
         if spec_other:
-            spec = env["hrmis.training.specialization"].sudo().create({"name": spec_other})
-            eol_specialization_id = spec.id
+            eol_specialization_id = False
             eol_specialization_code = False
+            eol_specialization_other_name = spec_other
+        else:
+            eol_specialization_other_name = False
              
         allowed_district_id = m2o_int(post.get("allowed_district_id"))
+        allowed_facility_raw = (post.get("allowed_facility_id") or "").strip()
+        allowed_facility_other_name = (
+            (post.get("allowed_work_facility_other_name") or "").strip()
+            if allowed_facility_raw == OTHER_TOKEN
+            else False
+        )
         allowed_facility_id = _resolve_facility_other(
-            post.get("allowed_facility_id"),
-            post.get("allowed_work_facility_other_name"),
+            allowed_facility_raw,
+            allowed_facility_other_name,
             allowed_district_id,
         )
         allowed_bps_val = int(post.get("allowed_bps") or 0) if (post.get("allowed_bps") or "").strip() else 0
+        allowed_designation_raw = (post.get("allowed_designation_id") or "").strip()
+        allowed_designation_other_name = (
+            (post.get("allowed_work_designation_other_name") or "").strip()
+            if allowed_designation_raw == OTHER_TOKEN
+            else False
+        )
         onleave_district_id = m2o_int(post.get("frontend_onleave_district_id"))
         onleave_facility_id = _resolve_facility_other(
             post.get("frontend_onleave_facility_id"),
@@ -2844,8 +2896,10 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             # EOL
             "eol_institute_id": eol_institute_id,
             "eol_institute_code": eol_institute_code,
+            "eol_institute_other_name": eol_institute_other_name,
             "eol_specialization_id": eol_specialization_id,
             "eol_specialization_code": eol_specialization_code,
+            "eol_specialization_other_name": eol_specialization_other_name,
             "eol_status": post.get("frontend_eol_status") or False,
             "eol_start": post.get("frontend_eol_start") or False,
             "eol_end": post.get("frontend_eol_end") or False,
@@ -2856,13 +2910,15 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "allowed_to_work": allowed_to_work,
             "allowed_district_id": allowed_district_id,
             "allowed_facility_id": allowed_facility_id,
+            "allowed_facility_other_name": allowed_facility_other_name or False,
             "allowed_bps": allowed_bps_val,
             "allowed_designation_id": _resolve_designation_other(
-                post.get("allowed_designation_id"),
-                post.get("allowed_work_designation_other_name"),
+                allowed_designation_raw,
+                allowed_designation_other_name,
                 allowed_bps_val,
                 allowed_facility_id,
             ),
+            "allowed_designation_other_name": allowed_designation_other_name or False,
             "allowed_start_month": self._month_to_date(post.get("allowed_start_month") or "") or False,
 
             # EOL Primary Posting (as you had)
@@ -3184,6 +3240,11 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 return code_field or ""
             return ""
 
+        def _other_or_m2o_value(record, code_field=None, other_name=None):
+            if other_name:
+                return OTHER_TOKEN
+            return _m2o_value(record, code_field)
+
         return {
             "status": status_rec.status or "",
             "current_posting_start": (req.current_posting_start or "")[:7] if req else "",
@@ -3198,17 +3259,29 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "onleave_reporting_to": status_rec.onleave_reporting_to or "",
             "onleave_reporting_district_id": status_rec.onleave_reporting_district_id or 0,
             "onleave_reporting_facility_id": status_rec.onleave_reporting_facility_id or 0,
-            "eol_institute_value": _m2o_value(status_rec.eol_institute_id, status_rec.eol_institute_code),
+            "eol_institute_value": _other_or_m2o_value(
+                status_rec.eol_institute_id,
+                status_rec.eol_institute_code,
+                status_rec.eol_institute_other_name,
+            ),
+            "eol_institute_other_name": status_rec.eol_institute_other_name or "",
             "eol_degree": "__other__" if status_rec.eol_degree == "other" else (status_rec.eol_degree or ""),
             "eol_degree_other_name": status_rec.eol_degree_other_name or "",
-            "eol_specialization_value": _m2o_value(status_rec.eol_specialization_id, status_rec.eol_specialization_code),
+            "eol_specialization_value": _other_or_m2o_value(
+                status_rec.eol_specialization_id,
+                status_rec.eol_specialization_code,
+                status_rec.eol_specialization_other_name,
+            ),
+            "eol_specialization_other_name": status_rec.eol_specialization_other_name or "",
             "eol_status": status_rec.eol_status or "",
             "eol_start": self._yd(status_rec.eol_start),
             "eol_end": self._yd(status_rec.eol_end),
             "allowed_to_work": bool(status_rec.allowed_to_work),
             "allowed_district_id": status_rec.allowed_district_id or 0,
-            "allowed_facility_id": status_rec.allowed_facility_id or 0,
-            "allowed_designation_id": status_rec.allowed_designation_id.id if status_rec.allowed_designation_id else 0,
+            "allowed_facility_id": OTHER_TOKEN if (status_rec.allowed_facility_other_name or "").strip() else (status_rec.allowed_facility_id or 0),
+            "allowed_work_facility_other_name": status_rec.allowed_facility_other_name or "",
+            "allowed_designation_id": OTHER_TOKEN if (status_rec.allowed_designation_other_name or "").strip() else (status_rec.allowed_designation_id.id if status_rec.allowed_designation_id else 0),
+            "allowed_work_designation_other_name": status_rec.allowed_designation_other_name or "",
             "allowed_start_month": self._ym(status_rec.allowed_start_month),
             "deputation_start": self._ym(status_rec.deputation_start),
             "deputation_department": status_rec.deputation_department or "",
@@ -3242,10 +3315,10 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
         prefill_post = [{
             "district_id": q.district_id.id if q.district_id else 0,
-            "facility_id": q.facility_id.id if getattr(q, "facility_id", False) else 0,
+            "facility_id": OTHER_TOKEN if (q.facility_other_name or "").strip() else (q.facility_id.id if getattr(q, "facility_id", False) else 0),
             "facility_other_name": q.facility_other_name or "",
-            "designation_id": q.designation_id.id if q.designation_id else 0,
-            "designation_other_name": "",
+            "designation_id": OTHER_TOKEN if (getattr(q, "designation_other_name", "") or "").strip() else (q.designation_id.id if q.designation_id else 0),
+            "designation_other_name": getattr(q, "designation_other_name", "") or "",
             "bps": int(q.bps or 0),
             "start_month": self._ym(q.start_date),
             "end_month": self._ym(q.end_date),
@@ -3305,10 +3378,10 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
         prefill_post = [{
             "district_id": q.district_id.id if q.district_id else 0,
-            "facility_id": q.facility_id.id if q.facility_id else 0,
+            "facility_id": OTHER_TOKEN if (q.facility_other_name or "").strip() else (q.facility_id.id if q.facility_id else 0),
             "facility_other_name": q.facility_other_name or "",
-            "designation_id": q.designation_id.id if q.designation_id else 0,
-            "designation_other_name": "",
+            "designation_id": OTHER_TOKEN if (getattr(q, "designation_other_name", "") or "").strip() else (q.designation_id.id if q.designation_id else 0),
+            "designation_other_name": getattr(q, "designation_other_name", "") or "",
             "bps": int(q.bps or 0),
             "start_month": self._ym(q.start_date),
             "end_month": self._ym(q.end_date),
@@ -3372,6 +3445,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         p_bps = form.getlist("posting_bps[]")
         p_start = form.getlist("posting_start[]")
         p_end = form.getlist("posting_end[]")
+        p_fac_other = form.getlist("posting_facility_other_name[]")
+        p_des_other = form.getlist("posting_designation_other_name[]")
         def _safe_int0(v):
             try:
                 v = (v or "").strip()
@@ -3383,10 +3458,14 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             
         draft_post = []
         for i in range(max(len(p_district), len(p_facility), len(p_designation), len(p_bps), len(p_start), len(p_end))):
+            facility_raw = (p_facility[i] if i < len(p_facility) else "").strip()
+            designation_raw = (p_designation[i] if i < len(p_designation) else "").strip()
             draft_post.append({
                 "district_id": _safe_int0(p_district[i] if i < len(p_district) else ""),
-                "facility_id": _safe_int0(p_facility[i] if i < len(p_facility) else ""),
-                "designation_id": _safe_int0(p_designation[i] if i < len(p_designation) else ""),
+                "facility_id": OTHER_TOKEN if facility_raw == OTHER_TOKEN else _safe_int0(facility_raw),
+                "facility_other_name": (p_fac_other[i] if i < len(p_fac_other) else "").strip(),
+                "designation_id": OTHER_TOKEN if designation_raw == OTHER_TOKEN else _safe_int0(designation_raw),
+                "designation_other_name": (p_des_other[i] if i < len(p_des_other) else "").strip(),
                 "bps": _safe_int0(p_bps[i] if i < len(p_bps) else ""),
                 "start_month": (p_start[i] if i < len(p_start) else "").strip(),
                 "end_month": (p_end[i] if i < len(p_end) else "").strip(),

@@ -538,10 +538,12 @@ DESIGNATION
                                           <t t-esc="inst.name"/>
                                         </option>
                                       </t>
-                                      <option value="__other__" t-att-selected="status_prefill.get('eol_institute_value') == '__other__'">Other</option>
+                                      <option value="__other__" t-att-selected="status_prefill.get('eol_institute_value') == '__other__'">
+                                        <t t-esc="status_prefill.get('eol_institute_other_name') or 'Other'"/>
+                                      </option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input" type="text" name="frontend_eol_institute_other_name" placeholder="Enter Training Institute" disabled="disabled"/>
+                                      <input class="hrmis-input js-other-input" type="text" name="frontend_eol_institute_other_name" t-att-value="status_prefill.get('eol_institute_other_name') or ''" placeholder="Enter Training Institute" disabled="disabled"/>
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
@@ -601,10 +603,12 @@ DEGREE
                                       <option value="ent" t-att-selected="status_prefill.get('eol_specialization_value') == 'ent'">ENT</option>
                                       <option value="dentistry" t-att-selected="status_prefill.get('eol_specialization_value') == 'dentistry'">Dentistry</option>
                                       <option value="orthodontist" t-att-selected="status_prefill.get('eol_specialization_value') == 'orthodontist'">Orthodontist</option>
-                                      <option value="__other__" t-att-selected="status_prefill.get('eol_specialization_value') == '__other__'">Other</option>
+                                      <option value="__other__" t-att-selected="status_prefill.get('eol_specialization_value') == '__other__'">
+                                        <t t-esc="status_prefill.get('eol_specialization_other_name') or 'Other'"/>
+                                      </option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input" type="text" name="frontend_eol_specialization_other_name" placeholder="Enter Specialization" disabled="disabled"/>
+                                      <input class="hrmis-input js-other-input" type="text" name="frontend_eol_specialization_other_name" t-att-value="status_prefill.get('eol_specialization_other_name') or ''" placeholder="Enter Specialization" disabled="disabled"/>
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
@@ -652,20 +656,28 @@ SUSTANTIVE POSTING FACILITY
 				    data-enable-search="1" 
 				    data-other-name="facility_other_name" 
 				    required="required">
-                                      <option value="" selected="selected">Select Facility</option>
+                                      <option value=""
+                                              t-att-selected="not substantive_facility_prefill_has_match and not substantive_facility_prefill_other_name">
+                                        Select Facility
+                                      </option>
                                       <t t-foreach="facilities" t-as="f">
                                             <option t-att-value="f.get('id')"
                                                     t-att-data-district-id="f.get('district_id') or ''"
-                                                    t-att-selected="(req.facility_id and req.facility_id == f.get('id')) or (current_employee.facility_id and current_employee.facility_id.id == f.get('id'))">
+                                                    t-att-selected="str(substantive_facility_prefill_value or '') == str(f.get('id') or '') and substantive_facility_prefill_has_match">
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
-                                      <option value="__other__" data-district-id="">Other</option>
+                                      <option value="__other__"
+                                              data-district-id=""
+                                              t-att-selected="substantive_facility_prefill_value == '__other__' and substantive_facility_prefill_other_name">
+                                        <t t-esc="substantive_facility_prefill_other_name or 'Other'"/>
+                                      </option>
                                     </select>
                                     <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input js-current-facility-other" 
 				      type="text" 
 				      name="facility_other_name"
+				      t-att-value="substantive_facility_prefill_other_name or ''"
 				       placeholder="Enter Facility Name"/>
                                     </div>
                                   </div>
@@ -700,7 +712,7 @@ POSTING START (MONTH/YEAR)
                                     <t t-if="req and ('current_posting_start' in req._fields)">
                                       <!-- <t t-set="cps_val" t-value="status_prefill.get('current_posting_start') or (req.current_posting_start[:7] if req.current_posting_start else '')"/> -->
 </t>
-                                    <input class="hrmis-input js-current-post-start" type="month" name="current_posting_start" required="required" t-att-value="cps_val"/>
+                                    <input class="hrmis-input js-current-post-start" type="month" name="current_posting_start" required="required" t-att-value="status_prefill.get('current_posting_start') or req.current_posting_start or ''"/>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6; display: flex">
                                     <div style="display:flex; align-items:center; justify-content:center; margin-top:10px; gap: 12px">
@@ -746,20 +758,28 @@ SUBSTANTIVE POSTING FACILITY
 				    data-enable-search="1" 
 				    data-other-name="facility_other_name" 
 				    required="required">
-                                      <option value="" selected="selected">Select Facility</option>
+                                      <option value=""
+                                              t-att-selected="not substantive_facility_prefill_has_match and not substantive_facility_prefill_other_name">
+                                        Select Facility
+                                      </option>
                                       <t t-foreach="facilities" t-as="f">
                                             <option t-att-value="f.get('id')"
                                                     t-att-data-district-id="f.get('district_id') or ''"
-                                                    t-att-selected="(req.facility_id and req.facility_id == f.get('id')) or (current_employee.facility_id and current_employee.facility_id.id == f.get('id'))">
+                                                    t-att-selected="str(substantive_facility_prefill_value or '') == str(f.get('id') or '') and substantive_facility_prefill_has_match">
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
-                                      <option value="__other__" data-district-id="">Other</option>
+                                      <option value="__other__"
+                                              data-district-id=""
+                                              t-att-selected="substantive_facility_prefill_value == '__other__' and substantive_facility_prefill_other_name">
+                                        <t t-esc="substantive_facility_prefill_other_name or 'Other'"/>
+                                      </option>
                                     </select>
                                     <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input js-current-facility-other" 
 				      type="text" 
 				      name="facility_other_name" 
+				      t-att-value="substantive_facility_prefill_other_name or ''"
 				      placeholder="Enter Facility Name"/>
                                     </div>
                                   </div>
@@ -839,12 +859,16 @@ ALLOWED TO WORK DISTRICT
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
-                                      <option value="__other__">Other</option>
+                                      <option value="__other__"
+                                              t-att-selected="status_prefill.get('allowed_facility_id') == '__other__'">
+                                        <t t-esc="status_prefill.get('allowed_work_facility_other_name') or 'Other'"/>
+                                      </option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input" 
 				      type="text" 
 				      name="allowed_work_facility_other_name" 
+				      t-att-value="status_prefill.get('allowed_work_facility_other_name') or ''"
 				      placeholder="Enter Facility"/>
                                     </div>
                                   </div>
@@ -864,10 +888,13 @@ DESIGNATION
                                           <t t-esc="des.name"/>
                                         </option>
                                       </t>
-                                      <option value="__other__">Other</option>
+                                      <option value="__other__"
+                                              t-att-selected="status_prefill.get('allowed_designation_id') == '__other__'">
+                                        <t t-esc="status_prefill.get('allowed_work_designation_other_name') or 'Other'"/>
+                                      </option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input" type="text" name="allowed_work_designation_other_name" placeholder="Enter Designation"/>
+                                      <input class="hrmis-input js-other-input" type="text" name="allowed_work_designation_other_name" t-att-value="status_prefill.get('allowed_work_designation_other_name') or ''" placeholder="Enter Designation"/>
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
@@ -1020,8 +1047,8 @@ FACILITY
                                     </t>
 
                                     <option value="__other__"
-                                            t-att-selected="(p.get('facility_other_name') or '').strip() and not p.get('facility_id')">
-                                      Other
+                                            t-att-selected="str(p.get('facility_id') or '') == '__other__'">
+                                      <t t-esc="p.get('facility_other_name') or 'Other'"/>
                                     </option>
                                   </select>
                                   <div class="js-other-wrap" style="display:none; margin-top:6px;">
@@ -1052,7 +1079,9 @@ DESIGNATION
                                         <t t-esc="des.name"/>
                                       </option>
                                     </t>
-                                    <option value="__other__" t-att-selected="(p.get('designation_other_name') or '').strip() and not p.get('designation_id')"> Other </option>
+                                    <option value="__other__" t-att-selected="str(p.get('designation_id') or '') == '__other__'">
+                                      <t t-esc="p.get('designation_other_name') or 'Other'"/>
+                                    </option>
                                   </select>
                                   <div class="js-other-wrap" style="display:none; margin-top:6px;">
                                     <input class="hrmis-input js-other-input" type="text" name="posting_designation_other_name[]" t-att-value="p.get('designation_other_name') or ''" placeholder="Enter Designation" disabled="disabled"/>

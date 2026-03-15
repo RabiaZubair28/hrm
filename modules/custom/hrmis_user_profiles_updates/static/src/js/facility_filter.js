@@ -44,6 +44,12 @@ function _getCtx(el, form) {
 
 function _initFacilityFilter() {
   const form = _qs(document, "#profile_update_form") || document;
+  const isSubmittedView = !!form?.classList?.contains?.("is-submitted");
+
+  // In submitted/read-only view, preserve server-rendered selections exactly as-is.
+  if (isSubmittedView) {
+    return;
+  }
 
   if (form && form.dataset && form.dataset.hrmisFacilityFilterBound === "1") {
     console.info("[HRMIS][FAC] already bound, skipping rebind");

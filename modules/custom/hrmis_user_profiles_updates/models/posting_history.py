@@ -75,6 +75,7 @@ class HrmisPostingHistory(models.Model):
     facility_other_name = fields.Char(string="Other Facility")
 
     designation_id = fields.Many2one("hrmis.designation", required=True)
+    designation_other_name = fields.Char(string="Other Designation")
     bps = fields.Integer(string="BPS", required=True)
 
     start_date = fields.Date(required=True, index=True)
