@@ -663,13 +663,13 @@ SUSTANTIVE POSTING FACILITY
                                       <t t-foreach="facilities" t-as="f">
                                             <option t-att-value="f.get('id')"
                                                     t-att-data-district-id="f.get('district_id') or ''"
-                                                    t-att-selected="(req.facility_id and req.facility_id == f.get('id')) or (current_employee.facility_id and current_employee.facility_id.id == f.get('id'))">
+                                                    t-att-selected="str(req.facility_id or '') == str(f.get('id') or '') or str(current_employee.facility_id.id if current_employee.facility_id else '') == str(f.get('id') or '')">
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
                                       <option value="__other__"
                                               data-district-id=""
-                                              t-att-selected="(req.facility_other_name or '').strip() and not req.facility_id">
+                                              t-att-selected="(req.facility_other_name or '').strip()">
                                         <t t-esc="req.facility_other_name or 'Other'"/>
                                       </option>
                                     </select>
@@ -765,13 +765,13 @@ SUBSTANTIVE POSTING FACILITY
                                       <t t-foreach="facilities" t-as="f">
                                             <option t-att-value="f.get('id')"
                                                     t-att-data-district-id="f.get('district_id') or ''"
-                                                    t-att-selected="(req.facility_id and req.facility_id == f.get('id')) or (current_employee.facility_id and current_employee.facility_id.id == f.get('id'))">
+                                                    t-att-selected="str(req.facility_id or '') == str(f.get('id') or '') or str(current_employee.facility_id.id if current_employee.facility_id else '') == str(f.get('id') or '')">
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
                                       <option value="__other__"
                                               data-district-id=""
-                                              t-att-selected="(req.facility_other_name or '').strip() and not req.facility_id">
+                                              t-att-selected="(req.facility_other_name or '').strip()">
                                         <t t-esc="req.facility_other_name or 'Other'"/>
                                       </option>
                                     </select>
