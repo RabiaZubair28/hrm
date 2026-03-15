@@ -651,43 +651,35 @@ SUSTANTIVE POSTING DISTRICT
 SUSTANTIVE POSTING FACILITY
                                       <span class="req">*</span>
                                     </label>
-                                    <t t-if="not is_draft">
-                                      <input class="hrmis-input"
-                                             type="text"
-                                             readonly="readonly"
-                                             t-att-value="substantive_facility_prefill_label or ''"/>
-                                    </t>
-                                    <t t-else="">
-                                      <select class="hrmis-input js-current-facility js-other-select" 
-				      name="facility_id" 
-				      data-enable-search="1" 
-				      data-other-name="facility_other_name" 
-				      required="required">
-                                        <option value=""
-                                                t-att-selected="not substantive_facility_prefill_has_match and not substantive_facility_prefill_other_name">
-                                          Select Facility
+                                    <select class="hrmis-input js-current-facility js-other-select" 
+				    name="facility_id" 
+				    data-enable-search="1" 
+				    data-other-name="facility_other_name" 
+				    required="required">
+                                      <option value=""
+                                              t-att-selected="not substantive_facility_prefill_has_match and not substantive_facility_prefill_other_name">
+                                        Select Facility
+                                      </option>
+                                      <t t-foreach="facilities" t-as="f">
+                                            <option t-att-value="f.get('id')"
+                                                    t-att-data-district-id="f.get('district_id') or ''"
+                                                    t-att-selected="str(substantive_facility_prefill_value or '') == str(f.get('id') or '') and substantive_facility_prefill_has_match">
+                                                <t t-esc="f.get('name')"/>
                                         </option>
-                                        <t t-foreach="facilities" t-as="f">
-                                              <option t-att-value="f.get('id')"
-                                                      t-att-data-district-id="f.get('district_id') or ''"
-                                                      t-att-selected="str(substantive_facility_prefill_value or '') == str(f.get('id') or '') and substantive_facility_prefill_has_match">
-                                                  <t t-esc="f.get('name')"/>
-                                          </option>
-                                        </t>
-                                        <option value="__other__"
-                                                data-district-id=""
-                                                t-att-selected="substantive_facility_prefill_value == '__other__' and substantive_facility_prefill_other_name">
-                                          <t t-esc="substantive_facility_prefill_other_name or 'Other'"/>
-                                        </option>
-                                      </select>
-                                      <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
-                                        <input class="hrmis-input js-other-input js-current-facility-other" 
-				        type="text" 
-				        name="facility_other_name"
-				        t-att-value="substantive_facility_prefill_other_name or ''"
-				         placeholder="Enter Facility Name"/>
-                                      </div>
-                                    </t>
+                                      </t>
+                                      <option value="__other__"
+                                              data-district-id=""
+                                              t-att-selected="substantive_facility_prefill_value == '__other__' and substantive_facility_prefill_other_name">
+                                        <t t-esc="substantive_facility_prefill_other_name or 'Other'"/>
+                                      </option>
+                                    </select>
+                                    <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
+                                      <input class="hrmis-input js-other-input js-current-facility-other" 
+				      type="text" 
+				      name="facility_other_name"
+				      t-att-value="substantive_facility_prefill_other_name or ''"
+				       placeholder="Enter Facility Name"/>
+                                    </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>
@@ -761,43 +753,35 @@ SUBSTANTIVE POSTING DISTRICT
 SUBSTANTIVE POSTING FACILITY
                                       <span class="req">*</span>
                                     </label>
-                                    <t t-if="not is_draft">
-                                      <input class="hrmis-input"
-                                             type="text"
-                                             readonly="readonly"
-                                             t-att-value="substantive_facility_prefill_label or ''"/>
-                                    </t>
-                                    <t t-else="">
-                                      <select class="hrmis-input js-hrmis-facility js-current-facility js-other-select" 
-                                              name="posting_facility_id"
-				      data-enable-search="1" 
-				      data-other-name="facility_other_name" 
-				      required="required">
-                                        <option value=""
-                                                t-att-selected="not substantive_facility_prefill_has_match and not substantive_facility_prefill_other_name">
-                                          Select Facility
+                                    <select class="hrmis-input js-hrmis-facility js-current-facility js-other-select" 
+                                            name="posting_facility_id"
+				    data-enable-search="1" 
+				    data-other-name="facility_other_name" 
+				    required="required">
+                                      <option value=""
+                                              t-att-selected="not substantive_facility_prefill_has_match and not substantive_facility_prefill_other_name">
+                                        Select Facility
+                                      </option>
+                                      <t t-foreach="facilities" t-as="f">
+                                            <option t-att-value="f.get('id')"
+                                                    t-att-data-district-id="f.get('district_id') or ''"
+                                                    t-att-selected="str(substantive_facility_prefill_value or '') == str(f.get('id') or '') and substantive_facility_prefill_has_match">
+                                                <t t-esc="f.get('name')"/>
                                         </option>
-                                        <t t-foreach="facilities" t-as="f">
-                                              <option t-att-value="f.get('id')"
-                                                      t-att-data-district-id="f.get('district_id') or ''"
-                                                      t-att-selected="str(substantive_facility_prefill_value or '') == str(f.get('id') or '') and substantive_facility_prefill_has_match">
-                                                  <t t-esc="f.get('name')"/>
-                                          </option>
-                                        </t>
-                                        <option value="__other__"
-                                                data-district-id=""
-                                                t-att-selected="substantive_facility_prefill_value == '__other__' and substantive_facility_prefill_other_name">
-                                          <t t-esc="substantive_facility_prefill_other_name or 'Other'"/>
-                                        </option>
-                                      </select>
-                                      <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
-                                        <input class="hrmis-input js-other-input js-current-facility-other" 
-				        type="text" 
-				        name="facility_other_name" 
-				        t-att-value="substantive_facility_prefill_other_name or ''"
-				        placeholder="Enter Facility Name"/>
-                                      </div>
-                                    </t>
+                                      </t>
+                                      <option value="__other__"
+                                              data-district-id=""
+                                              t-att-selected="substantive_facility_prefill_value == '__other__' and substantive_facility_prefill_other_name">
+                                        <t t-esc="substantive_facility_prefill_other_name or 'Other'"/>
+                                      </option>
+                                    </select>
+                                    <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
+                                      <input class="hrmis-input js-other-input js-current-facility-other" 
+				      type="text" 
+				      name="facility_other_name" 
+				      t-att-value="substantive_facility_prefill_other_name or ''"
+				      placeholder="Enter Facility Name"/>
+                                    </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
                                     <label>

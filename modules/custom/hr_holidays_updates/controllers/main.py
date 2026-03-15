@@ -1420,8 +1420,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             ctx["substantive_facility_prefill_value"],
             ctx["substantive_facility_prefill_other_name"],
             ctx["substantive_facility_prefill_has_match"],
-            ctx["substantive_facility_prefill_label"],
-        ) = self._resolve_substantive_facility_prefill(env, pre_fill, req, all_facilities)
+        ) = self._resolve_substantive_facility_prefill(pre_fill, req, all_facilities)
 
         ctx = self._with_prefill_ctx(env, employee, req, ctx, prefer_draft=prefer_draft)
         status_prefill_source = (
@@ -1613,7 +1612,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "date_promotion": req.date_promotion or employee.date_promotion or "",
         }
 
-    def _resolve_substantive_facility_prefill(self, env, pre_fill, req, facilities):
+    def _resolve_substantive_facility_prefill(self, pre_fill, req, facilities):
         selected_value = str(
             (pre_fill.get("facility_id") if isinstance(pre_fill, dict) else None) or ""
         ).strip()
@@ -1623,28 +1622,19 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             else ""
         )
 
-        facility_map = {
-            str((f or {}).get("id") or "").strip(): (f or {}).get("name") or ""
+        facility_ids = {
+            str((f or {}).get("id") or "").strip()
             for f in (facilities or [])
             if str((f or {}).get("id") or "").strip()
         }
 
-        if selected_value and selected_value in facility_map:
-            return selected_value, "", True, (facility_map.get(selected_value) or "").strip()
+        if selected_value and selected_value in facility_ids:
+            return selected_value, "", True
 
         if other_name:
-            return OTHER_TOKEN, other_name, False, other_name
+            return OTHER_TOKEN, other_name, False
 
-        fallback_label = ""
-        if selected_value and selected_value.isdigit():
-            local_facility = env["hrmis.facility.type"].sudo().browse(int(selected_value)).exists()
-            if local_facility:
-                fallback_label = (local_facility.name or "").strip()
-
-        if fallback_label:
-            return selected_value, "", False, fallback_label
-
-        return "", "", False, ""
+        return "", "", False
    
 
     @http.route("/hrmis/profile/request", type="http", auth="user", website=True, methods=["GET"], csrf=False)
