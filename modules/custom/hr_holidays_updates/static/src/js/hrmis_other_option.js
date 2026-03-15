@@ -67,6 +67,23 @@ function _toggleOther(selectEl) {
   if (!isOther) pair.input.value = "";
 }
 
+function _syncSubmittedOtherDisplay(selectEl) {
+  const pair = _getOrCreateOtherWrap(selectEl);
+  if (!pair) return;
+
+  const otherOpt = _ensureOtherOption(selectEl);
+  const isOther = selectEl.value === "__other__";
+  const otherValue = (pair.input.value || "").trim();
+
+  if (isOther && otherOpt && otherValue) {
+    otherOpt.textContent = otherValue;
+  }
+
+  pair.wrap.style.display = "none";
+  pair.input.disabled = true;
+  pair.input.required = false;
+}
+
 function _injectSearch(selectEl) {
   const enabled = selectEl.dataset.enableSearch === "1";
   if (!enabled) return null;
@@ -171,13 +188,17 @@ publicWidget.registry.HrmisOtherOption = publicWidget.Widget.extend({
   },
 
   start() {
+    const isSubmittedView = this.el.classList.contains("is-submitted");
 
     const selects = this.el.querySelectorAll("select.js-other-select");
 
     selects.forEach((sel) => {
       _ensureOtherOption(sel);
-    //   _injectSearch(sel);
-      _toggleOther(sel); // initial state
+      if (isSubmittedView) {
+        _syncSubmittedOtherDisplay(sel);
+      } else {
+        _toggleOther(sel); // initial state
+      }
     });
 
     return this._super(...arguments);
@@ -195,4 +216,3 @@ publicWidget.registry.HrmisOtherOption = publicWidget.Widget.extend({
     _toggleOther(sel);
   },
 });
-

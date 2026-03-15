@@ -180,6 +180,11 @@ function _bindAllowedToWorkToggle() {
 }
 
 function _bind() {
+  const form = _qs(document, "#profile_update_form");
+  if (form && form.classList.contains("is-submitted")) {
+    return;
+  }
+
   const statusSelect = _qs(
     document,
     'select[name="hrmis_current_status_frontend"]',

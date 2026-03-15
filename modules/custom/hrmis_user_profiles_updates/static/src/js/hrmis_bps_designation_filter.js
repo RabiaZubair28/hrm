@@ -52,6 +52,12 @@ function _getCtx(el, form) {
 
 function _initBpsDesignationFilter() {
   const form = _qs(document, "#profile_update_form") || document;
+  const isSubmittedView = !!form?.classList?.contains?.("is-submitted");
+
+  // Read-only submitted screens should keep server-rendered selections untouched.
+  if (isSubmittedView) {
+    return;
+  }
 
   if (form && form.dataset && form.dataset.hrmisBpsFilterBound === "1") {
     console.info("[HRMIS][BPS] already bound, skipping rebind");
@@ -126,6 +132,21 @@ function _initBpsDesignationFilter() {
 
   function filterDesignationsByBps(designationSelect, bpsInput) {
     if (!designationSelect) return;
+    const isAllowedDesignation =
+      _norm(designationSelect.getAttribute("name")) === "allowed_designation_id";
+    const hasLocalAllowedBps =
+      !!designationSelect.closest(".hrmis-field, .hrmis-form__grid, .js-status-box, form")?.querySelector?.(
+        'input[name="allowed_bps"], select[name="allowed_bps"]',
+      );
+
+    // Allowed-to-work designation currently has no dedicated BPS input in the form.
+    // Do not clear a valid prefilled value just because the generic top-level BPS differs.
+    if (isAllowedDesignation && !hasLocalAllowedBps) {
+      if (typeof designationSelect._hrmisRefreshCombobox === "function") {
+        designationSelect._hrmisRefreshCombobox();
+      }
+      return;
+    }
 
     const bpsValueRaw = bpsInput ? _norm(bpsInput.value) : "";
     const bpsValue = _canonBps(bpsValueRaw);
