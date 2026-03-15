@@ -1387,9 +1387,27 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         )
 
         districts, districts_error = self._get_emr_districts(env)
-        all_facilities, facilities_meta, facilities_error = self._get_all_emr_facilities(
-            env, page=1, limit=2500
+        local_facility_recs = env["hrmis.facility.type"].sudo().search(
+            [("active", "=", True)],
+            order="name ASC",
         )
+        all_facilities = [
+            {
+                "id": fac.id,
+                "name": fac.name or "",
+                "code": fac.facility_code or "",
+                "district_id": fac.district_id.id if fac.district_id else "",
+                "district_name": fac.district_id.name if fac.district_id else "",
+            }
+            for fac in local_facility_recs
+        ]
+        facilities_meta = {
+            "page": 1,
+            "limit": len(all_facilities),
+            "count": len(all_facilities),
+            "lastPage": 1,
+        }
+        facilities_error = None
 
         emr_error = districts_error or facilities_error
         error = error or emr_error
@@ -1815,9 +1833,10 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
         # Common "currently posted" main block
         if status == "currently_posted":
-            facility_value = self._get_substantive_facility_raw_value(
-                post, form=request.httprequest.form
-            )
+            facility_value = (post.get("facility_id") or "").strip()
+            if not facility_value:
+                raw_pf = request.httprequest.form.getlist("posting_facility_id[]") or []
+                facility_value = next((str(v).strip() for v in raw_pf if str(v).strip()), "")
 
             if empty("district_id"):
                 errors.append("Substantive Posting District is required.")
@@ -1971,34 +1990,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         _logger.warning("[HRMIS_SUBMIT][NORMALIZE] facility_id missing")
         return post
 
-    def _get_substantive_facility_raw_value(self, post, form=None):
-        """
-        Resolve the substantive posting facility raw value from the active status box.
-
-        The form keeps multiple status boxes in the DOM at the same time, so we must
-        avoid blindly preferring a hidden box field over the active box selection.
-        """
-        status = (post.get("hrmis_current_status_frontend") or "").strip()
-        current_facility = (post.get("posting_facility_id") or "").strip()
-        eol_facility = (post.get("facility_id") or "").strip()
-
-        current_facility_list = []
-        if form is not None:
-            current_facility_list = [
-                (v or "").strip()
-                for v in (form.getlist("posting_facility_id[]") or [])
-                if (v or "").strip()
-            ]
-
-        if status == "currently_posted":
-            candidates = [current_facility, *current_facility_list, eol_facility]
-        elif status == "eol_pgship":
-            candidates = [eol_facility, current_facility, *current_facility_list]
-        else:
-            candidates = [eol_facility, current_facility, *current_facility_list]
-
-        return next((v for v in candidates if v), "")
-
     # -------------------------------------------------------------------------
     # Parsing primitives (cadre/designation/bps + related browse)
     # -------------------------------------------------------------------------
@@ -2051,10 +2042,10 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return False
 
 
-    def _parse_facility_district(self, env, post, form=None):
+    def _parse_facility_district(self, env, post):
         district_id = self._safe_int_or_false(post.get("district_id"))
 
-        raw_facility = self._get_substantive_facility_raw_value(post, form=form)
+        raw_facility = (post.get("posting_facility_id") or post.get("facility_id") or "").strip()
         raw_other_name = (post.get("facility_other_name") or "").strip()
 
         facility_id = False
@@ -2107,8 +2098,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         except Exception:
             return 0.0
 
-    def _build_req_vals(self, post, *, bps, cadre_id, designation_id, district_id, facility_id, approver_emp, posted_taken, form=None):
-        raw_facility_value = self._get_substantive_facility_raw_value(post, form=form)
+    def _build_req_vals(self, post, *, bps, cadre_id, designation_id, district_id, facility_id, approver_emp, posted_taken):
+        raw_facility_value = (post.get("posting_facility_id") or post.get("facility_id") or "").strip()
         facility_other_name = (
             (post.get("facility_other_name") or "").strip()
             if self._is_other(raw_facility_value)
@@ -3727,8 +3718,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return resp
 
         # 5) Parse cadre/designation/bps + facility/district (browse kept)
-        form = request.httprequest.form
-        facility_id, district_id = self._parse_facility_district(env, post, form=form)
+        facility_id, district_id = self._parse_facility_district(env, post)
         designation_id, cadre_id, bps, designation = self._parse_designation_cadre_bps(env, post, facility_id=facility_id)
         
 
@@ -3752,10 +3742,10 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             facility_id=facility_id,
             approver_emp=approver_emp,
             posted_taken=posted_taken,
-            form=form,
         ))
 
         # 8) Parse repeatable histories
+        form = request.httprequest.form
         post = self._normalize_main_facility_from_form(post, form)
 
         _logger.info("[HRMIS_SUBMIT] req=%s user=%s(%s)", req.id, request.env.user.name, request.env.user.id)
@@ -3928,7 +3918,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             )
 
         # 4) Parse facility/district + designation/cadre/bps (same logic as submit)
-        facility_id, district_id = self._parse_facility_district(env, post, form=form)
+        facility_id, district_id = self._parse_facility_district(env, post)
         designation_id, cadre_id, bps, designation = self._parse_designation_cadre_bps(env, post, facility_id=facility_id)
 
         # 5) Approver handling on SAVE:
@@ -3958,7 +3948,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             facility_id=facility_id,
             approver_emp=approver_emp,
             posted_taken=posted_taken,
-            form=form,
         )
         # IMPORTANT: do not submit on save
         req_vals.pop("state", None)
