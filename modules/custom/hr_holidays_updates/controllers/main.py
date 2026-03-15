@@ -2805,10 +2805,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         eol_specialization_id, eol_specialization_code = _m2o_or_code(spec_raw)
 
         if spec_other:
-            # No hrmis.training.specialization model exists in this codebase.
-            # Preserve custom "Other" text in the existing code field instead.
-            eol_specialization_id = False
-            eol_specialization_code = spec_other
+            spec = env["hrmis.training.specialization"].sudo().create({"name": spec_other})
+            eol_specialization_id = spec.id
+            eol_specialization_code = False
              
         allowed_district_id = m2o_int(post.get("allowed_district_id"))
         allowed_facility_raw = (post.get("allowed_facility_id") or "").strip()
@@ -3194,63 +3193,12 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         if not status_rec:
             return {}
 
-        known_eol_specialization_codes = {
-            "general_medicine",
-            "family_medicine",
-            "emergency_medicine",
-            "pediatrics",
-            "pediatric_surgery",
-            "cardiology",
-            "neurology",
-            "psychiatry",
-            "dermatology",
-            "endocrinology",
-            "pulmonology",
-            "nephrology",
-            "gastroenterology",
-            "oncology",
-            "hematology",
-            "general_surgery",
-            "neurosurgery",
-            "plastic_surgery",
-            "urology",
-            "orthopedics",
-            "obstetrics_gynecology",
-            "radiology",
-            "pathology",
-            "anesthesiology",
-            "physiotherapy",
-            "nutrition",
-            "ophthalmology",
-            "ent",
-            "dentistry",
-            "orthodontist",
-        }
-
         def _m2o_value(record, code_field=None):
             if record:
                 return record.id
             if code_field:
                 return code_field or ""
             return ""
-
-        def _specialization_prefill(record, code_field):
-            if record:
-                return record.id, ""
-
-            raw = (code_field or "").strip()
-            if not raw:
-                return "", ""
-
-            if raw in known_eol_specialization_codes:
-                return raw, ""
-
-            return OTHER_TOKEN, raw
-
-        eol_specialization_value, eol_specialization_other_name = _specialization_prefill(
-            status_rec.eol_specialization_id,
-            status_rec.eol_specialization_code,
-        )
 
         return {
             "status": status_rec.status or "",
@@ -3269,8 +3217,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "eol_institute_value": _m2o_value(status_rec.eol_institute_id, status_rec.eol_institute_code),
             "eol_degree": "__other__" if status_rec.eol_degree == "other" else (status_rec.eol_degree or ""),
             "eol_degree_other_name": status_rec.eol_degree_other_name or "",
-            "eol_specialization_value": eol_specialization_value,
-            "eol_specialization_other_name": eol_specialization_other_name,
+            "eol_specialization_value": _m2o_value(status_rec.eol_specialization_id, status_rec.eol_specialization_code),
             "eol_status": status_rec.eol_status or "",
             "eol_start": self._yd(status_rec.eol_start),
             "eol_end": self._yd(status_rec.eol_end),
