@@ -1387,27 +1387,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         )
 
         districts, districts_error = self._get_emr_districts(env)
-        local_facility_recs = env["hrmis.facility.type"].sudo().search(
-            [("active", "=", True)],
-            order="name ASC",
+        all_facilities, facilities_meta, facilities_error = self._get_all_emr_facilities(
+            env, page=1, limit=2500
         )
-        all_facilities = [
-            {
-                "id": fac.id,
-                "name": fac.name or "",
-                "code": fac.facility_code or "",
-                "district_id": fac.district_id.id if fac.district_id else "",
-                "district_name": fac.district_id.name if fac.district_id else "",
-            }
-            for fac in local_facility_recs
-        ]
-        facilities_meta = {
-            "page": 1,
-            "limit": len(all_facilities),
-            "count": len(all_facilities),
-            "lastPage": 1,
-        }
-        facilities_error = None
 
         emr_error = districts_error or facilities_error
         error = error or emr_error
