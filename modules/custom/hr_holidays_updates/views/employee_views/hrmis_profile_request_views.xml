@@ -538,10 +538,12 @@ DESIGNATION
                                           <t t-esc="inst.name"/>
                                         </option>
                                       </t>
-                                      <option value="__other__" t-att-selected="status_prefill.get('eol_institute_value') == '__other__'">Other</option>
+                                      <option value="__other__" t-att-selected="status_prefill.get('eol_institute_value') == '__other__'">
+                                        <t t-esc="status_prefill.get('eol_institute_other_name') or 'Other'"/>
+                                      </option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input" type="text" name="frontend_eol_institute_other_name" placeholder="Enter Training Institute" disabled="disabled"/>
+                                      <input class="hrmis-input js-other-input" type="text" name="frontend_eol_institute_other_name" t-att-value="status_prefill.get('eol_institute_other_name') or ''" placeholder="Enter Training Institute" disabled="disabled"/>
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
@@ -601,10 +603,12 @@ DEGREE
                                       <option value="ent" t-att-selected="status_prefill.get('eol_specialization_value') == 'ent'">ENT</option>
                                       <option value="dentistry" t-att-selected="status_prefill.get('eol_specialization_value') == 'dentistry'">Dentistry</option>
                                       <option value="orthodontist" t-att-selected="status_prefill.get('eol_specialization_value') == 'orthodontist'">Orthodontist</option>
-                                      <option value="__other__" t-att-selected="status_prefill.get('eol_specialization_value') == '__other__'">Other</option>
+                                      <option value="__other__" t-att-selected="status_prefill.get('eol_specialization_value') == '__other__'">
+                                        <t t-esc="status_prefill.get('eol_specialization_other_name') or 'Other'"/>
+                                      </option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input" type="text" name="frontend_eol_specialization_other_name" placeholder="Enter Specialization" disabled="disabled"/>
+                                      <input class="hrmis-input js-other-input" type="text" name="frontend_eol_specialization_other_name" t-att-value="status_prefill.get('eol_specialization_other_name') or ''" placeholder="Enter Specialization" disabled="disabled"/>
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">

@@ -97,6 +97,7 @@ class HrmisProfilePostingStatus(models.Model):
         string="Training Institute (Code)",
         help="Stores frontend string values like 'jpmc', 'duhs' when institute_id is not an integer ID.",
     )
+    eol_institute_other_name = fields.Char(string="Other EOL Training Institute")
     eol_degree = fields.Selection(
         [
             ("ms", "MS"),
@@ -123,6 +124,7 @@ class HrmisProfilePostingStatus(models.Model):
         string="Specialization (Code)",
         help="Stores frontend string values like 'general_medicine' when specialization_id is not an integer ID.",
     )
+    eol_specialization_other_name = fields.Char(string="Other EOL Specialization")
 
     eol_status = fields.Selection(
         [
@@ -261,8 +263,10 @@ class HrmisProfilePostingStatus(models.Model):
             if r.status != "eol_pgship":
                 r.eol_institute_id = False
                 r.eol_institute_code = False
+                r.eol_institute_other_name = False
                 r.eol_specialization_id = False
                 r.eol_specialization_code = False
+                r.eol_specialization_other_name = False
                 r.eol_status = False
                 r.eol_start = False
                 r.eol_end = False

@@ -2796,18 +2796,20 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             eol_degree = eol_degree_raw or False
             eol_degree_other_name = False
         eol_institute_id, eol_institute_code = _m2o_or_code(inst_raw)
-        
+        eol_institute_other_name = False
         if inst_other:
-            inst = env["hrmis.training.institute"].sudo().create({"name": inst_other})
-            eol_institute_id = inst.id
-            eol_institute_code = False 
+            eol_institute_id = False
+            eol_institute_code = False
+            eol_institute_other_name = inst_other
 
         eol_specialization_id, eol_specialization_code = _m2o_or_code(spec_raw)
-
+        eol_specialization_other_name = False
         if spec_other:
-            spec = env["hrmis.training.specialization"].sudo().create({"name": spec_other})
-            eol_specialization_id = spec.id
+            eol_specialization_id = False
             eol_specialization_code = False
+            eol_specialization_other_name = spec_other
+        else:
+            eol_specialization_other_name = False
              
         allowed_district_id = m2o_int(post.get("allowed_district_id"))
         allowed_facility_raw = (post.get("allowed_facility_id") or "").strip()
@@ -2858,8 +2860,10 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             # EOL
             "eol_institute_id": eol_institute_id,
             "eol_institute_code": eol_institute_code,
+            "eol_institute_other_name": eol_institute_other_name,
             "eol_specialization_id": eol_specialization_id,
             "eol_specialization_code": eol_specialization_code,
+            "eol_specialization_other_name": eol_specialization_other_name,
             "eol_status": post.get("frontend_eol_status") or False,
             "eol_start": post.get("frontend_eol_start") or False,
             "eol_end": post.get("frontend_eol_end") or False,
@@ -3200,6 +3204,11 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 return code_field or ""
             return ""
 
+        def _other_or_m2o_value(record, code_field=None, other_name=None):
+            if other_name:
+                return OTHER_TOKEN
+            return _m2o_value(record, code_field)
+
         return {
             "status": status_rec.status or "",
             "current_posting_start": (req.current_posting_start or "")[:7] if req else "",
@@ -3214,10 +3223,20 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "onleave_reporting_to": status_rec.onleave_reporting_to or "",
             "onleave_reporting_district_id": status_rec.onleave_reporting_district_id or 0,
             "onleave_reporting_facility_id": status_rec.onleave_reporting_facility_id or 0,
-            "eol_institute_value": _m2o_value(status_rec.eol_institute_id, status_rec.eol_institute_code),
+            "eol_institute_value": _other_or_m2o_value(
+                status_rec.eol_institute_id,
+                status_rec.eol_institute_code,
+                status_rec.eol_institute_other_name,
+            ),
+            "eol_institute_other_name": status_rec.eol_institute_other_name or "",
             "eol_degree": "__other__" if status_rec.eol_degree == "other" else (status_rec.eol_degree or ""),
             "eol_degree_other_name": status_rec.eol_degree_other_name or "",
-            "eol_specialization_value": _m2o_value(status_rec.eol_specialization_id, status_rec.eol_specialization_code),
+            "eol_specialization_value": _other_or_m2o_value(
+                status_rec.eol_specialization_id,
+                status_rec.eol_specialization_code,
+                status_rec.eol_specialization_other_name,
+            ),
+            "eol_specialization_other_name": status_rec.eol_specialization_other_name or "",
             "eol_status": status_rec.eol_status or "",
             "eol_start": self._yd(status_rec.eol_start),
             "eol_end": self._yd(status_rec.eol_end),
