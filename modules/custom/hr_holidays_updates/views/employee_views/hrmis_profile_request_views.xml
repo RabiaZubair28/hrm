@@ -651,33 +651,36 @@ SUSTANTIVE POSTING DISTRICT
 SUSTANTIVE POSTING FACILITY
                                       <span class="req">*</span>
                                     </label>
+                                    <t t-set="selected_facility_value" t-value="str(req.facility_id or (current_employee.facility_id.id if current_employee.facility_id else '') or '')"/>
+                                    <t t-set="selected_facility_other_name" t-value="(req.facility_other_name or '').strip()"/>
+                                    <t t-set="selected_facility_has_match" t-value="any(str(f.get('id') or '') == selected_facility_value for f in facilities)"/>
                                     <select class="hrmis-input js-current-facility js-other-select" 
 				    name="facility_id" 
 				    data-enable-search="1" 
 				    data-other-name="facility_other_name" 
 				    required="required">
                                       <option value=""
-                                              t-att-selected="not (req.facility_id or current_employee.facility_id or (req.facility_other_name or '').strip())">
+                                              t-att-selected="not selected_facility_has_match and not selected_facility_other_name">
                                         Select Facility
                                       </option>
                                       <t t-foreach="facilities" t-as="f">
                                             <option t-att-value="f.get('id')"
                                                     t-att-data-district-id="f.get('district_id') or ''"
-                                                    t-att-selected="str(req.facility_id or '') == str(f.get('id') or '') or str(current_employee.facility_id.id if current_employee.facility_id else '') == str(f.get('id') or '')">
+                                                    t-att-selected="str(f.get('id') or '') == selected_facility_value and selected_facility_has_match">
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
                                       <option value="__other__"
                                               data-district-id=""
-                                              t-att-selected="(req.facility_other_name or '').strip()">
-                                        <t t-esc="req.facility_other_name or 'Other'"/>
+                                              t-att-selected="selected_facility_other_name and not selected_facility_has_match">
+                                        <t t-esc="selected_facility_other_name or 'Other'"/>
                                       </option>
                                     </select>
                                     <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input js-current-facility-other" 
 				      type="text" 
 				      name="facility_other_name"
-				      t-att-value="req.facility_other_name or ''"
+				      t-att-value="selected_facility_other_name"
 				       placeholder="Enter Facility Name"/>
                                     </div>
                                   </div>
@@ -753,33 +756,36 @@ SUBSTANTIVE POSTING DISTRICT
 SUBSTANTIVE POSTING FACILITY
                                       <span class="req">*</span>
                                     </label>
+                                    <t t-set="selected_facility_value" t-value="str(req.facility_id or (current_employee.facility_id.id if current_employee.facility_id else '') or '')"/>
+                                    <t t-set="selected_facility_other_name" t-value="(req.facility_other_name or '').strip()"/>
+                                    <t t-set="selected_facility_has_match" t-value="any(str(f.get('id') or '') == selected_facility_value for f in facilities)"/>
                                     <select class="hrmis-input js-hrmis-facility js-current-facility js-other-select" 
                                             name="posting_facility_id"
 				    data-enable-search="1" 
 				    data-other-name="facility_other_name" 
 				    required="required">
                                       <option value=""
-                                              t-att-selected="not (req.facility_id or current_employee.facility_id or (req.facility_other_name or '').strip())">
+                                              t-att-selected="not selected_facility_has_match and not selected_facility_other_name">
                                         Select Facility
                                       </option>
                                       <t t-foreach="facilities" t-as="f">
                                             <option t-att-value="f.get('id')"
                                                     t-att-data-district-id="f.get('district_id') or ''"
-                                                    t-att-selected="str(req.facility_id or '') == str(f.get('id') or '') or str(current_employee.facility_id.id if current_employee.facility_id else '') == str(f.get('id') or '')">
+                                                    t-att-selected="str(f.get('id') or '') == selected_facility_value and selected_facility_has_match">
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
                                       <option value="__other__"
                                               data-district-id=""
-                                              t-att-selected="(req.facility_other_name or '').strip()">
-                                        <t t-esc="req.facility_other_name or 'Other'"/>
+                                              t-att-selected="selected_facility_other_name and not selected_facility_has_match">
+                                        <t t-esc="selected_facility_other_name or 'Other'"/>
                                       </option>
                                     </select>
                                     <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input js-current-facility-other" 
 				      type="text" 
 				      name="facility_other_name" 
-				      t-att-value="req.facility_other_name or ''"
+				      t-att-value="selected_facility_other_name"
 				      placeholder="Enter Facility Name"/>
                                     </div>
                                   </div>
