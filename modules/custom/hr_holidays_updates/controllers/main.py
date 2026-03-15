@@ -1587,6 +1587,11 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
 
     def _build_prefill_dict(self, employee, req):
+        def _raw_id(value):
+            if value in (None, "", False):
+                return False
+            return getattr(value, "id", value)
+
         # Keep behavior same: prefer req values, fallback to employee
         return {
             "hrmis_employee_id": req.hrmis_employee_id or employee.hrmis_employee_id or "",
@@ -1599,8 +1604,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "hrmis_bps": req.hrmis_bps or employee.hrmis_bps or "",
             "hrmis_cadre": (req.hrmis_cadre.id if req.hrmis_cadre else (employee.hrmis_cadre.id if employee.hrmis_cadre else False)),
             "hrmis_designation": (req.hrmis_designation.id if req.hrmis_designation else (employee.hrmis_designation.id if employee.hrmis_designation else False)),
-            "district_id": (req.district_id.id if req.district_id else (employee.district_id.id if employee.district_id else False)),
-            "facility_id": (req.facility_id.id if req.facility_id else (employee.facility_id.id if employee.facility_id else False)),
+            "district_id": (_raw_id(req.district_id) or (employee.district_id.id if employee.district_id else False)),
+            "facility_id": (_raw_id(req.facility_id) or (employee.facility_id.id if employee.facility_id else False)),
             "hrmis_contact_info": req.hrmis_contact_info or employee.hrmis_contact_info or "",
             "hrmis_merit_number": req.hrmis_merit_number or employee.hrmis_merit_number or "",
             "hrmis_leaves_taken": req.hrmis_leaves_taken if req.hrmis_leaves_taken is not False else (employee.hrmis_leaves_taken or 0),
@@ -4241,14 +4246,15 @@ class HrmisProfileUpdateRequests(http.Controller):
             # ----------------------------
             # 2) Find / create allocation row
             # ----------------------------
+            facility_id = getattr(req.facility_id, "id", req.facility_id) or False
             allocation = Allocation.search([
-                ('facility_id', '=', req.facility_id.id),
+                ('facility_id', '=', facility_id),
                 ('designation_id', '=', req.hrmis_designation.id),
             ], limit=1)
 
             if not allocation:
                 allocation = Allocation.create({
-                    'facility_id': req.facility_id.id,
+                    'facility_id': facility_id,
                     'designation_id': req.hrmis_designation.id,
                     'occupied_posts': 0,
                 })
