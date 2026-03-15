@@ -657,27 +657,27 @@ SUSTANTIVE POSTING FACILITY
 				    data-other-name="facility_other_name" 
 				    required="required">
                                       <option value=""
-                                              t-att-selected="not (req.facility_id or current_employee.facility_id or (req.facility_other_name or '').strip())">
+                                              t-att-selected="not substantive_facility_prefill_has_match and not substantive_facility_prefill_other_name">
                                         Select Facility
                                       </option>
                                       <t t-foreach="facilities" t-as="f">
                                             <option t-att-value="f.get('id')"
                                                     t-att-data-district-id="f.get('district_id') or ''"
-                                                    t-att-selected="str(req.facility_id or '') == str(f.get('id') or '') or str(current_employee.facility_id.id if current_employee.facility_id else '') == str(f.get('id') or '')">
+                                                    t-att-selected="str(substantive_facility_prefill_value or '') == str(f.get('id') or '') and substantive_facility_prefill_has_match">
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
                                       <option value="__other__"
                                               data-district-id=""
-                                              t-att-selected="(req.facility_other_name or '').strip()">
-                                        <t t-esc="req.facility_other_name or 'Other'"/>
+                                              t-att-selected="substantive_facility_prefill_value == '__other__' and substantive_facility_prefill_other_name">
+                                        <t t-esc="substantive_facility_prefill_other_name or 'Other'"/>
                                       </option>
                                     </select>
                                     <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input js-current-facility-other" 
 				      type="text" 
 				      name="facility_other_name"
-				      t-att-value="req.facility_other_name or ''"
+				      t-att-value="substantive_facility_prefill_other_name or ''"
 				       placeholder="Enter Facility Name"/>
                                     </div>
                                   </div>
@@ -759,27 +759,27 @@ SUBSTANTIVE POSTING FACILITY
 				    data-other-name="facility_other_name" 
 				    required="required">
                                       <option value=""
-                                              t-att-selected="not (req.facility_id or current_employee.facility_id or (req.facility_other_name or '').strip())">
+                                              t-att-selected="not substantive_facility_prefill_has_match and not substantive_facility_prefill_other_name">
                                         Select Facility
                                       </option>
                                       <t t-foreach="facilities" t-as="f">
                                             <option t-att-value="f.get('id')"
                                                     t-att-data-district-id="f.get('district_id') or ''"
-                                                    t-att-selected="str(req.facility_id or '') == str(f.get('id') or '') or str(current_employee.facility_id.id if current_employee.facility_id else '') == str(f.get('id') or '')">
+                                                    t-att-selected="str(substantive_facility_prefill_value or '') == str(f.get('id') or '') and substantive_facility_prefill_has_match">
                                                 <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
                                       <option value="__other__"
                                               data-district-id=""
-                                              t-att-selected="(req.facility_other_name or '').strip()">
-                                        <t t-esc="req.facility_other_name or 'Other'"/>
+                                              t-att-selected="substantive_facility_prefill_value == '__other__' and substantive_facility_prefill_other_name">
+                                        <t t-esc="substantive_facility_prefill_other_name or 'Other'"/>
                                       </option>
                                     </select>
                                     <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
                                       <input class="hrmis-input js-other-input js-current-facility-other" 
 				      type="text" 
 				      name="facility_other_name" 
-				      t-att-value="req.facility_other_name or ''"
+				      t-att-value="substantive_facility_prefill_other_name or ''"
 				      placeholder="Enter Facility Name"/>
                                     </div>
                                   </div>

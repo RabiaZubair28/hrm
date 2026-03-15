@@ -1416,6 +1416,11 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         ctx["facilities_json"] = json.dumps(all_facilities)
         ctx["facilities_meta_json"] = json.dumps(facilities_meta)
         ctx["selected_district_id"] = selected_district_id
+        (
+            ctx["substantive_facility_prefill_value"],
+            ctx["substantive_facility_prefill_other_name"],
+            ctx["substantive_facility_prefill_has_match"],
+        ) = self._resolve_substantive_facility_prefill(pre_fill, req, all_facilities)
 
         ctx = self._with_prefill_ctx(env, employee, req, ctx, prefer_draft=prefer_draft)
         status_prefill_source = (
@@ -1606,6 +1611,30 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "year_qualification": req.year_qualification or employee.year_qualification or "",
             "date_promotion": req.date_promotion or employee.date_promotion or "",
         }
+
+    def _resolve_substantive_facility_prefill(self, pre_fill, req, facilities):
+        selected_value = str(
+            (pre_fill.get("facility_id") if isinstance(pre_fill, dict) else None) or ""
+        ).strip()
+        other_name = (
+            (getattr(req, "facility_other_name", "") or "").strip()
+            if req and req.exists()
+            else ""
+        )
+
+        facility_ids = {
+            str((f or {}).get("id") or "").strip()
+            for f in (facilities or [])
+            if str((f or {}).get("id") or "").strip()
+        }
+
+        if selected_value and selected_value in facility_ids:
+            return selected_value, "", True
+
+        if other_name:
+            return OTHER_TOKEN, other_name, False
+
+        return "", "", False
    
 
     @http.route("/hrmis/profile/request", type="http", auth="user", website=True, methods=["GET"], csrf=False)
