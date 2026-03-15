@@ -211,6 +211,44 @@ function _appendFacilitiesToSelect(selectEl, facilities) {
   if (selectEl._hrmisRefreshCombobox) selectEl._hrmisRefreshCombobox();
 }
 
+function _getSelectedOptionLabel(selectEl) {
+  if (!selectEl) return "";
+  const opt = selectEl.options?.[selectEl.selectedIndex] || null;
+  return opt ? String(opt.textContent || "").trim() : "";
+}
+
+function _restoreFacilitySelection(selectEl, selectedValue, selectedLabel) {
+  if (!selectEl) return false;
+
+  const value = String(selectedValue || "").trim();
+  if (_isEmpty(value)) {
+    selectEl.selectedIndex = 0;
+    selectEl.value = "";
+    if (selectEl.options?.[0]) selectEl.options[0].selected = true;
+    if (selectEl._hrmisRefreshCombobox) selectEl._hrmisRefreshCombobox();
+    return false;
+  }
+
+  const opt = Array.from(selectEl.options || []).find(
+    (item) => String(item.value || "").trim() === value,
+  );
+
+  if (!opt) {
+    if (selectEl._hrmisRefreshCombobox) selectEl._hrmisRefreshCombobox();
+    return false;
+  }
+
+  if (_isOtherFacilityValue(value) && !_isEmpty(selectedLabel)) {
+    opt.textContent = selectedLabel;
+  }
+
+  opt.selected = true;
+  selectEl.value = value;
+
+  if (selectEl._hrmisRefreshCombobox) selectEl._hrmisRefreshCombobox();
+  return true;
+}
+
 async function _fetchFacilities(districtIdRaw) {
   const payload = {
     jsonrpc: "2.0",
@@ -241,26 +279,34 @@ async function _fetchFacilities(districtIdRaw) {
 /* ----------------------------
  * CURRENT posting filters
  * ---------------------------- */
-function _initCurrentPostingFilters() {
+function _initCurrentPostingFiltersInScope(scopeOrSelector, cfg) {
+  const scope =
+    typeof scopeOrSelector === "string"
+      ? _qs(document, scopeOrSelector)
+      : scopeOrSelector;
+
+  if (!scope) return;
+
   const districtSelect =
-    _qs(document, "select.js-current-district") ||
-    _qs(document, 'select[name="district_id"]');
+    _qs(scope, `select[name="${cfg.districtName}"]`) ||
+    _qs(scope, "select.js-current-district");
 
   const facilitySelect =
-    _qs(document, "select.js-current-facility") ||
-    _qs(document, 'select[name="facility_id"]');
+    _qs(scope, `select[name="${cfg.facilityName}"]`) ||
+    _qs(scope, "select.js-current-facility");
 
-  const designationSelect = _qs(document, 'select[name="hrmis_designation"]');
+  const designationSelect = _qs(scope, 'select[name="hrmis_designation"]');
   const bpsInput = _qs(document, 'input[name="hrmis_bps"]');
 
   if (!districtSelect || !facilitySelect) return;
 
-  // Ensure "Other facility" starts hidden + disabled based on current selection
-  _toggleOtherFacilityInScope(document, facilitySelect);
+  const bindKey = `hrmisCurrentPostingBound_${cfg.key}`;
+  const bpsBindKey = `hrmisCurrentPostingBpsBound_${cfg.key}`;
 
   function getBps() {
     return _normBps(bpsInput ? bpsInput.value : "");
   }
+
   function getFacility() {
     return String(facilitySelect.value || "").trim();
   }
@@ -277,7 +323,6 @@ function _initCurrentPostingFilters() {
     }
 
     _toggleOptions(designationSelect, (opt, idx) => {
-      // keep placeholder visible
       if (idx === 0) return true;
 
       const val = String(opt.value || "").trim();
@@ -286,32 +331,31 @@ function _initCurrentPostingFilters() {
       const optBps = _optBps(opt);
       const optFacilityId = _optFacilityId(opt);
 
-      // fallback: if no bps tag, allow
       if (_isEmpty(optBps)) return true;
 
       const bpsOk = optBps === bps;
       if (!bpsOk) return false;
 
-      // no facility selected yet => BPS only
       if (_isEmpty(facilityId)) return true;
-
-      // "Other" selected => ignore facility tag
       if (_isOtherFacilityValue(facilityId)) return true;
 
-      // if tagged, enforce; else allow
       if (!_isEmpty(optFacilityId)) return optFacilityId === facilityId;
       return true;
     });
   }
 
-  async function refreshFacilities() {
+  async function refreshFacilities({ preserveSelection = false } = {}) {
     const selectedDistrictId = String(districtSelect.value || "").trim();
+    const selectedFacilityValue = preserveSelection
+      ? String(facilitySelect.value || "").trim()
+      : "";
+    const selectedFacilityLabel = preserveSelection
+      ? _getSelectedOptionLabel(facilitySelect)
+      : "";
 
-    // immediate empty facility to prevent sticky UI
     _resetFacilitySelect(facilitySelect);
-    _toggleOtherFacilityInScope(document, facilitySelect);
+    _toggleOtherFacilityInScope(scope, facilitySelect);
 
-    // district empty -> no fetch
     if (_isEmpty(selectedDistrictId)) {
       filterDesignations();
       return;
@@ -320,34 +364,58 @@ function _initCurrentPostingFilters() {
     const facilities = await _fetchFacilities(selectedDistrictId);
     _appendFacilitiesToSelect(facilitySelect, facilities);
 
-    // keep empty after filling
-    facilitySelect.selectedIndex = 0;
-    facilitySelect.value = "";
-    if (facilitySelect.options?.[0]) facilitySelect.options[0].selected = true;
+    _restoreFacilitySelection(
+      facilitySelect,
+      selectedFacilityValue,
+      selectedFacilityLabel,
+    );
 
-    if (facilitySelect._hrmisRefreshCombobox)
-      facilitySelect._hrmisRefreshCombobox();
-
-    _toggleOtherFacilityInScope(document, facilitySelect);
+    _toggleOtherFacilityInScope(scope, facilitySelect);
     filterDesignations();
   }
 
-  // initial
-  refreshFacilities();
+  scope._hrmisRefreshCurrentPostingFacilities = () =>
+    refreshFacilities({ preserveSelection: true });
+
+  _toggleOtherFacilityInScope(scope, facilitySelect);
+
+  if (scope.dataset[bindKey] === "1") {
+    scope._hrmisRefreshCurrentPostingFacilities();
+    return;
+  }
+
+  scope.dataset[bindKey] = "1";
+
+  refreshFacilities({ preserveSelection: true });
 
   districtSelect.addEventListener("change", () => {
     refreshFacilities();
   });
 
   facilitySelect.addEventListener("change", () => {
-    _toggleOtherFacilityInScope(document, facilitySelect);
+    _toggleOtherFacilityInScope(scope, facilitySelect);
     filterDesignations();
   });
 
-  if (bpsInput) {
+  if (bpsInput && bpsInput.dataset[bpsBindKey] !== "1") {
+    bpsInput.dataset[bpsBindKey] = "1";
     bpsInput.addEventListener("input", filterDesignations);
     bpsInput.addEventListener("change", filterDesignations);
   }
+}
+
+function _initCurrentPostingFilters() {
+  _initCurrentPostingFiltersInScope("#current_posting_box", {
+    key: "current",
+    districtName: "district_id",
+    facilityName: "posting_facility_id",
+  });
+
+  _initCurrentPostingFiltersInScope("#eol_box", {
+    key: "eol",
+    districtName: "district_id",
+    facilityName: "facility_id",
+  });
 }
 
 /* ----------------------------
