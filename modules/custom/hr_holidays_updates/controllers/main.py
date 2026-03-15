@@ -2052,6 +2052,12 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return 0.0
 
     def _build_req_vals(self, post, *, bps, cadre_id, designation_id, district_id, facility_id, approver_emp, posted_taken):
+        raw_facility_value = (post.get("posting_facility_id") or post.get("facility_id") or "").strip()
+        facility_other_name = (
+            (post.get("facility_other_name") or "").strip()
+            if self._is_other(raw_facility_value)
+            else False
+        )
         vals = {
             "hrmis_employee_id": post.get("hrmis_employee_id"),
             "hrmis_cnic": post.get("hrmis_cnic"),
@@ -2065,6 +2071,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "hrmis_designation": designation_id,
             "district_id": district_id,
             "facility_id": facility_id,
+            "facility_other_name": facility_other_name or False,
             "hrmis_contact_info": post.get("hrmis_contact_info"),
             "hrmis_merit_number": post.get("hrmis_merit_number"),
             "hrmis_leaves_taken": posted_taken,  # fallback (server recalcs below)
