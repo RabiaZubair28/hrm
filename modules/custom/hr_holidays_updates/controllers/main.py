@@ -2850,11 +2850,12 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "status": status,
 
             # Suspension
-            "suspension_date": post.get("frontend_suspension_date") or False,
-            "suspension_reporting_to": post.get("frontend_reporting_to") or False,
-            "suspension_reporting_district_id": susp_district_id,
-            "suspension_reporting_facility_id": susp_facility_id,
-            "suspension_reporting_designation_id": susp_designation_id,  # <-- if you added this field
+           # Suspension
+"suspension_date": post.get("frontend_suspension_date") or False,
+"suspension_reporting_to": post.get("frontend_reporting_to") or False,
+"suspension_reporting_district_id": susp_district_id,
+"suspension_reporting_facility_id": susp_facility_id,
+"suspension_reporting_designation_id": susp_designation_id, # <-- if you added this field
 
             # On leave
             "onleave_type_id": m2o_int(post.get("frontend_onleave_type")),
@@ -3223,7 +3224,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "suspension_reporting_to": status_rec.suspension_reporting_to or "",
             "suspension_reporting_district_id": status_rec.suspension_reporting_district_id or 0,
             "suspension_reporting_facility_id": status_rec.suspension_reporting_facility_id or 0,
-            "suspension_reporting_designation_id": status_rec.suspension_reporting_designation_id.id if status_rec.suspension_reporting_designation_id else 0,
+            "suspension_reporting_designation_id": status_rec.suspension_reporting_designation_id or 0,
             "onleave_type_id": status_rec.onleave_type_id.id if status_rec.onleave_type_id else 0,
             "onleave_start": self._yd(status_rec.onleave_start),
             "onleave_end": self._yd(status_rec.onleave_end),
