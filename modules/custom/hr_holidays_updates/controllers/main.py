@@ -2767,18 +2767,28 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         # ✅ Suspension (compute FIRST so it can be referenced safely)
         # -------------------------------------------------------
         susp_district_id = m2o_int(post.get("frontend_reporting_district_id"))
-
+        susp_facility_raw = (post.get("frontend_reporting_facility_id") or "").strip()
+        susp_facility_other_name = (
+            (post.get("frontend_reporting_facility_other_name") or "").strip()
+            if susp_facility_raw == OTHER_TOKEN
+            else False
+        )
         susp_facility_id = _resolve_facility_other(
-            post.get("frontend_reporting_facility_id"),
-            post.get("frontend_reporting_facility_other_name"),
+            susp_facility_raw,
+            susp_facility_other_name,
             susp_district_id,
         )
 
         susp_bps_val = int(post.get("frontend_reporting_bps") or 0) if (post.get("frontend_reporting_bps") or "").strip() else 0
-
+        susp_designation_raw = (post.get("hrmis_designation") or "").strip()
+        susp_designation_other_name = (
+            (post.get("frontend_reporting_designation_other_name") or "").strip()
+            if susp_designation_raw == OTHER_TOKEN
+            else False
+        )
         susp_designation_id = _resolve_designation_other(
-            post.get("hrmis_designation"),
-            post.get("frontend_reporting_designation_other_name"),
+            susp_designation_raw,
+            susp_designation_other_name,
             susp_bps_val,
             susp_facility_id,
         )
@@ -2838,10 +2848,28 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             else False
         )
         onleave_district_id = m2o_int(post.get("frontend_onleave_district_id"))
+        onleave_facility_raw = (post.get("frontend_onleave_facility_id") or "").strip()
+        onleave_facility_other_name = (
+            (post.get("frontend_onleave_facility_other_name") or "").strip()
+            if onleave_facility_raw == OTHER_TOKEN
+            else False
+        )
         onleave_facility_id = _resolve_facility_other(
-            post.get("frontend_onleave_facility_id"),
-            post.get("frontend_onleave_facility_other_name"),
+            onleave_facility_raw,
+            onleave_facility_other_name,
             onleave_district_id,
+        )
+        onleave_designation_raw = (post.get("hrmis_designation") or "").strip()
+        onleave_designation_other_name = (
+            (post.get("hrmis_designation_other_name") or "").strip()
+            if onleave_designation_raw == OTHER_TOKEN
+            else False
+        )
+        onleave_designation_id = _resolve_designation_other(
+            onleave_designation_raw,
+            onleave_designation_other_name,
+            0,
+            onleave_facility_id,
         )
 
         deputation_district_id = m2o_int(post.get("frontend_deputation_district_id"))
@@ -2850,12 +2878,13 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "status": status,
 
             # Suspension
-           # Suspension
-"suspension_date": post.get("frontend_suspension_date") or False,
-"suspension_reporting_to": post.get("frontend_reporting_to") or False,
-"suspension_reporting_district_id": susp_district_id,
-"suspension_reporting_facility_id": susp_facility_id,
-"suspension_reporting_designation_id": susp_designation_id, # <-- if you added this field
+            "suspension_date": post.get("frontend_suspension_date") or False,
+            "suspension_reporting_to": post.get("frontend_reporting_to") or False,
+            "suspension_reporting_district_id": susp_district_id,
+            "suspension_reporting_facility_id": susp_facility_id,
+            "suspension_reporting_facility_other_name": susp_facility_other_name or False,
+            "suspension_reporting_designation_id": susp_designation_id,
+            "suspension_reporting_designation_other_name": susp_designation_other_name or False,
 
             # On leave
             "onleave_type_id": m2o_int(post.get("frontend_onleave_type")),
@@ -2864,6 +2893,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "onleave_reporting_to": post.get("frontend_onleave_reporting_to") or False,
             "onleave_reporting_district_id": onleave_district_id,
             "onleave_reporting_facility_id": onleave_facility_id,
+            "onleave_reporting_facility_other_name": onleave_facility_other_name or False,
+            "onleave_reporting_designation_id": onleave_designation_id,
+            "onleave_reporting_designation_other_name": onleave_designation_other_name or False,
 
             # EOL
             "eol_institute_id": eol_institute_id,
@@ -3223,14 +3255,25 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "suspension_date": self._yd(status_rec.suspension_date),
             "suspension_reporting_to": status_rec.suspension_reporting_to or "",
             "suspension_reporting_district_id": status_rec.suspension_reporting_district_id or 0,
-            "suspension_reporting_facility_id": status_rec.suspension_reporting_facility_id or 0,
-            "suspension_reporting_designation_id": status_rec.suspension_reporting_designation_id or 0,
+            "suspension_reporting_facility_id": OTHER_TOKEN if (status_rec.suspension_reporting_facility_other_name or "").strip() else (status_rec.suspension_reporting_facility_id or 0),
+            "suspension_reporting_facility_other_name": status_rec.suspension_reporting_facility_other_name or "",
+            "suspension_reporting_designation_id": _other_or_m2o_value(
+                status_rec.suspension_reporting_designation_id,
+                other_name=status_rec.suspension_reporting_designation_other_name,
+            ),
+            "suspension_reporting_designation_other_name": status_rec.suspension_reporting_designation_other_name or "",
             "onleave_type_id": status_rec.onleave_type_id.id if status_rec.onleave_type_id else 0,
             "onleave_start": self._yd(status_rec.onleave_start),
             "onleave_end": self._yd(status_rec.onleave_end),
             "onleave_reporting_to": status_rec.onleave_reporting_to or "",
             "onleave_reporting_district_id": status_rec.onleave_reporting_district_id or 0,
-            "onleave_reporting_facility_id": status_rec.onleave_reporting_facility_id or 0,
+            "onleave_reporting_facility_id": OTHER_TOKEN if (status_rec.onleave_reporting_facility_other_name or "").strip() else (status_rec.onleave_reporting_facility_id or 0),
+            "onleave_reporting_facility_other_name": status_rec.onleave_reporting_facility_other_name or "",
+            "onleave_reporting_designation_id": _other_or_m2o_value(
+                status_rec.onleave_reporting_designation_id,
+                other_name=status_rec.onleave_reporting_designation_other_name,
+            ),
+            "onleave_reporting_designation_other_name": status_rec.onleave_reporting_designation_other_name or "",
             "eol_institute_value": _other_or_m2o_value(
                 status_rec.eol_institute_id,
                 status_rec.eol_institute_code,

@@ -327,17 +327,19 @@ DESIGNATION
                                       <span class="req">*</span>
                                     </label>
                                     <div class="hrmis-field">
-                                      <select class="hrmis-input js-other-select" name="hrmis_designation" data-enable-search="1" data-other-name="hrmis_designation_other_name" required="required">
+                                      <select class="hrmis-input js-other-select" name="hrmis_designation" data-enable-search="1" data-other-name="frontend_reporting_designation_other_name" required="required">
                                         <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('suspension_reporting_designation_id')">Select Designation</option>
                                         <t t-foreach="designations_unique" t-as="des">
                                           <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-selected="status_prefill.get('suspension_reporting_designation_id') == des.id">
                                             <t t-esc="des.name"/>
                                           </option>
                                         </t>
-                                        <option value="__other__">Other</option>
+                                        <option value="__other__" t-att-selected="status_prefill.get('suspension_reporting_designation_id') == '__other__'">
+                                          <t t-esc="status_prefill.get('suspension_reporting_designation_other_name') or 'Other'"/>
+                                        </option>
                                       </select>
                                       <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                        <input class="hrmis-input js-other-input" type="text" name="frontend_reporting_designation_other_name" placeholder="Enter Designation Name" autocomplete="off" disabled="disabled"/>
+                                        <input class="hrmis-input js-other-input" type="text" name="frontend_reporting_designation_other_name" placeholder="Enter Designation Name" autocomplete="off" disabled="disabled" t-att-value="status_prefill.get('suspension_reporting_designation_other_name') or ''"/>
                                       </div>
                                     </div>
                                   </div>
@@ -381,7 +383,9 @@ DESIGNATION
     </option>
   </t>
 
-  <option value="__other__" data-district-id="">Other</option>
+  <option value="__other__" data-district-id="" t-att-selected="status_prefill.get('suspension_reporting_facility_id') == '__other__'">
+    <t t-esc="status_prefill.get('suspension_reporting_facility_other_name') or 'Other'"/>
+  </option>
 </select>
 
 <div class="js-other-wrap js-current-facility-other-wrap" style="display:none; margin-top:6px;">
@@ -390,7 +394,8 @@ DESIGNATION
          name="frontend_reporting_facility_other_name" 
          placeholder="Enter Facility Name" 
          autocomplete="off" 
-         disabled="disabled"/>
+         disabled="disabled"
+         t-att-value="status_prefill.get('suspension_reporting_facility_other_name') or ''"/>
 </div>
                                     </div>
                                   </div>
@@ -441,16 +446,18 @@ DESIGNATION
                                       <span class="req">*</span>
                                     </label>
                                     <select class="hrmis-input js-other-select" name="hrmis_designation" data-enable-search="1" data-other-name="hrmis_designation_other_name" required="required">
-                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not (req.hrmis_designation or current_employee.hrmis_designation)"> Select Designation </option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not status_prefill.get('onleave_reporting_designation_id')"> Select Designation </option>
                                       <t t-foreach="designations_unique" t-as="des">
-                                        <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-selected="(req.hrmis_designation and req.hrmis_designation.id == des.id) or (current_employee.hrmis_designation and current_employee.hrmis_designation.id == des.id)">
+                                        <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-selected="status_prefill.get('onleave_reporting_designation_id') == des.id">
                                           <t t-esc="des.name"/>
                                         </option>
                                       </t>
-                                      <option value="__other__">Other</option>
+                                      <option value="__other__" t-att-selected="status_prefill.get('onleave_reporting_designation_id') == '__other__'">
+                                        <t t-esc="status_prefill.get('onleave_reporting_designation_other_name') or 'Other'"/>
+                                      </option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
-                                      <input class="hrmis-input js-other-input" type="text" name="hrmis_designation_other_name" placeholder="Enter Designation"/>
+                                      <input class="hrmis-input js-other-input" type="text" name="hrmis_designation_other_name" placeholder="Enter Designation" disabled="disabled" t-att-value="status_prefill.get('onleave_reporting_designation_other_name') or ''"/>
                                     </div>
                                   </div>
                                   <div class="hrmis-field" style="grid-column: span 6;">
@@ -487,7 +494,9 @@ DESIGNATION
                                               <t t-esc="f.get('name')"/>
                                         </option>
                                       </t>
-                                      <option value="__other__" data-district-id="">Other</option>
+                                      <option value="__other__" data-district-id="" t-att-selected="status_prefill.get('onleave_reporting_facility_id') == '__other__'">
+                                        <t t-esc="status_prefill.get('onleave_reporting_facility_other_name') or 'Other'"/>
+                                      </option>
                                   </select>
 
                                   <div class="js-other-wrap" style="display:none; margin-top:6px;">
@@ -496,7 +505,8 @@ DESIGNATION
                                             name="frontend_onleave_facility_other_name"
                                             placeholder="Enter Facility Name"
                                             autocomplete="off"
-                                            disabled="disabled"/>
+                                            disabled="disabled"
+                                            t-att-value="status_prefill.get('onleave_reporting_facility_other_name') or ''"/>
                                   </div>
                                 </div>
                                 </div>
