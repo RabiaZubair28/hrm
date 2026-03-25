@@ -738,12 +738,12 @@ DESIGNATION
                                     </label>
                                     <select class="hrmis-input js-other-select" name="hrmis_designation" data-enable-search="1" data-other-name="hrmis_designation_other_name" required="required">
                                       <option value="" disabled="disabled" hidden="hidden" t-att-selected="not (req.hrmis_designation or current_employee.hrmis_designation)"> Select Designation </option>
-                                      <t t-foreach="designations_unique" t-as="des">
+                                      <t t-foreach="current_posted_designations or designations_unique" t-as="des">
                                         <t t-set="des_fac_id" t-value="''"/>
                                         <t t-if="'facility_id' in des._fields and des.facility_id">
                                           <t t-set="des_fac_id" t-value="des.facility_id.id"/>
 </t>
-                                        <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-data-facility-id="des_fac_id" t-att-selected="(req.hrmis_designation and req.hrmis_designation.id == des.id) or (current_employee.hrmis_designation and current_employee.hrmis_designation.id == des.id)">
+                                        <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-data-facility-id="des_fac_id" t-att-selected="(req.hrmis_designation and req.hrmis_designation.id == des.id) or ((not req.hrmis_designation) and current_employee.hrmis_designation and current_employee.hrmis_designation.id == des.id)">
                                           <t t-esc="des.name"/>
                                         </option>
                                       </t>
