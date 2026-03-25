@@ -1380,7 +1380,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         max_dob_str, max_today_str, max_past_str = self._build_max_date_strings(env)
         pre_fill = self._build_prefill_dict(employee, req)
         required_designation_ids = self._collect_required_designation_ids(
-            env, employee=employee, req=req
+            employee=employee, req=req
         )
         designations_unique = self._get_unique_designations(
             env, selected_ids=required_designation_ids
@@ -1565,7 +1565,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return "CNIC Back Scan is required."
 
         return None
-    def _collect_required_designation_ids(self, env, employee=None, req=None):
+    def _collect_required_designation_ids(self, employee=None, req=None):
         ids = set()
 
         if employee and employee.exists() and employee.hrmis_designation:
@@ -1574,29 +1574,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         if req and req.exists():
             if req.hrmis_designation:
                 ids.add(req.hrmis_designation.id)
-
-            status_rec = req.posting_status_id[:1]
-            if status_rec:
-                for field_name in (
-                    "suspension_reporting_designation_id",
-                    "onleave_reporting_designation_id",
-                    "allowed_designation_id",
-                    "eol_primary_designation_id",
-                ):
-                    designation = getattr(status_rec, field_name, False)
-                    if designation:
-                        ids.add(designation.id)
-
-            Post = env["hrmis.posting.history"].sudo()
-            ids.update(
-                Post.search([("request_id", "=", req.id)]).mapped("designation_id").ids
-            )
-
-        if employee and employee.exists():
-            Post = env["hrmis.posting.history"].sudo()
-            ids.update(
-                Post.search([("employee_id", "=", employee.id)]).mapped("designation_id").ids
-            )
 
         return [designation_id for designation_id in ids if designation_id]
 
