@@ -1380,9 +1380,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         max_dob_str, max_today_str, max_past_str = self._build_max_date_strings(env)
         pre_fill = self._build_prefill_dict(employee, req)
         designations_unique = self._get_unique_designations(env)
-        current_posted_designations = self._get_current_posted_designations(
-            env, employee=employee, req=req
-        )
 
         selected_district_id = (
             (pre_fill.get("district_id") if isinstance(pre_fill, dict) else None)
@@ -1407,7 +1404,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             districts=districts,
             facilities=all_facilities,
             designations_unique=designations_unique,
-            current_posted_designations=current_posted_designations,
             max_dob_str=max_dob_str,
             max_today_str=max_today_str,
             max_past_str=max_past_str,
@@ -1576,26 +1572,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 seen.add(key)
                 unique.append(d)
         return unique
-
-    def _get_current_posted_designations(self, env, employee=None, req=None):
-        designations = list(self._get_unique_designations(env))
-        selected_designation = False
-
-        if req and req.exists() and req.hrmis_designation:
-            selected_designation = req.hrmis_designation
-        elif employee and employee.exists() and employee.hrmis_designation:
-            selected_designation = employee.hrmis_designation
-
-        if (
-            selected_designation
-            and selected_designation.active
-            and selected_designation.id not in {designation.id for designation in designations}
-        ):
-            # The current-posted dropdown needs the exact saved designation record,
-            # even when another record with the same name is the deduplicated entry.
-            designations.append(selected_designation)
-
-        return designations
 
     def _build_max_date_strings(self, env):
         today = date.today()
