@@ -1562,16 +1562,11 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         return None
     def _get_unique_designations(self, env):
         Designation = env["hrmis.designation"].sudo()
-        designations = Designation.search([("active", "=", True)], order="name")
-
-        seen = set()
-        unique = []
-        for d in designations:
-            key = (d.name or "").strip().lower()
-            if key and key not in seen:
-                seen.add(key)
-                unique.append(d)
-        return unique
+        # Keep all active rows so a saved Many2one id is always present in the
+        # rendered <option> list. Production can contain distinct designation
+        # records that share the same display name, and collapsing by name
+        # breaks prefill by dropping the exact saved record.
+        return Designation.search([("active", "=", True)], order="name, id")
 
     def _build_max_date_strings(self, env):
         today = date.today()

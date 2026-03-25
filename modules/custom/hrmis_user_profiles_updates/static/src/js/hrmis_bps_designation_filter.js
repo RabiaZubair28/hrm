@@ -28,6 +28,14 @@ function _isOther(v) {
   return _norm(v) === "__other__";
 }
 
+function _ensureInitialValue(designationSelect) {
+  if (!designationSelect || designationSelect.dataset.hrmisInitialValueBound === "1") {
+    return;
+  }
+  designationSelect.dataset.hrmisInitialValueBound = "1";
+  designationSelect.dataset.hrmisInitialValue = _norm(designationSelect.value);
+}
+
 function _isHiddenOption(opt) {
   return !!(opt && (opt.hidden === true || opt.style.display === "none"));
 }
@@ -132,6 +140,7 @@ function _initBpsDesignationFilter() {
 
   function filterDesignationsByBps(designationSelect, bpsInput) {
     if (!designationSelect) return;
+    _ensureInitialValue(designationSelect);
     const isAllowedDesignation =
       _norm(designationSelect.getAttribute("name")) === "allowed_designation_id";
     const hasLocalAllowedBps =
@@ -150,6 +159,8 @@ function _initBpsDesignationFilter() {
 
     const bpsValueRaw = bpsInput ? _norm(bpsInput.value) : "";
     const bpsValue = _canonBps(bpsValueRaw);
+    const currentValue = _norm(designationSelect.value);
+    const initialValue = _norm(designationSelect.dataset.hrmisInitialValue);
 
     let visibleCount = 0;
     let totalReal = 0;
@@ -165,7 +176,13 @@ function _initBpsDesignationFilter() {
       const optBpsRaw = _norm(option.dataset.bps || option.dataset.bpsId);
       const optBps = _canonBps(optBpsRaw);
 
-      const visible = !bpsValue || !optBps || optBps === bpsValue;
+      // Keep the server-prefilled choice available on first load even when
+      // production data has a stale/mismatched BPS on that designation row.
+      const preservePrefill =
+        !!initialValue &&
+        currentValue === initialValue &&
+        _norm(option.value) === initialValue;
+      const visible = preservePrefill || !bpsValue || !optBps || optBps === bpsValue;
 
       _setOptionVisible(option, visible);
       if (visible) visibleCount += 1;
