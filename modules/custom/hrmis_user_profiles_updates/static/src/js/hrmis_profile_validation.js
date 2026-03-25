@@ -1078,45 +1078,31 @@ function _initContact(form) {
   contactInput.setAttribute("autocomplete", "off");
   contactInput.setAttribute("maxlength", "11");
 
-  function normalize() {
+  function normalize({ preserveEmpty = true } = {}) {
     let v = (contactInput.value || "").replace(/\D/g, "");
+    if (!v) {
+      contactInput.value = preserveEmpty ? "" : "03";
+      return;
+    }
     if (!v.startsWith("03")) v = "03" + v.replace(/^0+/, "");
     v = v.slice(0, 11);
-    if (v.length < 2) v = "03";
     contactInput.value = v;
   }
 
-  if (_isEmpty(contactInput.value)) {
-    contactInput.value = "03";
-    contactInput.setSelectionRange?.(2, 2);
-  } else {
+  if (!_isEmpty(contactInput.value)) {
     normalize();
   }
 
   contactInput.addEventListener("keydown", (e) => {
-    const pos = contactInput.selectionStart || 0;
-
     const allowed =
+      e.key === "Backspace" ||
+      e.key === "Delete" ||
       e.key === "Tab" ||
       e.key === "ArrowLeft" ||
       e.key === "ArrowRight" ||
       e.key === "Home" ||
       e.key === "End";
     if (allowed) return;
-
-    if (e.key === "Backspace" && pos <= 2) {
-      e.preventDefault();
-      contactInput.value = "03";
-      contactInput.setSelectionRange?.(2, 2);
-      return;
-    }
-
-    if (e.key === "Delete" && pos < 2) {
-      e.preventDefault();
-      contactInput.value = "03";
-      contactInput.setSelectionRange?.(2, 2);
-      return;
-    }
 
     if (e.ctrlKey || e.metaKey) return;
 
@@ -1131,18 +1117,20 @@ function _initContact(form) {
     const text =
       (e.clipboardData || window.clipboardData).getData("text") || "";
     let v = text.replace(/\D/g, "");
-    if (!v.startsWith("03")) v = "03" + v.replace(/^0+/, "");
+    if (v && !v.startsWith("03")) v = "03" + v.replace(/^0+/, "");
     v = v.slice(0, 11);
     contactInput.value = v;
     contactInput.dispatchEvent(new Event("input", { bubbles: true }));
   });
 
   contactInput.addEventListener("focus", () => {
-    normalize();
-    contactInput.setSelectionRange?.(
-      contactInput.value.length,
-      contactInput.value.length,
-    );
+    if (!_isEmpty(contactInput.value)) {
+      normalize();
+      contactInput.setSelectionRange?.(
+        contactInput.value.length,
+        contactInput.value.length,
+      );
+    }
   });
 
   contactInput.addEventListener("input", () => {
