@@ -686,55 +686,6 @@ function _initSearchableSelects(scopeRoot) {
 /* ---------------------------------------------------------
  * Digits-only enforcement (strict)
  * --------------------------------------------------------- */
-// function _digitsOnly(input, { maxLen = null } = {}) {
-//   if (!input) return;
-
-//   input.setAttribute("inputmode", "numeric");
-//   input.setAttribute("autocomplete", "off");
-//   if (maxLen) input.setAttribute("maxlength", String(maxLen));
-
-//   input.addEventListener("keydown", (e) => {
-//     const allowed =
-//       e.key === "Backspace" ||
-//       e.key === "Delete" ||
-//       e.key === "Tab" ||
-//       e.key === "ArrowLeft" ||
-//       e.key === "ArrowRight" ||
-//       e.key === "Home" ||
-//       e.key === "End";
-
-//     if (allowed) return;
-//     if (e.ctrlKey || e.metaKey) return;
-
-//     if (!/^\d$/.test(e.key)) {
-//       e.preventDefault();
-//       _showError(input, "Only numbers allowed");
-//     } else {
-//       _clearError(input);
-//     }
-//   });
-
-//   input.addEventListener("paste", (e) => {
-//     e.preventDefault();
-//     const text =
-//       (e.clipboardData || window.clipboardData).getData("text") || "";
-//     let digits = text.replace(/\D/g, "");
-//     if (maxLen) digits = digits.slice(0, maxLen);
-//     input.value = digits;
-//     input.dispatchEvent(new Event("input", { bubbles: true }));
-//   });
-
-//   input.addEventListener("input", () => {
-//     const raw = input.value || "";
-//     let digits = raw.replace(/\D/g, "");
-//     if (maxLen) digits = digits.slice(0, maxLen);
-//     if (digits !== raw) input.value = digits;
-//   });
-// }
-
-/* ---------------------------------------------------------
- * Digits-only enforcement (strict)
- * --------------------------------------------------------- */
 function _digitsOnly(input, { maxLen = null } = {}) {
   if (!input) return;
 
@@ -808,12 +759,11 @@ function _digitsOnly(input, { maxLen = null } = {}) {
 });
 }
 
-
 /* ---------------------------------------------------------
  * Joining/Current BPS helpers
  * --------------------------------------------------------- */
 function _joiningMonthValue(form) {
-  const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date YYYY-MM-DD
+  const joining = _qs(form, '[name="hrmis_joining_date"]');
   const v = (joining?.value || "").trim();
   return v ? v.slice(0, 7) : "";
 }
@@ -824,9 +774,6 @@ function _currentBpsValue(form) {
 
 /* ---------------------------------------------------------
  * PMDC fields required only for specific cadres
- *   - General
- *   - Special
- *   - Health Management
  * --------------------------------------------------------- */
 function _cadreSelectedLabel(form) {
   const sel = _qs(form, 'select[name="hrmis_cadre"]');
@@ -852,16 +799,13 @@ function _syncPmdcRequiredByCadre(form) {
 
   fields.forEach((inp) => {
     if (!inp) return;
-    if (needs) {
-      inp.setAttribute("required", "required");
-    } else {
+    if (needs) inp.setAttribute("required", "required");
+    else {
       inp.removeAttribute("required");
-      // clear any previous error when it becomes optional
       _clearError(inp);
     }
   });
 
-  // Toggle the * marker visibility
   _qsa(form, ".js-pmdc-req").forEach((star) => {
     star.style.display = needs ? "" : "none";
   });
@@ -885,7 +829,6 @@ function _cloneFromTemplate(tplSelector, containerSelector) {
     if (type === "checkbox" || type === "radio") inp.checked = false;
     else inp.value = "";
 
-    // IMPORTANT: ensure previous posting start never gets auto-filled
     if (inp.name === "posting_start[]") inp.value = "";
 
     _clearError(inp);
@@ -898,6 +841,7 @@ function _cloneFromTemplate(tplSelector, containerSelector) {
 
   container.appendChild(row);
   _initSearchableSelects(row);
+  _qsa(row, ".js-hrmis-bps").forEach((el) => _initBpsField(el));
   return row;
 }
 
@@ -905,9 +849,10 @@ function _cloneFromTemplate(tplSelector, containerSelector) {
  * Current Posting Start validation
  * --------------------------------------------------------- */
 function _validateCurrentPostingStart(form) {
-  const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date
+  const joining = _qs(form, '[name="hrmis_joining_date"]');
   const status =
     (_qs(form, 'select[name="hrmis_current_status_frontend"]')?.value || "").trim();
+
   if (
     status !== "currently_posted" &&
     status !== "eol_pgship" &&
@@ -915,12 +860,14 @@ function _validateCurrentPostingStart(form) {
   ) {
     return true;
   }
+
   const currentStart =
     status === "deputation"
       ? _qs(form, '#deputation_box [name="frontend_deputation_start"]')
       : status === "eol_pgship"
         ? _qs(form, '#eol_box [name="current_posting_start"]')
-        : _qs(form, '#current_posting_box [name="current_posting_start"]'); // YYYY-MM
+        : _qs(form, '#current_posting_box [name="current_posting_start"]');
+
   if (!joining || !currentStart) return true;
 
   _clearError(currentStart);
@@ -962,12 +909,10 @@ function _validateCurrentPostingStart(form) {
 
 /* ---------------------------------------------------------
  * DOB vs Commission year rule
- *  - Commission is month-proxy (YYYY-MM) stored as YYYY-MM-01
- *  - Requirement: Commission year cannot be before Date of Birth year
  * --------------------------------------------------------- */
 function _validateDobCommission(form) {
-  const dob = _qs(form, '[name="birthday"]'); // date YYYY-MM-DD
-  const commission = _qs(form, '[name="hrmis_commission_date"]'); // hidden date YYYY-MM-DD
+  const dob = _qs(form, '[name="birthday"]');
+  const commission = _qs(form, '[name="hrmis_commission_date"]');
   if (!dob || !commission) return true;
 
   const commissionUI = commission._hrmisMonthProxy || null;
@@ -979,7 +924,6 @@ function _validateDobCommission(form) {
   const cv = (commission.value || "").trim();
   if (_isEmpty(dobVal) || _isEmpty(cv)) return true;
 
-  // Commission is month-granular; enforce month >= DOB month.
   const minMonth = dobVal.length >= 7 ? dobVal.slice(0, 7) : "";
   const commMonth = cv.length >= 7 ? cv.slice(0, 7) : "";
   if (!_isValidMonth(minMonth) || !_isValidMonth(commMonth)) return true;
@@ -992,8 +936,8 @@ function _validateDobCommission(form) {
 }
 
 function _syncCommissionMinFromDob(form) {
-  const dob = _qs(form, '[name="birthday"]'); // date YYYY-MM-DD
-  const commission = _qs(form, '[name="hrmis_commission_date"]'); // hidden date YYYY-MM-DD
+  const dob = _qs(form, '[name="birthday"]');
+  const commission = _qs(form, '[name="hrmis_commission_date"]');
   if (!dob || !commission) return;
 
   const dobVal = (dob.value || "").trim();
@@ -1011,7 +955,6 @@ function _syncCommissionMinFromDob(form) {
     return;
   }
 
-  // Clamp existing value into min range.
   const curMonth =
     (cUi && (cUi.value || "").trim()) ||
     (commission.value || "").trim().slice(0, 7) ||
@@ -1026,11 +969,11 @@ function _syncCommissionMinFromDob(form) {
 }
 
 /* ---------------------------------------------------------
- * Joining vs Commission date rule (compares submitted dates)
+ * Joining vs Commission date rule
  * --------------------------------------------------------- */
 function _validateJoiningCommission(form) {
-  const joining = _qs(form, '[name="hrmis_joining_date"]'); // hidden date YYYY-MM-DD
-  const commission = _qs(form, '[name="hrmis_commission_date"]'); // hidden date YYYY-MM-DD
+  const joining = _qs(form, '[name="hrmis_joining_date"]');
+  const commission = _qs(form, '[name="hrmis_commission_date"]');
   if (!joining || !commission) return true;
 
   const joiningUI = joining._hrmisMonthProxy || null;
@@ -1123,7 +1066,7 @@ function _initCNIC(form) {
 }
 
 /* ---------------------------------------------------------
- * Contact strict: must be 03 + 9 digits (total 11)
+ * Contact strict: must be 03 + 9 digits
  * --------------------------------------------------------- */
 function _initContact(form) {
   const contactInput = _qs(form, '[name="hrmis_contact_info"]');
@@ -1217,7 +1160,87 @@ function _initContact(form) {
 }
 
 /* ---------------------------------------------------------
- * Date helpers (YYYY-MM-DD local)
+ * BPS professional validator
+ * --------------------------------------------------------- */
+function _initBpsField(input) {
+  if (!input || input.dataset.hrmisBpsBound === "1") return;
+  input.dataset.hrmisBpsBound = "1";
+
+  input.setAttribute("type", "text");
+  input.setAttribute("inputmode", "numeric");
+  input.setAttribute("autocomplete", "off");
+  input.setAttribute("maxlength", "2");
+  input.setAttribute("placeholder", "Enter BPS");
+
+  input.addEventListener("keydown", (e) => {
+    const allowed =
+      e.key === "Backspace" ||
+      e.key === "Delete" ||
+      e.key === "Tab" ||
+      e.key === "ArrowLeft" ||
+      e.key === "ArrowRight" ||
+      e.key === "Home" ||
+      e.key === "End" ||
+      e.key === "Enter";
+
+    if (allowed || e.ctrlKey || e.metaKey) return;
+
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault();
+      _showError(input, "Only numbers allowed");
+    }
+  });
+
+  input.addEventListener("input", () => {
+    const raw = input.value || "";
+    const digits = raw.replace(/\D/g, "").slice(0, 2);
+
+    if (digits !== raw) input.value = digits;
+
+    if (!digits) {
+      input.setCustomValidity("");
+      _clearError(input);
+      return;
+    }
+
+    const n = parseInt(digits, 10);
+
+    if (n < 16 || n > 20) {
+      input.setCustomValidity("BPS needs to be 16 to 20");
+      _showError(input, "BPS needs to be 16 to 20");
+    } else {
+      input.setCustomValidity("");
+      _clearError(input);
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    const v = (input.value || "").trim();
+
+    if (!v) {
+      input.setCustomValidity("");
+      _clearError(input);
+      return;
+    }
+
+    const n = parseInt(v, 10);
+
+    if (Number.isNaN(n) || n < 16 || n > 20) {
+      input.value = "";
+      input.setCustomValidity("BPS needs to be 16 to 20");
+      _showError(input, "BPS needs to be 16 to 20");
+    } else {
+      input.value = String(n);
+      input.setCustomValidity("");
+      _clearError(input);
+    }
+
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
+/* ---------------------------------------------------------
+ * Date helpers
  * --------------------------------------------------------- */
 function _parseLocalYmd(ymd) {
   const s = String(ymd || "").trim();
@@ -1242,12 +1265,12 @@ function _yesterdayLocalYmd() {
   return _toLocalYmd(d);
 }
 
-/* =========================================================
- * Leave datepicker + overlap logic (unchanged)
- * ========================================================= */
+/* ---------------------------------------------------------
+ * Leave datepicker helpers
+ * --------------------------------------------------------- */
 let _hrmisLeaveDatePickerStyleInjected = false;
 let _hrmisLeaveDatePickerPopup = null;
-let _hrmisLeaveDatePickerState = null; // { input, monthDate, min, max, disabledRanges }
+let _hrmisLeaveDatePickerState = null;
 
 function _injectHrmisLeaveDatePickerStyles() {
   if (_hrmisLeaveDatePickerStyleInjected) return;
@@ -1271,8 +1294,9 @@ function _injectHrmisLeaveDatePickerStyles() {
   document.head.appendChild(style);
 }
 function _ensureHrmisLeaveDatePickerPopup() {
-  _injectHrmisLeaveDatePickerStyles();
   if (_hrmisLeaveDatePickerPopup) return _hrmisLeaveDatePickerPopup;
+  _injectHrmisLeaveDatePickerStyles();
+
   const el = document.createElement("div");
   el.className = "hrmis-datepop";
   el.style.display = "none";
@@ -1283,18 +1307,17 @@ function _ensureHrmisLeaveDatePickerPopup() {
     if (
       !_hrmisLeaveDatePickerPopup ||
       _hrmisLeaveDatePickerPopup.style.display === "none"
-    )
-      return;
+    ) return;
     const t = ev.target;
     if (
       t &&
       (_hrmisLeaveDatePickerPopup.contains(t) ||
         (_hrmisLeaveDatePickerState?.input &&
           _hrmisLeaveDatePickerState.input.contains(t)))
-    )
-      return;
+    ) return;
     _closeHrmisLeaveDatePicker();
   });
+
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape") _closeHrmisLeaveDatePicker();
   });
@@ -1343,13 +1366,6 @@ function _nextEnabledYmd(fromYmd, toYmd, disabledRanges) {
   }
   return "";
 }
-function _getAttrSafe(input, name) {
-  try {
-    return (input && input.getAttribute && input.getAttribute(name)) || "";
-  } catch {
-    return "";
-  }
-}
 function _getJoiningMinLeaveStartYmd() {
   const form = _qs(document, ".hrmis-form");
   const joining = _qs(form, '[name="hrmis_joining_date"]')?.value || "";
@@ -1370,18 +1386,8 @@ function _renderHrmisLeaveDatePicker() {
   const today = _todayLocalYmd();
 
   const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
   ];
 
   const prevMonth = new Date(y, m0 - 1, 1);
@@ -1438,8 +1444,9 @@ function _renderHrmisLeaveDatePicker() {
 
   const firstDay = new Date(y, m0, 1).getDay();
   const days = _daysInMonthLocal(monthDate);
-  for (let i = 0; i < firstDay; i++)
+  for (let i = 0; i < firstDay; i++) {
     grid.appendChild(document.createElement("div"));
+  }
 
   for (let day = 1; day <= days; day++) {
     const ymd = _ymdForLocal(y, m0, day);
@@ -1513,29 +1520,6 @@ function _renderHrmisLeaveDatePicker() {
         applyYear(yearInp.value);
       }
     });
-
-    yearInp.addEventListener(
-      "wheel",
-      (ev) => {
-        ev.preventDefault();
-        const delta = ev.deltaY > 0 ? -1 : 1;
-        const newY = clampYear((parseInt(yearInp.value, 10) || y) + delta);
-        yearInp.value = String(newY);
-        _hrmisLeaveDatePickerState.monthDate = new Date(newY, m0, 1);
-        _renderHrmisLeaveDatePicker();
-      },
-      { passive: false },
-    );
-
-    yearInp.addEventListener("keydown", (ev) => {
-      if (ev.key !== "ArrowUp" && ev.key !== "ArrowDown") return;
-      ev.preventDefault();
-      const delta = ev.key === "ArrowUp" ? 1 : -1;
-      const newY = clampYear((parseInt(yearInp.value, 10) || y) + delta);
-      yearInp.value = String(newY);
-      _hrmisLeaveDatePickerState.monthDate = new Date(newY, m0, 1);
-      _renderHrmisLeaveDatePicker();
-    });
   }
 }
 
@@ -1565,9 +1549,7 @@ function _attachHrmisLeaveDatePicker(input, getOptions) {
   input._hrmisLeaveDatePickerAttached = true;
   try {
     input.type = "text";
-  } catch {
-    // ignore
-  }
+  } catch {}
   input.setAttribute("inputmode", "none");
   input.setAttribute("autocomplete", "off");
   input.readOnly = true;
@@ -1602,7 +1584,6 @@ function _collectLeaveRanges(excludeRow) {
   return out;
 }
 
-/* (leave gender filter + overlap + constraints + calc: unchanged from your file) */
 function _syncLeaveTypeSelectsByGender(form) {
   const genderEl = _qs(form, '[name="gender"]');
   const gender = String(genderEl?.value || "")
@@ -1615,14 +1596,12 @@ function _syncLeaveTypeSelectsByGender(form) {
   for (const sel of selects) {
     if (!(sel instanceof HTMLSelectElement)) continue;
 
-    // No gender -> disable + red look + message
     if (!gender) {
       sel.value = "";
       _setComboboxDisabled(sel, true, "Please select the gender first.");
       continue;
     }
 
-    // Gender selected -> enable + clear red
     _setComboboxDisabled(sel, false);
 
     const isMale = gender === "male";
@@ -1648,14 +1627,11 @@ function _applyLeaveOverlapRule(row, changedEl) {
   const endEl = _qs(row, 'input[name="leave_end[]"]');
   if (!startEl || !endEl) return true;
 
-  // ✅ If joining date isn't selected (or fields are disabled),
-  // don't clear errors that were set by _syncLeaveRowDateConstraints.
   const joinMin = _getJoiningMinLeaveStartYmd();
   if (!joinMin || startEl.disabled || endEl.disabled) {
-    return true; // overlap rule irrelevant right now
+    return true;
   }
 
-  // (now it's safe to clear overlap-related errors)
   if (changedEl) changedEl.setCustomValidity("");
   _clearError(startEl);
   _clearError(endEl);
@@ -1783,7 +1759,6 @@ function _syncLeaveRowDateConstraints(row) {
   _applyLeaveOverlapRule(row, end);
 }
 
-/* leave contribution calc */
 function _normLeaveTypeForCalc(name) {
   return String(name || "")
     .trim()
@@ -1799,8 +1774,7 @@ function _leaveContributionFromTypeName(name, effectiveDays) {
     s.includes("eol") ||
     s.includes("medical") ||
     s.includes("maternity")
-  )
-    return 0;
+  ) return 0;
 
   if (s.includes("half pay"))
     return Math.ceil((Number(effectiveDays || 0) || 0) / 2);
@@ -1825,7 +1799,6 @@ function _recalcLeavesTaken(form) {
   if (!out) return;
 
   let total = 0;
-  let hasAny = false;
 
   _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
     const typeSel = _qs(row, 'select[name="leave_type_id[]"]');
@@ -1835,7 +1808,6 @@ function _recalcLeavesTaken(form) {
     if (_isEmpty(typeSel.value) || _isEmpty(start.value) || _isEmpty(end.value))
       return;
 
-    hasAny = true;
     const optText = typeSel.selectedOptions?.[0]?.textContent || "";
     const days = _daysInclusiveLocal(start.value, end.value);
     if (!days) return;
@@ -1844,69 +1816,9 @@ function _recalcLeavesTaken(form) {
 
   out.value = String(total || 0);
 }
-/** @odoo-module **/
-
-import publicWidget from "@web/legacy/js/public/public_widget";
-
-function _qs(root, sel) {
-  return root ? root.querySelector(sel) : null;
-}
-function _qsa(root, sel) {
-  return root ? Array.from(root.querySelectorAll(sel)) : [];
-}
-
-function _setContainerEnabled(container, enabled) {
-  const els = _qsa(container, "input, select, textarea");
-
-  els.forEach((el) => {
-    // Save original required once
-    if (!el.dataset.origRequired) {
-      el.dataset.origRequired = el.required ? "1" : "0";
-    }
-
-    // Disable/enable
-    el.disabled = !enabled;
-
-    // Required only when enabled AND originally required
-    el.required = enabled && el.dataset.origRequired === "1";
-  });
-}
-
-function _toggleStatusBoxes(form) {
-  const statusSel = _qs(form, 'select[name="hrmis_current_status_frontend"]');
-  if (!statusSel) return;
-
-  const status = statusSel.value || "";
-  console.warn("[POSTING_STATUS] status=", status);
-
-  const boxes = _qsa(form, ".js-status-box");
-  boxes.forEach((box) => {
-    const boxStatus = box.getAttribute("data-status") || "";
-    const active = boxStatus === status;
-
-    box.style.display = active ? "" : "none";
-    _setContainerEnabled(box, active);
-
-    console.warn("[POSTING_STATUS] box", boxStatus, "active=", active);
-  });
-
-  // Also handle allowed-to-work dependent blocks (optional)
-  _qsa(form, ".js-status-dependent").forEach((wrap) => {
-    const statuses = (wrap.getAttribute("data-statuses") || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    const shouldShow = statuses.includes(status);
-    wrap.style.display = shouldShow ? "" : "none";
-    _setContainerEnabled(wrap, shouldShow);
-  });
-}
-
-/* Removed legacy publicWidget status toggle to avoid duplicate status logic. */
 
 /* ---------------------------------------------------------
- * Dates (basic max=today)
+ * Dates basic
  * --------------------------------------------------------- */
 function _initDates(form) {
   const today = _todayLocalYmd();
@@ -1918,17 +1830,13 @@ function _initDates(form) {
 
 /* ---------------------------------------------------------
  * Profile date pickers
- *  - DOB uses calendar widget
- *  - Commission/Joining are month-proxy fields (handled elsewhere)
  * --------------------------------------------------------- */
 function _initProfileDatePickers(form) {
   const dob = _qs(form, '[name="birthday"]');
   if (dob) {
     _ensureNativeDateInput(dob);
-    // Avoid double-binding on BFCache / repeated init.
     if (dob.dataset.hrmisDobCommissionBound === "1") return;
     dob.dataset.hrmisDobCommissionBound = "1";
-    // Keep Commission-vs-DOB validation in sync.
     dob.addEventListener("change", () => {
       _syncCommissionMinFromDob(form);
       _validateDobCommission(form);
@@ -1940,9 +1848,9 @@ function _initProfileDatePickers(form) {
   }
 }
 
-/* =========================================================
- * Previous Posting (Manual Fill – No Auto Chain) — SINGLE, FIXED
- * ========================================================= */
+/* ---------------------------------------------------------
+ * Previous Posting
+ * --------------------------------------------------------- */
 function _postingRows() {
   return _qsa(document, "#prev_post_rows .hrmis-repeat-row");
 }
@@ -1983,17 +1891,13 @@ function _validatePostingBpsAgainstCurrent(form, row) {
 }
 
 function _initPostingPrevChain(form) {
-  // NOTE: Previous Posting History is always available now (like Qualifications)
-  // and is NOT dependent on Current Posting Start vs Joining Month.
   const wrap = _qs(document, ".js-prev-posting-wrap");
   const container = _qs(document, "#prev_post_rows");
   if (!wrap || !container) return;
 
-  // prevent double-binding if init is called again
   if (wrap.dataset.hrmisPrevPostingInited === "1") return;
   wrap.dataset.hrmisPrevPostingInited = "1";
 
-  // ensure visible (server may still prefill rows)
   wrap.style.display = "";
 
   const resync = () => {
@@ -2003,7 +1907,6 @@ function _initPostingPrevChain(form) {
     });
   };
 
-  // resync bounds whenever relevant inputs change
   const joining = _qs(form, '[name="hrmis_joining_date"]');
   const currentStart = _qs(form, '[name="current_posting_start"]');
   const bps = _qs(form, '[name="hrmis_bps"]');
@@ -2015,9 +1918,10 @@ function _initPostingPrevChain(form) {
 
   resync();
 }
-/* =========================================================
- * PROMOTION CHAIN (strict chain) — unchanged
- * ========================================================= */
+
+/* ---------------------------------------------------------
+ * Promotion chain
+ * --------------------------------------------------------- */
 function _promoRows() {
   return _qsa(document, "#promo_rows .hrmis-repeat-row");
 }
@@ -2248,7 +2152,6 @@ function _initPromotionChain(form) {
     if (e.target?.matches?.('input[name="promotion_bps_from[]"]'))
       _applyPromoToMinFromFrom(row);
 
-    // Live validation: clears warnings as soon as values become valid
     _validatePromoRow(form, row);
   });
 
@@ -2281,7 +2184,7 @@ function _initPromotionChain(form) {
 }
 
 /* ---------------------------------------------------------
- * Repeatables init (Add/Remove + delegation)
+ * Repeatables init
  * --------------------------------------------------------- */
 function _removeRepeatRow(btn) {
   const row = btn.closest(".hrmis-repeat-row");
@@ -2332,7 +2235,6 @@ function _initRepeatables(form) {
     const t = e.target;
     if (!t) return;
 
-    // leave row changes
     if (
       t.matches?.(
         'input[name="leave_start[]"], input[name="leave_end[]"], select[name="leave_type_id[]"]',
@@ -2345,6 +2247,7 @@ function _initRepeatables(form) {
       }
       _recalcLeavesTaken(form);
     }
+
     if (
       t.matches?.('input[name="posting_start[]"], input[name="posting_end[]"]')
     ) {
@@ -2399,18 +2302,6 @@ function _initRepeatables(form) {
     const t = e.target;
     if (!t) return;
 
-    if (t.matches?.('input[name="posting_bps[]"]')) {
-      const raw = t.value || "";
-      const digits = raw.replace(/\D/g, "").slice(0, 2);
-      if (digits !== raw) t.value = digits;
-
-      const row = t.closest(".hrmis-repeat-row");
-      if (row) {
-        _applyPostingBpsMaxFromCurrent(form, row);
-        _validatePostingBpsAgainstCurrent(form, row);
-      }
-    }
-
     if (
       t.matches?.(
         'input[name="promotion_bps_from[]"], input[name="promotion_bps_to[]"]',
@@ -2432,13 +2323,12 @@ function _initRepeatables(form) {
 }
 
 /* ---------------------------------------------------------
- * Validation for repeatables on submit (unchanged from your file)
+ * Validation for repeatables on submit
  * --------------------------------------------------------- */
 function _validateRepeatables(form) {
   let hasError = false;
   const tm = _todayMonth();
 
-  // qualifications
   _qsa(document, "#qual_rows .hrmis-repeat-row").forEach((row) => {
     const degree = _qs(row, 'select[name="qualification_degree[]"]');
     const start = _qs(row, 'input[name="qualification_start[]"]');
@@ -2460,7 +2350,6 @@ function _validateRepeatables(form) {
       return;
     }
 
-    // keep UI in sync in case something changed before submit
     _syncQualEndVisibility(row);
 
     if (_isEmpty(degree?.value)) {
@@ -2505,7 +2394,6 @@ function _validateRepeatables(form) {
 
   _syncQualDegreeOptions();
 
-  // previous posting strict chain (only when jm != cm)
   const joiningVal = _qs(form, '[name="hrmis_joining_date"]')?.value || "";
   const currentVal = _qs(form, '[name="current_posting_start"]')?.value || "";
 
@@ -2539,7 +2427,7 @@ function _validateRepeatables(form) {
 
           const start = _readMonthValueFromInput(startInp);
           const end = _readMonthValueFromInput(endInp);
-          // hard bounds: not before joining, not after/beyond current posting start
+
           if (_isValidMonth(jm)) {
             if (
               _isValidMonth(start) &&
@@ -2571,7 +2459,6 @@ function _validateRepeatables(form) {
               hasError = true;
               break;
             }
-            // you already check end >= cm, keep it; it enforces end < cm
           }
 
           if (_isEmpty(district?.value)) {
@@ -2650,7 +2537,6 @@ function _validateRepeatables(form) {
     }
   }
 
-  // promotions strict chain
   const promoRows = _promoRows();
   const filledPromoRows = promoRows.filter((row) => {
     const from = _qs(row, 'input[name="promotion_bps_from[]"]')?.value || "";
@@ -2690,7 +2576,6 @@ function _validateRepeatables(form) {
     }
   }
 
-  // leave validations + overlap
   _qsa(document, "#leave_rows .hrmis-repeat-row").forEach((row) => {
     const type = _qs(row, 'select[name="leave_type_id[]"]');
     const start = _qs(row, 'input[name="leave_start[]"]');
@@ -2774,7 +2659,7 @@ function _validateRepeatables(form) {
 }
 
 /* ---------------------------------------------------------
- * File validation: CNIC scans (front/back) — unchanged
+ * File validation
  * --------------------------------------------------------- */
 function _initCnicScanFiles(form) {
   const MAX_BYTES = 4 * 1024 * 1024;
@@ -2882,6 +2767,7 @@ function _initAllowedToWorkToggle() {
   checkbox.addEventListener("change", syncAllowedUI);
   syncAllowedUI();
 }
+
 function _readPrefillJSON() {
   const el = document.getElementById("hrmis_profile_prefill_json");
   if (!el) return null;
@@ -2899,7 +2785,6 @@ function _setSelectValue(selectEl, value) {
   if (!selectEl) return;
   const v = String(value || "");
   selectEl.value = v;
-  // if option not found, keep empty
   if (selectEl.value !== v) selectEl.value = "";
 }
 
@@ -2937,7 +2822,6 @@ function _seedPrevPostingRows(form, items) {
   const list = Array.isArray(items) ? items : [];
   if (!list.length) return;
 
-  // show the section
   const wrap = _qs(document, ".js-prev-posting-wrap");
   if (wrap) wrap.style.display = "";
 
@@ -3004,47 +2888,34 @@ function _applyPrefillRepeatables(form) {
   _seedQualificationRows(form, data.qual);
   _seedPrevPostingRows(form, data.post);
   _seedLeaveRows(form, data.leave);
-
-  // if later you add promo:
-  // _seedPromoRows(form, data.promo);
 }
+
 /* ---------------------------------------------------------
- * Main init (guarded)
+ * Main init
  * --------------------------------------------------------- */
 function _initHRMISValidations() {
   const form = _qs(document, ".hrmis-form");
   if (!form) return;
 
-  // INIT GUARD: prevent double binding on pageshow/bfcache
   if (form.dataset.hrmisInited === "1") return;
   form.dataset.hrmisInited = "1";
 
   _initSearchableSelects(form);
   _attachComboboxGlobalCloser();
   _initDates(form);
-  _initProfileDatePickers(form); // DOB only (commission/joining use month proxy)
+  _initProfileDatePickers(form);
   _initCNIC(form);
   _initContact(form);
   _initCnicScanFiles(form);
-  // Status UI (Suspended hides current posting + shows suspension box)
   _initFrontendStatusToggle(form);
+_qsa(form, ".js-hrmis-bps").forEach((el) => _initBpsField(el));
+_qsa(form, 'input[name="promotion_bps_from[]"]').forEach((el) => _initBpsField(el));
+_qsa(form, 'input[name="promotion_bps_to[]"]').forEach((el) => _initBpsField(el));
+_digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
 
-  _digitsOnly(_qs(form, '[name="hrmis_bps"]'), { maxLen: 2 });
-  
-  _digitsOnly(_qs(form, '[name="posting_bps[]"]'), { maxLen: 2 });
-  _digitsOnly(_qs(form, '[name="promotion_bps_from[]"]'), { maxLen: 2 });
-  _digitsOnly(_qs(form, '[name="promotion_bps_to[]"]'), { maxLen: 2 });
-
-
-
-
-  _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
-
-  // PMDC conditional required (depends on Cadre)
   const cadreSel = _qs(form, 'select[name="hrmis_cadre"]');
   if (cadreSel) {
     cadreSel.addEventListener("change", () => _syncPmdcRequiredByCadre(form));
-    // run once on load (prefilled cadre)
     _syncPmdcRequiredByCadre(form);
   }
 
@@ -3054,7 +2925,6 @@ function _initHRMISValidations() {
     leavesTakenEl.setAttribute("readonly", "readonly");
   }
 
-  // Commission & Joining month/year UI proxy (keeps backend date intact)
   const joiningInput = _qs(form, '[name="hrmis_joining_date"]');
   const commissionInput = _qs(form, '[name="hrmis_commission_date"]');
   const joiningUI = joiningInput ? _attachMonthProxy(joiningInput) : null;
@@ -3062,10 +2932,8 @@ function _initHRMISValidations() {
     ? _attachMonthProxy(commissionInput)
     : null;
 
-  // Previous posting visibility logic
   _initPostingPrevChain(form);
 
-  // Current Posting Start: prevent future months
   const cpsInput = _qs(form, '[name="current_posting_start"]');
   const deputationInput = _qs(form, '[name="frontend_deputation_start"]');
   const currentStatusInput = _qs(
@@ -3075,7 +2943,6 @@ function _initHRMISValidations() {
   if (cpsInput) cpsInput.setAttribute("max", _todayMonth());
   if (deputationInput) deputationInput.setAttribute("max", _todayMonth());
 
-  // Require Joining before enabling current posting start (UX)
   if (joiningInput && (cpsInput || deputationInput)) {
     const toggle = () => {
       const hasJoining = !_isEmpty(joiningInput.value);
@@ -3123,7 +2990,7 @@ function _initHRMISValidations() {
     });
     currentStatusInput?.addEventListener("change", toggle);
 
-    cpsInput.addEventListener("change", () => {
+    cpsInput?.addEventListener("change", () => {
       _validateCurrentPostingStart(form);
       _postingRows().forEach((r) => _syncPostingRowDateConstraints(form, r));
     });
@@ -3134,13 +3001,11 @@ function _initHRMISValidations() {
     toggle();
   }
 
-  // Joining vs Commission: enforce order (Commission first) on UI proxies
   if (joiningInput && commissionInput && joiningUI && commissionUI) {
     const syncMinMax = () => {
-      const jmv = (joiningUI.value || "").trim(); // YYYY-MM
-      const cmv = (commissionUI.value || "").trim(); // YYYY-MM
+      const jmv = (joiningUI.value || "").trim();
+      const cmv = (commissionUI.value || "").trim();
 
-      // DOB constraint: commission >= DOB month
       _syncCommissionMinFromDob(form);
 
       commissionUI.setAttribute("max", _todayMonth());
@@ -3148,7 +3013,6 @@ function _initHRMISValidations() {
 
       const hasCommission = !_isEmpty(cmv);
 
-      // Disable ONLY UI joining picker (do NOT disable hidden date input)
       joiningUI.disabled = !hasCommission;
 
       if (!hasCommission) {
@@ -3168,7 +3032,6 @@ function _initHRMISValidations() {
       joiningUI.setAttribute("min", cmv);
       joiningInput.setAttribute("min", `${cmv}-01`);
 
-      // commission <= joining if joining exists
       if (!_isEmpty(jmv)) {
         commissionUI.setAttribute("max", jmv);
         commissionInput.setAttribute("max", `${jmv}-01`);
@@ -3193,7 +3056,6 @@ function _initHRMISValidations() {
   _promoRows().forEach((row) => _syncPromoRowConstraints(form, row));
   _syncPostingBpsConstraints(form);
 
-  // Keep constraints in sync when Current BPS changes
   const bpsEl = _qs(form, '[name="hrmis_bps"]');
   if (bpsEl) {
     const refresh = () => {
@@ -3215,7 +3077,6 @@ function _initHRMISValidations() {
   form.addEventListener("submit", function (e) {
     let hasError = false;
 
-    // Ensure conditional required flags are in sync right before validation
     const needsPmdc = _syncPmdcRequiredByCadre(form);
 
     if (needsPmdc) {
@@ -3233,7 +3094,6 @@ function _initHRMISValidations() {
       });
     }
 
-    // Validate all visible enabled required fields, including active Status box fields.
     _qsa(form, "input[required], select[required], textarea[required]").forEach(
       (input) => {
         if (!input) return;
@@ -3270,7 +3130,6 @@ function _initHRMISValidations() {
       },
     );
 
-    // DOB 18+
     const dobVal = _qs(form, '[name="birthday"]')?.value;
     if (dobVal) {
       const dob = new Date(dobVal + "T00:00:00");
@@ -3305,19 +3164,13 @@ function _initHRMISValidations() {
 function _ensureNativeDateInput(input) {
   if (!input) return;
 
-  // If this input was previously converted to text for custom popup,
-  // restore it back to native date input.
   try {
     input.type = "date";
-  } catch {
-    // ignore if browser refuses changing type (rare)
-  }
+  } catch {}
 
   input.readOnly = false;
   input.removeAttribute("inputmode");
   input.removeAttribute("autocomplete");
-
-  // prevent custom popup behavior if it was attached earlier
   input._hrmisLeaveDatePickerAttached = false;
 }
 
@@ -3327,17 +3180,14 @@ function _setComboboxDisabled(selectEl, disabled, msg = "") {
   const combo = selectEl.closest(".hrmis-combobox");
   const comboInput = combo ? combo.querySelector("input[type='text']") : null;
 
-  // Sync BOTH: real select + the visible combobox input
   selectEl.disabled = !!disabled;
   if (comboInput) comboInput.disabled = !!disabled;
 
-  // Optional: pointer feel
   if (comboInput) {
     comboInput.style.cursor = disabled ? "not-allowed" : "";
     comboInput.style.backgroundColor = disabled ? "#fff5f5" : "";
   }
 
-  // Error styling on the visible input (so it becomes reddish)
   if (disabled && msg) {
     if (comboInput) _showError(comboInput, msg);
     else _showError(selectEl, msg);
@@ -3346,6 +3196,7 @@ function _setComboboxDisabled(selectEl, disabled, msg = "") {
     _clearError(selectEl);
   }
 }
+
 function _initFrontendStatusToggle(formArg) {
   const form = formArg || document.querySelector(".hrmis-form");
   if (!form) return;
@@ -3353,16 +3204,12 @@ function _initFrontendStatusToggle(formArg) {
   const statusEl = form.querySelector('[name="hrmis_current_status_frontend"]');
   if (!statusEl) return;
 
-  // status boxes (currently_posted, suspended, on_leave, eol_pgship etc.)
   const boxes = Array.from(document.querySelectorAll(".js-status-box"));
-
-  // Allowed-to-work UI
   const allowedCbs = Array.from(
     form.querySelectorAll(".js-allowed-to-work-toggle"),
   );
   const allowedBox = document.getElementById("allowed_to_work_box");
 
-  // ---------- helpers ----------
   function remember(el) {
     if (!el || el.dataset.hrmisRemembered === "1") return;
     el.dataset.hrmisRemembered = "1";
@@ -3407,7 +3254,6 @@ function _initFrontendStatusToggle(formArg) {
     return active || null;
   }
 
-  // ---------- Allowed-to-work toggle ----------
   function setAllowedBoxVisible(visible) {
     if (!allowedBox) return;
 
@@ -3417,7 +3263,6 @@ function _initFrontendStatusToggle(formArg) {
       remember(el);
 
       if (!visible) {
-        // clear values when hiding
         if (el.tagName === "SELECT") el.value = "";
         else if (el.type === "checkbox" || el.type === "radio")
           el.checked = false;
@@ -3426,7 +3271,6 @@ function _initFrontendStatusToggle(formArg) {
         el.disabled = true;
         el.removeAttribute("required");
       } else {
-        // restore original
         el.disabled = el.dataset.hrmisOrigDisabled === "1";
         if (el.dataset.hrmisOrigRequired === "1")
           el.setAttribute("required", "required");
@@ -3438,7 +3282,6 @@ function _initFrontendStatusToggle(formArg) {
     const eligible =
       activeStatus === "currently_posted" || activeStatus === "eol_pgship";
 
-    // Force-hide unless eligible for allowed-to-work
     if (!eligible) {
       allowedCbs.forEach((cb) => {
         remember(cb);
@@ -3449,7 +3292,6 @@ function _initFrontendStatusToggle(formArg) {
       return;
     }
 
-    // eligible: enable checkbox(es) and follow their state
     allowedCbs.forEach((cb) => {
       remember(cb);
       cb.disabled = cb.dataset.hrmisOrigDisabled === "1";
@@ -3459,7 +3301,6 @@ function _initFrontendStatusToggle(formArg) {
     setAllowedBoxVisible(shouldShow);
   }
 
-  // ---------- suspension sub-toggle ----------
   const suspensionReportingTo = form.querySelector(
     '[name="frontend_reporting_to"]',
   );
@@ -3512,7 +3353,6 @@ function _initFrontendStatusToggle(formArg) {
     }
   }
 
-  // ---------- on-leave sub-toggle ----------
   const onLeaveReportingTo = form.querySelector(
     '[name="frontend_onleave_reporting_to"]',
   );
@@ -3565,7 +3405,6 @@ function _initFrontendStatusToggle(formArg) {
     }
   }
 
-  // ---------- eol (pgship) end-date by status ----------
   const eolStatusSel = form.querySelector('[name="frontend_eol_status"]');
   const eolEndWrap = document.getElementById("frontend_eol_end_wrap");
   const eolEndInp = form.querySelector('[name="frontend_eol_end"]');
@@ -3590,7 +3429,6 @@ function _initFrontendStatusToggle(formArg) {
     }
   }
 
-  // remember original attrs once
   boxes.forEach((box) =>
     box.querySelectorAll("input, select, textarea").forEach(remember),
   );
@@ -3604,16 +3442,12 @@ function _initFrontendStatusToggle(formArg) {
   if (eolStatusSel) remember(eolStatusSel);
   if (eolEndInp) remember(eolEndInp);
 
-  // ---------- main sync ----------
   function sync() {
     const status = (statusEl.value || "").trim();
 
     const active = showOnly(status);
-
-    // ✅ allowed-to-work must follow status + checkbox
     syncAllowedToWork(status);
 
-    // run sub-toggles only when their box is active
     if (active && active.dataset.status === "suspended") {
       syncSuspensionFacility();
     } else {
@@ -3660,12 +3494,10 @@ function _initFrontendStatusToggle(formArg) {
     }
   }
 
-  // events
   statusEl.addEventListener("change", sync);
 
   allowedCbs.forEach((cb) => {
     cb.addEventListener("change", () => {
-      // If multiple checkboxes exist in DOM, keep them synced
       const checked = !!cb.checked;
       allowedCbs.forEach((other) => {
         if (other !== cb) other.checked = checked;
@@ -3681,7 +3513,7 @@ function _initFrontendStatusToggle(formArg) {
   if (eolStatusSel)
     eolStatusSel.addEventListener("change", syncEolEndVisibility);
 
-  sync(); // run once on load
+  sync();
 }
 
 function _initHRMIS() {
@@ -3690,7 +3522,6 @@ function _initHRMIS() {
 
   const isSubmittedView = form.classList.contains("is-submitted");
   if (isSubmittedView) {
-    // Hide delete icons
     document.querySelectorAll(".btn_remove_row").forEach((el) => {
       el.style.display = "none";
     });

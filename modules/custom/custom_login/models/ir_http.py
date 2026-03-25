@@ -1,3 +1,4 @@
+from importlib.resources import path
 import logging
 
 from odoo import models
@@ -17,6 +18,8 @@ class IrHttp(models.AbstractModel):
     def _custom_404(cls, reason="unknown"):
         path = (request.httprequest.path or "")
         uid = request.session.uid
+
+        
         _logger.warning("[CUSTOM 404] reason=%s path=%s uid=%s", reason, path, uid)
 
         # Ensure request.website exists (fallback path often doesn't have it)
@@ -62,6 +65,10 @@ class IrHttp(models.AbstractModel):
     def _dispatch(cls, endpoint):
         path = (request.httprequest.path or "")
         uid = request.session.uid
+
+        if path in ("", "/"):
+            _logger.warning("[ROOT REDIRECT] path=%s -> /web/login", path)
+            return request.redirect("/web/login")
 
         _logger.warning(
             "[DISPATCH START] path=%s uid=%s endpoint=%s",

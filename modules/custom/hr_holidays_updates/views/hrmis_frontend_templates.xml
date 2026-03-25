@@ -254,9 +254,9 @@
                     </aside>
                     <div class="hrmis-main">
                         <div class="hrmis-topbar">
-                                                         <div class="hrmis-warning-msg">
+                                                         <!-- <div class="hrmis-warning-msg">
     It is better to resign than to lie.
-</div>
+</div> -->
                             <div class="hrmis-topbar__left">
                                 <button class="hrmis-nav-toggle js-hrmis-nav-toggle" type="button"
                                     aria-label="Toggle menu" aria-expanded="false">

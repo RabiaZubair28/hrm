@@ -1,0 +1,233 @@
+/* =========================================================
+   SIZE TUNING - closer to reference
+   ========================================================= */
+
+.hrmis-profile-request,
+.hrmis-profile-request input,
+.hrmis-profile-request select,
+.hrmis-profile-request textarea,
+.hrmis-profile-request button,
+.hrmis-profile-request label,
+.hrmis-profile-request .hrmis-tab,
+.hrmis-profile-request .hrmis-pr-tab {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif !important;
+}
+
+/* field spacing */
+.hrmis-profile-request .hrmis-field {
+  margin-bottom: 20px !important;
+}
+
+/* labels smaller + tighter */
+.hrmis-profile-request .hrmis-field > label,
+.hrmis-profile-request .hrmis-field label {
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+  font-weight: 400 !important;
+  color: rgba(0, 0, 0, 0.88) !important;
+  padding: 0 0 6px !important;
+  margin: 0 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
+/* required star */
+.hrmis-profile-request .req,
+.hrmis-profile-request .hrmis-field label .req {
+  color: #ff4d4f !important;
+  font-weight: 400 !important;
+  margin-left: 2px !important;
+}
+
+/* inputs/selects smaller like reference */
+.hrmis-profile-request .hrmis-input,
+.hrmis-profile-request input.hrmis-input,
+.hrmis-profile-request select.hrmis-input,
+.hrmis-profile-request textarea.hrmis-input {
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 4px 11px !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  font-weight: 400 !important;
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  color: rgba(0, 0, 0, 0.88) !important;
+  box-shadow: none !important;
+}
+
+/* placeholder */
+.hrmis-profile-request .hrmis-input::placeholder,
+.hrmis-profile-request input::placeholder,
+.hrmis-profile-request textarea::placeholder {
+  color: rgba(0, 0, 0, 0.25) !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  opacity: 1 !important;
+}
+
+/* date fields */
+.hrmis-profile-request input[type="date"].hrmis-input,
+.hrmis-profile-request input[type="month"].hrmis-input,
+.hrmis-profile-request input[type="text"].hrmis-input,
+.hrmis-profile-request input[type="tel"].hrmis-input,
+.hrmis-profile-request input[type="email"].hrmis-input,
+.hrmis-profile-request input[type="number"].hrmis-input {
+  padding-inline: 11px !important;
+}
+
+/* selects */
+.hrmis-profile-request select.hrmis-input {
+  padding-right: 30px !important;
+}
+
+/* focus */
+.hrmis-profile-request .hrmis-input:focus,
+.hrmis-profile-request input.hrmis-input:focus,
+.hrmis-profile-request select.hrmis-input:focus,
+.hrmis-profile-request textarea.hrmis-input:focus {
+  border-color: #064526 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+  outline: none !important;
+}
+
+/* readonly */
+.hrmis-profile-request .hrmis-input[readonly],
+.hrmis-profile-request .hrmis-input:disabled,
+.hrmis-profile-request select.hrmis-input:disabled,
+.hrmis-profile-request .hrmis-input-frozen {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.88) !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.88) !important;
+}
+
+/* tabs smaller */
+.hrmis-profile-request .hrmis-pr-tabs {
+  gap: 10px !important;
+  padding: 12px 12px 0 !important;
+  margin-bottom: 16px !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.hrmis-profile-request .hrmis-pr-tab,
+.hrmis-profile-request .hrmis-tab {
+  padding: 12px 22px !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  border-radius: 16px 16px 0 0 !important;
+  font-weight: 400 !important;
+}
+
+.hrmis-profile-request .hrmis-pr-tab.active::before,
+.hrmis-profile-request .hrmis-pr-tab.is-active::before,
+.hrmis-profile-request .hrmis-tab.active::before,
+.hrmis-profile-request .hrmis-tab.is-active::before {
+  height: 3px !important;
+  border-radius: 16px 16px 0 0 !important;
+}
+
+/* help text */
+.hrmis-profile-request .hrmis-help {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  margin-top: 4px !important;
+}
+/* make text slightly bolder like reference */
+
+.hrmis-profile-request .hrmis-field > label,
+.hrmis-profile-request .hrmis-field label {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: rgba(0, 0, 0, 0.92) !important;
+}
+
+.hrmis-profile-request .hrmis-input,
+.hrmis-profile-request input.hrmis-input,
+.hrmis-profile-request select.hrmis-input,
+.hrmis-profile-request textarea.hrmis-input {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: rgba(0, 0, 0, 0.88) !important;
+}
+
+.hrmis-profile-request .hrmis-input::placeholder,
+.hrmis-profile-request input::placeholder,
+.hrmis-profile-request textarea::placeholder {
+  font-weight: 400 !important;
+  color: rgba(0, 0, 0, 0.35) !important;
+}
+
+.hrmis-profile-request .hrmis-pr-tab,
+.hrmis-profile-request .hrmis-tab {
+  font-weight: 600 !important;
+  color: rgba(0, 0, 0, 0.88) !important;
+}
+
+.hrmis-profile-request .hrmis-pr-tab.active,
+.hrmis-profile-request .hrmis-tab.active,
+.hrmis-profile-request .hrmis-pr-tab.is-active,
+.hrmis-profile-request .hrmis-tab.is-active {
+  font-weight: 600 !important;
+  color: #064526 !important;
+}
+/* tighter field spacing */
+
+.hrmis-profile-request .hrmis-field {
+  margin-bottom: 16px !important;
+}
+
+.hrmis-profile-request .hrmis-field > label,
+.hrmis-profile-request .hrmis-field label {
+  padding: 0 0 4px !important;
+  margin: 0 !important;
+  line-height: 1.25 !important;
+}
+
+.hrmis-profile-request .hrmis-help {
+  margin-top: 3px !important;
+}
+
+.hrmis-profile-request .hrmis-form__grid {
+  gap: 0 18px !important;
+}
+/* make input boxes lighter, keep labels a bit bolder */
+
+.hrmis-profile-request .hrmis-input,
+.hrmis-profile-request input.hrmis-input,
+.hrmis-profile-request select.hrmis-input,
+.hrmis-profile-request textarea.hrmis-input {
+  border: 1px solid #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.78) !important;
+  font-weight: 400 !important;
+  box-shadow: none !important;
+  background: #fff !important;
+}
+
+.hrmis-profile-request .hrmis-input::placeholder,
+.hrmis-profile-request input::placeholder,
+.hrmis-profile-request textarea::placeholder {
+  color: rgba(0, 0, 0, 0.25) !important;
+  font-weight: 400 !important;
+}
+
+.hrmis-profile-request .hrmis-field > label,
+.hrmis-profile-request .hrmis-field label {
+  font-weight: 500 !important;
+  color: rgba(0, 0, 0, 0.88) !important;
+}
+
+/* only make the background behind tabs and above form white */
+
+.hrmis-profile-request .hrmis-pr-tabs,
+.hrmis-profile-request .tab-content,
+.hrmis-profile-request .hrmis-pr-tab-content,
+.hrmis-profile-request .tab-pane,
+.hrmis-profile-request .hrmis-panel,
+.hrmis-profile-request .hrmis-panel__body,
+.hrmis-profile-request .hrmis-pr-shell,
+.hrmis-profile-request .hrmis-pr-shell__body {
+  background: #fff !important;
+}

@@ -1618,7 +1618,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         ProfileRequest = request.env["hrmis.employee.profile.request"].sudo()
     
         req = ProfileRequest.search(
-            [("employee_id", "=", employee.id), ("state", "in", ["draft", "submitted"])], limit=1
+            [("employee_id", "=", employee.id), ("state", "in", ["draft", "submitted"])],order="id desc", limit=1
         )
 
         if not req:
@@ -2004,12 +2004,12 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         facility_id = False
 
         if self._is_other(raw_facility):
-            if not raw_other_name:
-                raise ValidationError("Facility name is required when Substantive Posting Facility is Other.")
-
-            # Safer: do not force district mapping if your local temp facility model
-            # is not aligned with EMR district IDs
-            facility_id = self._get_or_create_temp_facility(env, raw_other_name, district_id or 0) or False
+            if raw_other_name:
+                facility_id = self._get_or_create_temp_facility(
+                    env, raw_other_name, district_id or 0
+                ) or False
+            else:
+                facility_id = False
         else:
             facility_id = self._safe_int_or_false(raw_facility)
 
@@ -2120,122 +2120,187 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
     def _parse_qualification_history_or_error(self, employee, req, env, form):
         q_degree = form.getlist("qualification_degree[]")
         q_inst = form.getlist("qualification_institute_id[]")
-        q_inst_other = form.getlist("qualification_institute_other_name[]")
-        q_degree_other = form.getlist("qualification_degree_other[]")
+
+        q_inst_other = (
+            form.getlist("qualification_institute_other_name[]")
+            or form.getlist("qualification_institute_other_name")
+        )
+        q_degree_other = (
+            form.getlist("qualification_degree_other[]")
+            or form.getlist("qualification_degree_other")
+        )
         q_spec = form.getlist("qualification_specialization[]")
-        q_spec_other = form.getlist("qualification_specialization_other[]")
+        q_spec_other = (
+            form.getlist("qualification_specialization_other[]")
+            or form.getlist("qualification_specialization_other")
+        )
         q_start = form.getlist("qualification_start[]")
         q_end = form.getlist("qualification_end[]")
         q_status = form.getlist("qualification_status[]")
 
         allowed_degree_keys = {
             "ms", "md", "fcps_1", "fcps_2", "mcps", "diploma",
-            "mbbs", "mph", "mba", "msph", "other",
+            "mbbs", "mph", "mba", "msph", "mba(supply chain)", "other",
         }
 
-        # allowed_spec_keys = {
-        #     "general_medicine", "family_medicine", "medicine", "emergency_medicine",
-        #     "pediatrics", "pediatric_surgery", "cardiology", "neurology", "psychiatry",
-        #     "dermatology", "endocrinology", "pulmonology", "nephrology", "gastroenterology",
-        #     "oncology", "hematology", "general_surgery", "surgery", "neurosurgery",
-        #     "plastic_surgery", "urology", "orthopedics", "gynecology",
-        #     "obstetrics_gynecology", "radiology", "pathology", "anesthesia",
-        #     "anesthesiology", "physiotherapy", "nutrition", "ophthalmology",
-        #     "ent", "dentistry", "orthodontist", "other",
-        # }
         allowed_spec_keys = {
-    "general_medicine",
-    "family_medicine",
-    "emergency_medicine",
-    "pediatrics",
-    "pediatric_surgery",
-    "cardiology",
-    "neurology",
-    "dermatology",
-    "psychiatry",
-    "endocrinology",
-    "pulmonology",
-    "nephrology",
-    "gastroenterology",
-    "oncology",
-    "hematology",
-    "general_surgery",
-    "obstetrics_gynecology",
-    "orthopedics",
-    "ophthalmology",
-    "ent",
-    "neurosurgery",
-    "plastic_surgery",
-    "urology",
-    "anesthesiology",
-    "radiology",
-    "pathology",
-    "physiotherapy",
-    "nutrition",
-    "dentistry",
-    "orthodontist",
-    "other",
-}
+            "general_medicine",
+            "family_medicine",
+            "emergency_medicine",
+            "pediatrics",
+            "pediatric_surgery",
+            "cardiology",
+            "neurology",
+            "dermatology",
+            "psychiatry",
+            "endocrinology",
+            "pulmonology",
+            "nephrology",
+            "gastroenterology",
+            "oncology",
+            "hematology",
+            "general_surgery",
+            "obstetrics_gynecology",
+            "orthopedics",
+            "ophthalmology",
+            "ent",
+            "neurosurgery",
+            "plastic_surgery",
+            "urology",
+            "anesthesiology",
+            "radiology",
+            "pathology",
+            "physiotherapy",
+            "nutrition",
+            "dentistry",
+            "orthodontist",
+            "other",
+        }
+
+        _logger.warning(
+            "[PROFILE][QUAL][RAW] emp_id=%s req_id=%s lens={degree:%s degree_other:%s inst:%s inst_other:%s spec:%s spec_other:%s start:%s end:%s status:%s}",
+            employee.id, req.id,
+            len(q_degree), len(q_degree_other),
+            len(q_inst), len(q_inst_other),
+            len(q_spec), len(q_spec_other),
+            len(q_start), len(q_end), len(q_status),
+        )
+        _logger.warning("[PROFILE][QUAL][RAW] qualification_degree[]=%s", q_degree)
+        _logger.warning("[PROFILE][QUAL][RAW] qualification_degree_other[]=%s", q_degree_other)
+        _logger.warning("[PROFILE][QUAL][RAW] qualification_institute_id[]=%s", q_inst)
+        _logger.warning("[PROFILE][QUAL][RAW] qualification_institute_other_name[]=%s", q_inst_other)
+        _logger.warning("[PROFILE][QUAL][RAW] qualification_specialization[]=%s", q_spec)
+        _logger.warning("[PROFILE][QUAL][RAW] qualification_specialization_other[]=%s", q_spec_other)
+        _logger.warning("[PROFILE][QUAL][RAW] qualification_start[]=%s", q_start)
+        _logger.warning("[PROFILE][QUAL][RAW] qualification_end[]=%s", q_end)
+        _logger.warning("[PROFILE][QUAL][RAW] qualification_status[]=%s", q_status)
 
         qual_lines = []
+
         n = max(
-            len(q_degree), len(q_degree_other),
-            len(q_spec), len(q_spec_other),
-            len(q_start), len(q_end),
+            len(q_degree),
+            len(q_inst),
+            len(q_spec),
+            len(q_start),
+            len(q_end),
             len(q_status),
         )
 
+        _logger.warning("[PROFILE][QUAL] rows_to_process=%s", n)
+
+        def _get(lst, idx, default=""):
+            return (lst[idx] if idx < len(lst) else default) or default
+
+        def _is_other(v):
+            return (v or "").strip() in ("__other__", "other")
+
+        def _m2o_or_code(raw):
+            raw = (raw or "").strip()
+            if not raw or raw in ("0", "__other__"):
+                return False, False
+            try:
+                return int(raw), False
+            except Exception:
+                return False, raw
+
+        degree_other_ptr = 0
+        inst_other_ptr = 0
+        spec_other_ptr = 0
+
         for i in range(n):
-            deg_raw = (q_degree[i] if i < len(q_degree) else "").strip()
-            deg_other = (q_degree_other[i] if i < len(q_degree_other) else "").strip()
+            deg_raw = _get(q_degree, i, "").strip()
+            inst_raw = _get(q_inst, i, "").strip()
+            spec_raw = _get(q_spec, i, "").strip()
+            status = _get(q_status, i, "").strip() or "ongoing"
 
-            spec_raw = (q_spec[i] if i < len(q_spec) else "").strip()
-            spec_other = (q_spec_other[i] if i < len(q_spec_other) else "").strip()
+            raw_start = _get(q_start, i, "")
+            raw_end = _get(q_end, i, "")
 
-            status = (q_status[i] if i < len(q_status) else "").strip() or "ongoing"
+            s = self._month_to_date(raw_start)
+            e = self._month_to_date(raw_end)
 
-            s = self._month_to_date(q_start[i] if i < len(q_start) else "")
-            e = self._month_to_date(q_end[i] if i < len(q_end) else "")
+            deg_other = ""
+            if _is_other(deg_raw):
+                deg_other = (q_degree_other[degree_other_ptr] if degree_other_ptr < len(q_degree_other) else "") or ""
+                deg_other = deg_other.strip()
+                degree_other_ptr += 1
 
-            # Skip fully empty row
-            if not (deg_raw or deg_other or spec_raw or spec_other or s or e):
+            inst_other = ""
+            if _is_other(inst_raw):
+                inst_other = (q_inst_other[inst_other_ptr] if inst_other_ptr < len(q_inst_other) else "") or ""
+                inst_other = inst_other.strip()
+                inst_other_ptr += 1
+
+            spec_other = ""
+            if _is_other(spec_raw):
+                spec_other = (q_spec_other[spec_other_ptr] if spec_other_ptr < len(q_spec_other) else "") or ""
+                spec_other = spec_other.strip()
+                spec_other_ptr += 1
+
+            _logger.warning(
+                "[PROFILE][QUAL][ROW %s] raw={degree:%r degree_other:%r inst:%r inst_other:%r spec:%r spec_other:%r status:%r start:%r end:%r}",
+                i, deg_raw, deg_other, inst_raw, inst_other, spec_raw, spec_other, status, raw_start, raw_end
+            )
+
+            # skip fully empty row
+            if not (deg_raw or deg_other or inst_raw or inst_other or spec_raw or spec_other or s or e):
+                _logger.warning("[PROFILE][QUAL][ROW %s] skipped empty", i)
                 continue
 
-            # Degree + start month are required once row has any data
+            # degree required once row has any data
             if not deg_raw and not deg_other:
                 return None, self._render_profile_form_error(
                     employee, req, env,
                     f"Qualification History (Row {i+1}): Degree is required."
                 )
+
             if not s:
                 return None, self._render_profile_form_error(
                     employee, req, env,
                     f"Qualification History (Row {i+1}): Start Month is required."
                 )
-            def _m2o_or_code(raw):
-                raw = (raw or "").strip()
-                if not raw:
-                    return False, False
-                try:
-                    return int(raw), False
-                except Exception:
-                    return False, raw  # store as code
 
-            inst_raw = q_inst[i] if i < len(q_inst) else ""
-            inst_other = (q_inst_other[i] if i < len(q_inst_other) else "").strip()
-
+            # institute
             inst_id, inst_code = _m2o_or_code(inst_raw)
-            
-            # if “Other” typed, create like PGship does for specialization 
-            if inst_other:
+
+            if _is_other(inst_raw):
+                if not inst_other:
+                    return None, self._render_profile_form_error(
+                        employee, req, env,
+                        f"Qualification History (Row {i+1}): Institute name is required when Institute is Other."
+                    )
                 inst = env["hrmis.training.institute"].sudo().create({"name": inst_other})
                 inst_id = inst.id
                 inst_code = False
-            # Resolve degree selection
-            degree_val = deg_raw
-            degree_other_name = ""
+            else:
+                # hard guard: ignore stray posted other text on non-other rows
+                inst_other = ""
 
-            if deg_raw == "__other__":
+            # degree
+            degree_val = deg_raw
+            degree_other_name = False
+
+            if _is_other(deg_raw):
                 if not deg_other:
                     return None, self._render_profile_form_error(
                         employee, req, env,
@@ -2244,36 +2309,17 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 degree_val = "other"
                 degree_other_name = deg_other
 
-            # Enforce degree key must match selection
             if degree_val not in allowed_degree_keys:
                 return None, self._render_profile_form_error(
                     employee, req, env,
                     f"Qualification History (Row {i+1}): Invalid degree selected."
                 )
 
-		# Safety: enforce degree is valid selection key
-            if degree_val not in (
-                "ms",
-                "md",
-                "fcps_1",
-                "fcps_2",
-                "mcps",
-                "diploma",
-                "mbbs",
-                "mph",
-                "mba",
-                "msph",
-                "other",
-            ):
-                return None, self._render_profile_form_error(
-                    employee, req, env,
-                    "Qualification History: Invalid degree selected."
-                )
-            # Resolve specialization selection (IMPORTANT: specialization is a SELECTION in your model)
+            # specialization
             spec_val = spec_raw
-            spec_other_name = ""
+            spec_other_name = False
 
-            if spec_raw == "__other__":
+            if _is_other(spec_raw):
                 if not spec_other:
                     return None, self._render_profile_form_error(
                         employee, req, env,
@@ -2282,221 +2328,58 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 spec_val = "other"
                 spec_other_name = spec_other
 
-            # If user picked nothing, allow empty (your model specialization isn't required)
-            if spec_val:
-                if spec_val not in allowed_spec_keys:
-                    return None, self._render_profile_form_error(
-                        employee, req, env,
-                        f"Qualification History (Row {i+1}): Invalid specialization selected."
-                    )
+            if spec_val and spec_val not in allowed_spec_keys:
+                return None, self._render_profile_form_error(
+                    employee, req, env,
+                    f"Qualification History (Row {i+1}): Invalid specialization selected."
+                )
 
-            # If status is completed, end month required
             if status == "completed" and not e:
                 return None, self._render_profile_form_error(
                     employee, req, env,
                     f"Qualification History (Row {i+1}): End Month is required when status is Completed."
                 )
 
-            qual_lines.append({
+            qual_line = {
                 "request_id": req.id,
                 "employee_id": employee.id,
                 "degree": degree_val,
                 "training_institute_id": inst_id,
                 "qual_institute_code": inst_code,
                 "training_institute_other_name": inst_other or False,
-                "degree_other_name": degree_other_name,
-                "specialization": spec_val or False,                 # selection key or False
-                "specialization_other_name": spec_other_name or "",  # only when specialization == 'other'
+                "degree_other_name": degree_other_name or False,
+                "specialization": spec_val or False,
+                "specialization_other_name": spec_other_name or False,
                 "status": status,
                 "start_date": s,
                 "end_date": e or False,
-            })
+            }
 
+            qual_lines.append(qual_line)
+            _logger.warning("[PROFILE][QUAL][ROW %s] accepted -> %s", i, qual_line)
+
+        _logger.warning("[PROFILE][QUAL] parsed_lines_count=%s lines=%s", len(qual_lines), qual_lines)
         return qual_lines, None
 
 
-    # def _parse_posting_history_or_error(self, employee, req, env, form):
-    #     p_fac_other = (
-    #         form.getlist("posting_facility_other_name[]")
-    #         or form.getlist("posting_facility_other_name")
-    #         or form.getlist("facility_other_name")  # fallback if template used single name
-    #     )
-    #     p_des_other = form.getlist("posting_designation_other_name[]")
-    #     p_district = form.getlist("posting_district_id[]")
-    #     # ✅ Robust: accept multiple possible names for posting facility
-    #     p_facility = (
-    #         form.getlist("posting_facility_id[]")
-    #         or form.getlist("posting_facility_id")              # fallback if [] missing
-    #         or form.getlist("frontend_reporting_facility_id[]") # fallback if template used this
-    #     )
-    #     p_designation = form.getlist("posting_designation_id[]")
-    #     p_bps = form.getlist("posting_bps[]")
-    #     p_start = form.getlist("posting_start[]")
-    #     p_end = form.getlist("posting_end[]")
-
-    #     # ---------------------------------------------------------
-    #     # LOG 1: raw arrays (what browser actually posted)
-    #     # ---------------------------------------------------------
-    #     _logger.warning(
-    #         "[PROFILE][POSTING][RAW] emp_id=%s req_id=%s lens={district:%s facility:%s desig:%s bps:%s start:%s end:%s}",
-    #         employee.id, req.id,
-    #         len(p_district), len(p_facility), len(p_designation), len(p_bps), len(p_start), len(p_end),
-    #     )
-    #     _logger.warning("[PROFILE][POSTING][RAW] posting_district_id[]=%s", p_district)
-    #     _logger.warning("[PROFILE][POSTING][RAW] posting_facility_id[]=%s", p_facility)
-    #     _logger.warning("[PROFILE][POSTING][RAW] posting_designation_id[]=%s", p_designation)
-    #     _logger.warning("[PROFILE][POSTING][RAW] posting_bps[]=%s", p_bps)
-    #     _logger.warning("[PROFILE][POSTING][RAW] posting_start[]=%s", p_start)
-    #     _logger.warning("[PROFILE][POSTING][RAW] posting_end[]=%s", p_end)
-
-    #     post_lines = []
-    #     n = max(len(p_district), len(p_designation), len(p_bps), len(p_start), len(p_end), len(p_facility))
-
-    #     _logger.warning("[PROFILE][POSTING] rows_to_process=%s", n)
-
-    #     for i in range(n):
-    #         # raw per-index (before parsing)
-    #         raw_district = (p_district[i] if i < len(p_district) else "")
-    #         raw_facility = (p_facility[i] if i < len(p_facility) else "").strip()
-    #         raw_desig = (p_designation[i] if i < len(p_designation) else "").strip()
-    #         raw_bps = (p_bps[i] if i < len(p_bps) else "")
-    #         raw_start = (p_start[i] if i < len(p_start) else "")
-    #         raw_end = (p_end[i] if i < len(p_end) else "")
-
-           
-    #         # parsed values
-    #         district_id = self._to_int(raw_district)
-    #         facility_id = self._to_int(raw_facility)
-    #         designation_id = self._to_int(raw_desig)
-    #         bps_val = self._to_int(raw_bps)
-    #         s = self._month_to_date(raw_start)
-    #         e = self._month_to_date(raw_end)
-
-    #         if self._is_other(raw_facility):
-    #             other_name = (p_fac_other[i] if i < len(p_fac_other) else "").strip()
-    #             facility_id = self._get_or_create_temp_facility(env, other_name, district_id)
-    #         else:
-    #             facility_id = self._safe_int(raw_facility) or 0
-                
-
-            
-    #         # designation (needs facility_id)
-    #         # designation (needs facility_id when __other__)
-    #         if self._is_other(raw_desig):
-    #             other_name = (p_des_other[i] if i < len(p_des_other) else "").strip()
-
-    #             # ✅ HARD GUARD: cannot create designation without facility
-    #             if not facility_id:
-    #                 _logger.warning(
-    #                     "[PROFILE][POSTING][ROW %s] DESIGNATION OTHER but facility missing. raw_facility=%r p_facility_len=%s",
-    #                     i, raw_facility, len(p_facility)
-    #                 )
-    #                 return None, self._render_profile_form_error(
-    #                     employee, req, env,
-    #                     f"Posting History (Row {i+1}): Facility is required when Designation is Other."
-    #                 )
-
-    #             designation_id = self._get_or_create_temp_designation(env, other_name, bps_val, facility_id)
-    #         else:
-    #             designation_id = self._safe_int(raw_desig) or 0
-
-    #         # ---------------------------------------------------------
-    #         # LOG 2: per row, raw + parsed
-    #         # ---------------------------------------------------------
-    #         _logger.warning(
-    #             "[PROFILE][POSTING][ROW %s] raw={district:%r facility:%r desig:%r bps:%r start:%r end:%r}",
-    #             i, raw_district, raw_facility, raw_desig, raw_bps, raw_start, raw_end
-    #         )
-    #         _logger.warning(
-    #             "[PROFILE][POSTING][ROW %s] parsed={district_id:%s facility_id:%s designation_id:%s bps:%s start_date:%s end_date:%s}",
-    #             i, district_id, facility_id, designation_id, bps_val, s, e
-    #         )
-
-    #         # skip completely empty row (same logic)
-    #         # Treat a row as "started" only if any of the REQUIRED fields (or dates) exist.
-    #         # Facility alone should NOT activate the row.
-    #         if not (district_id or designation_id or bps_val or s or e):
-    #             _logger.warning("[PROFILE][POSTING][ROW %s] skipped (no required fields; facility-only or empty)", i)
-    #             continue
-
-    #         # required fields validation (same logic)
-    #         if not district_id or not designation_id or not bps_val or not s:
-    #             missing = []
-    #             if not district_id:
-    #                 missing.append("district_id")
-    #             if not designation_id:
-    #                 missing.append("designation_id")
-    #             if not bps_val:
-    #                 missing.append("bps")
-    #             if not s:
-    #                 missing.append("start_month")
-
-    #             _logger.warning(
-    #                 "[PROFILE][POSTING][ROW %s] VALIDATION FAIL missing=%s parsed={district_id:%s designation_id:%s bps:%s start_date:%s}",
-    #                 i, ",".join(missing), district_id, designation_id, bps_val, s
-    #             )
-
-    #             return None, self._render_profile_form_error(
-    #                 employee, req, env,
-    #                 "Posting History: District, Designation, BPS and Start Month are required."
-    #             )
-
-    #         # post_lines.append({
-    #         #     "request_id": req.id,
-    #         #     "employee_id": employee.id,
-    #         #     "district_id": district_id,
-    #         #     "facility_id": facility_id or False,
-    #         #     "designation_id": designation_id,
-    #         #     "bps": bps_val,
-    #         #     "start_date": s,
-    #         #     "end_date": e or False,
-    #         # })
-    #         post_lines.append({
-    #             "request_id": req.id,          # ✅ REQUIRED
-    #             "employee_id": employee.id,
-    #             "district_id": district_id,
-    #             "facility_id": facility_id or False,
-    #             "designation_id": designation_id,
-    #             "bps": bps_val,
-    #             "start_date": s,
-    #             "end_date": e or False,
-    #         })
-
-
-    #         _logger.warning("[PROFILE][POSTING][ROW %s] accepted -> %s", i, post_lines[-1])
-
-    #     # ---------------------------------------------------------
-    #     # LOG 3: final result
-    #     # ---------------------------------------------------------
-    #     _logger.warning("[PROFILE][POSTING] parsed_lines_count=%s lines=%s", len(post_lines), post_lines)
-
-    #     return post_lines, None
-
     def _parse_posting_history_or_error(self, employee, req, env, form):
-        # -----------------------------
-        # 1) Read arrays (robust)
-        # -----------------------------
-        # p_fac_other = (
-        #     form.getlist("posting_facility_other_name[]")
-        #     or form.getlist("posting_facility_other_name")
-        #     or form.getlist("facility_other_name")  # fallback if template used single name
-        # )
-        # p_des_other = (
-        #     form.getlist("posting_designation_other_name[]")
-        #     or form.getlist("posting_designation_other_name")
-        #     or form.getlist("designation_other_name")
-        # )
-        p_fac_other = form.getlist("posting_facility_other_name[]")
-        p_des_other = form.getlist("posting_designation_other_name[]")
+        p_fac_other = (
+            form.getlist("posting_facility_other_name[]")
+            or form.getlist("posting_facility_other_name")
+            or form.getlist("facility_other_name")
+        )
+        p_des_other = (
+            form.getlist("posting_designation_other_name[]")
+            or form.getlist("posting_designation_other_name")
+            or form.getlist("designation_other_name")
+        )
 
         p_district = form.getlist("posting_district_id[]")
         p_facility = form.getlist("posting_facility_id[]")
-
         p_designation = (
             form.getlist("posting_designation_id[]")
             or form.getlist("posting_designation_id")
         )
-
         p_bps = (
             form.getlist("posting_bps[]")
             or form.getlist("posting_bps")
@@ -2510,9 +2393,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             or form.getlist("posting_end")
         )
 
-        # -----------------------------
-        # 2) Logs: raw arrays
-        # -----------------------------
         _logger.warning(
             "[PROFILE][POSTING][RAW] emp_id=%s req_id=%s lens={district:%s facility:%s fac_other:%s desig:%s des_other:%s bps:%s start:%s end:%s}",
             employee.id, req.id,
@@ -2531,9 +2411,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
         post_lines = []
 
-        # IMPORTANT:
-        # Keep n derived from the "main" columns only (same as you did),
-        # but include facility/designation because they are required.
         n = max(
             len(p_district),
             len(p_facility),
@@ -2547,46 +2424,45 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         def _get(lst, idx, default=""):
             return (lst[idx] if idx < len(lst) else default) or default
 
+        fac_other_ptr = 0
+        des_other_ptr = 0
+
         for i in range(n):
-            # -----------------------------
-            # 3) Raw per-index values
-            # -----------------------------
             raw_district = _get(p_district, i, "")
             raw_facility = _get(p_facility, i, "").strip()
-            raw_fac_other = _get(p_fac_other, i, "").strip()
-
             raw_desig = _get(p_designation, i, "").strip()
-            raw_des_other = _get(p_des_other, i, "").strip()
-
             raw_bps = _get(p_bps, i, "")
             raw_start = _get(p_start, i, "")
             raw_end = _get(p_end, i, "")
 
-            # -----------------------------
-            # 4) Parse basic ints/dates
-            # -----------------------------
+            # consume "other" values ONLY for rows that are actually Other
+            raw_fac_other = ""
+            if self._is_other(raw_facility):
+                raw_fac_other = (p_fac_other[fac_other_ptr] if fac_other_ptr < len(p_fac_other) else "") or ""
+                raw_fac_other = raw_fac_other.strip()
+                fac_other_ptr += 1
+
+            raw_des_other = ""
+            if self._is_other(raw_desig):
+                raw_des_other = (p_des_other[des_other_ptr] if des_other_ptr < len(p_des_other) else "") or ""
+                raw_des_other = raw_des_other.strip()
+                des_other_ptr += 1
+
             district_id = self._to_int(raw_district) or False
             bps_val = self._to_int(raw_bps) or False
             s = self._month_to_date(raw_start)
             e = self._month_to_date(raw_end)
 
-            # We'll set these explicitly below
             facility_id = False
             designation_id = False
 
-            # ---------------------------------------------------------
-            # LOG: per row raw (including other)
-            # ---------------------------------------------------------
             _logger.warning(
                 "[PROFILE][POSTING][ROW %s] raw={district:%r facility:%r fac_other:%r desig:%r des_other:%r bps:%r start:%r end:%r}",
                 i, raw_district, raw_facility, raw_fac_other, raw_desig, raw_des_other, raw_bps, raw_start, raw_end
             )
 
-            # -----------------------------
-            # 5) Facility handling
-            # -----------------------------
+            # Facility handling
             if self._is_other(raw_facility):
-                # Only accept "Other" if a name exists
                 if not raw_fac_other:
                     _logger.warning("[PROFILE][POSTING][ROW %s] FACILITY OTHER selected but other_name empty", i)
                     return None, self._render_profile_form_error(
@@ -2600,17 +2476,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                     i, facility_id, raw_fac_other, district_id
                 )
             else:
-                # HARD GUARD: if not other, ignore any posted other_name (prevents 'Other selected' on refresh)
-                if raw_fac_other:
-                    _logger.warning(
-                        "[PROFILE][POSTING][ROW %s] FACILITY not other but other_name was posted=%r -> IGNORING/CLEARING",
-                        i, raw_fac_other
-                    )
                 facility_id = self._safe_int(raw_facility) or False
 
-            # -----------------------------
-            # 6) Designation handling
-            # -----------------------------
+            # Designation handling
             if self._is_other(raw_desig):
                 if not raw_des_other:
                     _logger.warning("[PROFILE][POSTING][ROW %s] DESIGNATION OTHER selected but other_name empty", i)
@@ -2619,7 +2487,6 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                         f"Posting History (Row {i+1}): Designation name is required when Designation is Other."
                     )
 
-                # ✅ HARD GUARD: cannot create designation without facility
                 if not facility_id:
                     _logger.warning(
                         "[PROFILE][POSTING][ROW %s] DESIGNATION OTHER but facility missing. raw_facility=%r",
@@ -2630,63 +2497,33 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                         f"Posting History (Row {i+1}): Facility is required when Designation is Other."
                     )
 
-                designation_id = self._get_or_create_temp_designation(env, raw_des_other, bps_val or 0, facility_id) or False
+                designation_id = self._get_or_create_temp_designation(
+                    env, raw_des_other, bps_val or 0, facility_id
+                ) or False
                 _logger.warning(
                     "[PROFILE][POSTING][ROW %s] designation OTHER -> created/linked designation_id=%s name=%r facility_id=%s bps=%s",
                     i, designation_id, raw_des_other, facility_id, bps_val
                 )
             else:
-                if raw_des_other:
-                    _logger.warning(
-                        "[PROFILE][POSTING][ROW %s] DESIGNATION not other but other_name was posted=%r -> IGNORING/CLEARING",
-                        i, raw_des_other
-                    )
                 designation_id = self._safe_int(raw_desig) or False
 
-            # ---------------------------------------------------------
-            # LOG: parsed
-            # ---------------------------------------------------------
             _logger.warning(
                 "[PROFILE][POSTING][ROW %s] parsed={district_id:%s facility_id:%s designation_id:%s bps:%s start_date:%s end_date:%s}",
                 i, district_id, facility_id, designation_id, bps_val, s, e
             )
 
-            # -----------------------------
-            # 7) Skip empty row logic (unchanged)
-            # Facility alone should NOT activate the row.
-            # -----------------------------
             if not (district_id or designation_id or bps_val or s or e):
                 _logger.warning("[PROFILE][POSTING][ROW %s] skipped (no required fields; facility-only or empty)", i)
                 continue
 
-            # -----------------------------
-            # 8) Required fields validation (unchanged)
-            # -----------------------------
             if not district_id or not designation_id or not bps_val or not s:
-                missing = []
-                if not district_id:
-                    missing.append("district_id")
-                if not designation_id:
-                    missing.append("designation_id")
-                if not bps_val:
-                    missing.append("bps")
-                if not s:
-                    missing.append("start_month")
-
-                _logger.warning(
-                    "[PROFILE][POSTING][ROW %s] VALIDATION FAIL missing=%s parsed={district_id:%s designation_id:%s bps:%s start_date:%s}",
-                    i, ",".join(missing), district_id, designation_id, bps_val, s
-                )
                 return None, self._render_profile_form_error(
                     employee, req, env,
                     "Posting History: District, Designation, BPS and Start Month are required."
                 )
 
-            # -----------------------------
-            # 9) Build line (keep same structure)
-            # -----------------------------
             post_lines.append({
-                "request_id": req.id,          # ✅ REQUIRED
+                "request_id": req.id,
                 "employee_id": employee.id,
                 "district_id": district_id,
                 "facility_id": facility_id or False,
@@ -2767,18 +2604,28 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         # ✅ Suspension (compute FIRST so it can be referenced safely)
         # -------------------------------------------------------
         susp_district_id = m2o_int(post.get("frontend_reporting_district_id"))
-
+        susp_facility_raw = (post.get("frontend_reporting_facility_id") or "").strip()
+        susp_facility_other_name = (
+            (post.get("frontend_reporting_facility_other_name") or "").strip()
+            if susp_facility_raw == OTHER_TOKEN
+            else False
+        )
         susp_facility_id = _resolve_facility_other(
-            post.get("frontend_reporting_facility_id"),
-            post.get("frontend_reporting_facility_other_name"),
+            susp_facility_raw,
+            susp_facility_other_name,
             susp_district_id,
         )
 
         susp_bps_val = int(post.get("frontend_reporting_bps") or 0) if (post.get("frontend_reporting_bps") or "").strip() else 0
-
+        susp_designation_raw = (post.get("hrmis_designation") or "").strip()
+        susp_designation_other_name = (
+            (post.get("frontend_reporting_designation_other_name") or "").strip()
+            if susp_designation_raw == OTHER_TOKEN
+            else False
+        )
         susp_designation_id = _resolve_designation_other(
-            post.get("hrmis_designation"),
-            post.get("frontend_reporting_designation_other_name"),
+            susp_designation_raw,
+            susp_designation_other_name,
             susp_bps_val,
             susp_facility_id,
         )
@@ -2838,10 +2685,28 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             else False
         )
         onleave_district_id = m2o_int(post.get("frontend_onleave_district_id"))
+        onleave_facility_raw = (post.get("frontend_onleave_facility_id") or "").strip()
+        onleave_facility_other_name = (
+            (post.get("frontend_onleave_facility_other_name") or "").strip()
+            if onleave_facility_raw == OTHER_TOKEN
+            else False
+        )
         onleave_facility_id = _resolve_facility_other(
-            post.get("frontend_onleave_facility_id"),
-            post.get("frontend_onleave_facility_other_name"),
+            onleave_facility_raw,
+            onleave_facility_other_name,
             onleave_district_id,
+        )
+        onleave_designation_raw = (post.get("hrmis_designation") or "").strip()
+        onleave_designation_other_name = (
+            (post.get("hrmis_designation_other_name") or "").strip()
+            if onleave_designation_raw == OTHER_TOKEN
+            else False
+        )
+        onleave_designation_id = _resolve_designation_other(
+            onleave_designation_raw,
+            onleave_designation_other_name,
+            0,
+            onleave_facility_id,
         )
 
         deputation_district_id = m2o_int(post.get("frontend_deputation_district_id"))
@@ -2850,12 +2715,13 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "status": status,
 
             # Suspension
-           # Suspension
-"suspension_date": post.get("frontend_suspension_date") or False,
-"suspension_reporting_to": post.get("frontend_reporting_to") or False,
-"suspension_reporting_district_id": susp_district_id,
-"suspension_reporting_facility_id": susp_facility_id,
-"suspension_reporting_designation_id": susp_designation_id, # <-- if you added this field
+            "suspension_date": post.get("frontend_suspension_date") or False,
+            "suspension_reporting_to": post.get("frontend_reporting_to") or False,
+            "suspension_reporting_district_id": susp_district_id,
+            "suspension_reporting_facility_id": susp_facility_id,
+            "suspension_reporting_facility_other_name": susp_facility_other_name or False,
+            "suspension_reporting_designation_id": susp_designation_id,
+            "suspension_reporting_designation_other_name": susp_designation_other_name or False,
 
             # On leave
             "onleave_type_id": m2o_int(post.get("frontend_onleave_type")),
@@ -2864,6 +2730,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "onleave_reporting_to": post.get("frontend_onleave_reporting_to") or False,
             "onleave_reporting_district_id": onleave_district_id,
             "onleave_reporting_facility_id": onleave_facility_id,
+            "onleave_reporting_facility_other_name": onleave_facility_other_name or False,
+            "onleave_reporting_designation_id": onleave_designation_id,
+            "onleave_reporting_designation_other_name": onleave_designation_other_name or False,
 
             # EOL
             "eol_institute_id": eol_institute_id,
@@ -3223,14 +3092,25 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "suspension_date": self._yd(status_rec.suspension_date),
             "suspension_reporting_to": status_rec.suspension_reporting_to or "",
             "suspension_reporting_district_id": status_rec.suspension_reporting_district_id or 0,
-            "suspension_reporting_facility_id": status_rec.suspension_reporting_facility_id or 0,
-            "suspension_reporting_designation_id": status_rec.suspension_reporting_designation_id or 0,
+            "suspension_reporting_facility_id": OTHER_TOKEN if (status_rec.suspension_reporting_facility_other_name or "").strip() else (status_rec.suspension_reporting_facility_id or 0),
+            "suspension_reporting_facility_other_name": status_rec.suspension_reporting_facility_other_name or "",
+            "suspension_reporting_designation_id": _other_or_m2o_value(
+                status_rec.suspension_reporting_designation_id,
+                other_name=status_rec.suspension_reporting_designation_other_name,
+            ),
+            "suspension_reporting_designation_other_name": status_rec.suspension_reporting_designation_other_name or "",
             "onleave_type_id": status_rec.onleave_type_id.id if status_rec.onleave_type_id else 0,
             "onleave_start": self._yd(status_rec.onleave_start),
             "onleave_end": self._yd(status_rec.onleave_end),
             "onleave_reporting_to": status_rec.onleave_reporting_to or "",
             "onleave_reporting_district_id": status_rec.onleave_reporting_district_id or 0,
-            "onleave_reporting_facility_id": status_rec.onleave_reporting_facility_id or 0,
+            "onleave_reporting_facility_id": OTHER_TOKEN if (status_rec.onleave_reporting_facility_other_name or "").strip() else (status_rec.onleave_reporting_facility_id or 0),
+            "onleave_reporting_facility_other_name": status_rec.onleave_reporting_facility_other_name or "",
+            "onleave_reporting_designation_id": _other_or_m2o_value(
+                status_rec.onleave_reporting_designation_id,
+                other_name=status_rec.onleave_reporting_designation_other_name,
+            ),
+            "onleave_reporting_designation_other_name": status_rec.onleave_reporting_designation_other_name or "",
             "eol_institute_value": _other_or_m2o_value(
                 status_rec.eol_institute_id,
                 status_rec.eol_institute_code,
@@ -3286,8 +3166,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         } for q in qual_recs]
 
         prefill_post = [{
-            "district_id": q.district_id.id if q.district_id else 0,
-            "facility_id": OTHER_TOKEN if (q.facility_other_name or "").strip() else (q.facility_id.id if getattr(q, "facility_id", False) else 0),
+            "district_id": int(q.district_id or 0),
+            "facility_id": OTHER_TOKEN if (q.facility_other_name or "").strip() else int(q.facility_id or 0),
             "facility_other_name": q.facility_other_name or "",
             "designation_id": OTHER_TOKEN if (getattr(q, "designation_other_name", "") or "").strip() else (q.designation_id.id if q.designation_id else 0),
             "designation_other_name": getattr(q, "designation_other_name", "") or "",
@@ -3349,8 +3229,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         } for q in qual_recs]
 
         prefill_post = [{
-            "district_id": q.district_id.id if q.district_id else 0,
-            "facility_id": OTHER_TOKEN if (q.facility_other_name or "").strip() else (q.facility_id.id if q.facility_id else 0),
+            "district_id": int(q.district_id or 0),
+            "facility_id": OTHER_TOKEN if (q.facility_other_name or "").strip() else int(q.facility_id or 0),
             "facility_other_name": q.facility_other_name or "",
             "designation_id": OTHER_TOKEN if (getattr(q, "designation_other_name", "") or "").strip() else (q.designation_id.id if q.designation_id else 0),
             "designation_other_name": getattr(q, "designation_other_name", "") or "",
@@ -3489,14 +3369,23 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         employee_prefill = self._load_employee_histories(env, employee)
         request_prefill = self._load_request_histories(req)
 
-        request_has_rows = any(request_prefill.get(key) for key in (
-            "prefill_qual_rows",
-            "prefill_post_rows",
-            "prefill_promo_rows",
-            "prefill_leave_rows",
-        ))
-        use_request_rows = bool(req and req.exists() and (req.state != "draft" or request_has_rows))
-        base_prefill = request_prefill if use_request_rows else employee_prefill
+        def _pick(section_key):
+            request_rows = request_prefill.get(section_key) or []
+            employee_rows = employee_prefill.get(section_key) or []
+
+            # For submitted requests, always prefer rows stored against the request.
+            if req and req.exists() and req.state != "draft":
+                return request_rows or employee_rows
+
+            # For draft requests, prefer request rows only if they exist.
+            return request_rows or employee_rows
+
+        base_prefill = {
+            "prefill_qual_rows": _pick("prefill_qual_rows"),
+            "prefill_post_rows": _pick("prefill_post_rows"),
+            "prefill_promo_rows": _pick("prefill_promo_rows"),
+            "prefill_leave_rows": _pick("prefill_leave_rows"),
+        }
 
         if prefer_draft:
             draft = self._draft_histories_from_post()

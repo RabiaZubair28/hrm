@@ -2,8 +2,8 @@
 import base64
 import io
 import logging
-from datetime import date, datetime
-from odoo import models, api
+
+from odoo import models, api, SUPERUSER_ID
 
 _logger = logging.getLogger(__name__)
 
@@ -13,15 +13,92 @@ except Exception:
     openpyxl = None
 
 
-QUEUE_PREFIX = "user_import" 
+QUEUE_PREFIX = "user_import"
 
 
 class HrmisUserQueueWorker(models.AbstractModel):
     _name = "hrmis.user.queue.worker"
     _description = "HRMIS User Import Queue Worker"
 
+    def _cell_str(self, v):
+        if v is None:
+            return ""
+        if isinstance(v, float) and v.is_integer():
+            return str(int(v)).strip()
+        return str(v).strip()
+
+    def _user_create_context(self):
+        ctx = dict(self.env.context or {})
+        ctx.update({
+            "no_reset_password": True,
+            "tracking_disable": True,
+            "mail_create_nolog": True,
+            "mail_create_nosubscribe": True,
+        })
+        return ctx
+
+    def _create_user_in_new_transaction(self, login, password, temp_password, name):
+        """
+        Create one user in a separate DB transaction.
+        This prevents cron timeout / rollback from wiping already-created users.
+        """
+        with self.env.registry.cursor() as cr:
+            env = api.Environment(cr, SUPERUSER_ID, self._user_create_context())
+            Users = env["res.users"].sudo()
+
+            existing = Users.search([("login", "=", login)], limit=1)
+            if existing:
+                return existing.id, existing.login, False  # already existed
+
+            vals = {
+                "name": name or login,
+                "login": login,
+                "password": password or login,
+                "temp_password": temp_password or login,
+                "hrmis_role": "employee",
+            }
+
+            user = Users.create(vals)
+            cr.commit()
+            return user.id, user.login, True
+
+    def _recover_processing_items(self, q, Users, pending_q, processing_q, done_q):
+        """
+        If cron died mid-run, items can remain in processing.
+        Recovery rule:
+        - if login already exists in DB => move straight to done
+        - else => move back to pending
+        """
+        stuck_items = q.list_json(processing_q, 0, -1)
+        if not stuck_items:
+            return 0, 0
+
+        moved_to_pending = 0
+        moved_to_done = 0
+
+        for item in stuck_items:
+            login = self._cell_str(item.get("login"))
+            existing = Users.search([("login", "=", login)], limit=1) if login else False
+
+            if existing:
+                item["_login_final"] = existing.login
+                item["_created_user_id"] = existing.id
+                if q.push_json(done_q, item):
+                    q.lrem_json(processing_q, item, count=1)
+                    moved_to_done += 1
+            else:
+                if q.push_json(pending_q, item):
+                    q.lrem_json(processing_q, item, count=1)
+                    moved_to_pending += 1
+
+        return moved_to_pending, moved_to_done
+
     @api.model
-    def run_user_import_batch(self, batch_size=300):
+    def run_user_import_batch(self, batch_size=50):
+        """
+        Keep this batch size modest.
+        res.users creation is expensive because password hashing happens.
+        """
         q = self.env["hrmis.redis.queue"].sudo()
         Users = self.env["res.users"].sudo()
         Job = self.env["hrmis.user.import.job"].sudo()
@@ -38,163 +115,119 @@ class HrmisUserQueueWorker(models.AbstractModel):
         done_q = f"{QUEUE_PREFIX}:{job.id}:done"
         failed_q = f"{QUEUE_PREFIX}:{job.id}:failed"
 
-        processed = created = failed = 0
+        processed = 0
+        created = 0
+        failed = 0
 
-        def _clean_token(s: str) -> str:
-            s = (s or "").strip().lower()
-            return "".join(ch for ch in s if ch.isalnum())
+        # Recover leftover processing items before new work
+        recovered_pending, recovered_done = self._recover_processing_items(
+            q, Users, pending_q, processing_q, done_q
+        )
+        if recovered_pending or recovered_done:
+            _logger.warning(
+                "[HRMIS][USER_IMPORT][JOB %s] recovered processing: to_pending=%s to_done=%s",
+                job.id, recovered_pending, recovered_done,
+            )
 
-        def _split_first_last(full_name: str):
-            raw = (full_name or "").strip()
-            parts = [p for p in raw.replace(".", " ").split() if p.strip()]
-            parts = [p for p in parts if p.lower() not in ("dr", "mr", "mrs", "ms", "prof")]
-            if not parts:
-                return "", ""
-            if len(parts) == 1:
-                t = _clean_token(parts[0])
-                return t, ""   # last missing
-            return _clean_token(parts[0]), _clean_token(parts[-1])
-
-        def _parse_dob(dob_val):
-            if not dob_val:
-                return None
-            if isinstance(dob_val, datetime):
-                return dob_val
-            if isinstance(dob_val, date):
-                return datetime(dob_val.year, dob_val.month, dob_val.day)
-
-            s = str(dob_val).strip()
-            for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y", "%d-%m-%Y"):
-                try:
-                    if fmt == "%Y-%m-%d":
-                        return datetime.strptime(s[:10], fmt)
-                    return datetime.strptime(s, fmt)
-                except Exception:
-                    pass
-            return None
-
-        def _make_login(first: str, last: str, dob_dt: datetime) -> str:
-            if not first or not dob_dt:
-                return ""
-            if not last:
-                last = first
-            return f"{first}.{last}.{dob_dt.strftime('%d%m')}"
-
-        def _make_password(last: str, dob_dt: datetime, domicile_code: str) -> str:
-            if not last or not dob_dt or not domicile_code:
-                return ""
-            return f"{last}{dob_dt.strftime('%d%m%Y')}{domicile_code.strip().lower()}"
-
-        # Process batch
-        for _ in range(int(batch_size)):
+        for _ in range(int(batch_size or 50)):
             item, raw_json = q.rpoplpush_json(pending_q, processing_q)
             if not item:
                 break
 
             processed += 1
 
-            sen_no = (item.get("sen_no") or "").strip()
             row_no = item.get("row")
+            login = self._cell_str(item.get("login"))
+            password = self._cell_str(item.get("password")) or login
+            temp_password = self._cell_str(item.get("temp_password")) or login
+            name = self._cell_str(item.get("name")) or login
 
-            name = (item.get("name") or "").strip()
-            dob_raw = item.get("dob")
-            domicile_code = (item.get("domicile_code") or "").strip()
-
-            first, last = _split_first_last(name)
-            dob_dt = _parse_dob(dob_raw)
-
-            base_login = _make_login(first, last, dob_dt)
-            base_password = _make_password((last or first), dob_dt, domicile_code)
-
-            item["_login_base"] = base_login
-            item["_password_base"] = base_password
+            terminal_marked = False
 
             try:
-                # validations
-                if not name:
-                    raise Exception("Missing name")
-                if not first:
-                    raise Exception("Could not parse first name")
-                if not dob_dt:
-                    raise Exception("DOB format not recognized")
-                if not domicile_code:
-                    raise Exception("Missing domicile_code")
-                if not base_login:
-                    raise Exception("Could not build login")
-                if not base_password:
-                    raise Exception("Could not build password")
+                if not login:
+                    raise Exception("Missing Pers.no. / login")
 
-                # duplication rule: base -> dr.base -> fail
-                login_to_use = base_login
+                user_id, final_login, was_created_now = self._create_user_in_new_transaction(
+                    login=login,
+                    password=password,
+                    temp_password=temp_password,
+                    name=name,
+                )
 
-                base_exists = bool(Users.search([("login", "=", base_login)], limit=1))
-                if base_exists:
-                    base_no_dr = base_login[3:] if base_login.startswith("dr.") else base_login
-                    dr_login = f"dr.{base_no_dr}"
+                item["_login_final"] = final_login
+                item["_created_user_id"] = user_id
 
-                    dr_exists = bool(Users.search([("login", "=", dr_login)], limit=1))
-                    if dr_exists:
-                        raise Exception("Username duplicate beyond 2 (base and dr. already exist)")
-                    login_to_use = dr_login
+                if not q.push_json(done_q, item):
+                    raise Exception("Could not write done queue entry")
 
-                vals = {
-                    "name": name,
-                    "login": login_to_use,
-                    "email": login_to_use,
-                    "temp_password": base_password,
-                    "hrmis_role": "employee",
-                    "manager_id": 4,
-                }
+                terminal_marked = True
 
-                with self.env.cr.savepoint():
-                    Users.create(vals)
-
-                created += 1
-                item["_login_final"] = login_to_use
-                q.push_json(done_q, item)
+                if was_created_now:
+                    created += 1
 
             except Exception as e:
-                failed += 1
                 item["error"] = str(e)
-                item["_login_final"] = None
-                q.push_json(failed_q, item)
+
+                if q.push_json(failed_q, item):
+                    terminal_marked = True
+                    failed += 1
 
                 _logger.warning(
-                    "[HRMIS][USER_IMPORT][JOB %s] FAILED sen_no=%s row=%s name=%s reason=%s",
-                    job.id, sen_no, row_no, name, str(e),
+                    "[HRMIS][USER_IMPORT][JOB %s] FAILED row=%s login=%s name=%s reason=%s",
+                    job.id, row_no, login, name, str(e),
                 )
 
             finally:
-                # ✅ always remove exact raw item from processing
-                removed = q.lrem_raw(processing_q, raw_json, count=1)
-                if not removed:
+                if terminal_marked:
+                    removed = q.lrem_raw(processing_q, raw_json, count=1)
+                    if not removed:
+                        _logger.warning(
+                            "[HRMIS][USER_IMPORT][JOB %s] processing cleanup failed row=%s login=%s",
+                            job.id, row_no, login,
+                        )
+                else:
                     _logger.warning(
-                        "[HRMIS][USER_IMPORT][JOB %s] processing cleanup failed (raw mismatch) sen_no=%s row=%s",
-                        job.id, sen_no, row_no,
+                        "[HRMIS][USER_IMPORT][JOB %s] item left in processing row=%s login=%s because terminal queue write failed",
+                        job.id, row_no, login,
                     )
 
-        # single commit at end (cron-friendly)
-        self.env.cr.commit()
+        # Reconcile counters from Redis AFTER processing
+        done_len = q.length(done_q)
+        failed_len = q.length(failed_q)
+        pending_len = q.length(pending_q)
+        processing_len = q.length(processing_q)
 
         job.write({
-            "processed_count": job.processed_count + processed,
-            "created_count": job.created_count + created,
-            "failed_count": job.failed_count + failed,
+            "processed_count": done_len + failed_len,
+            "created_count": done_len,
+            "failed_count": failed_len,
+            "state": "running" if (pending_len > 0 or processing_len > 0) else "done",
         })
 
-        if q.length(pending_q) == 0 and q.length(processing_q) == 0:
-            self._finalize_job_with_report(job, failed_q)
+        if pending_len == 0 and processing_len == 0:
+            try:
+                self._finalize_job_with_report(job, failed_q)
+            except Exception as e:
+                _logger.exception(
+                    "[HRMIS][USER_IMPORT][JOB %s] finalize failed: %s",
+                    job.id, str(e),
+                )
+                job.write({
+                    "state": "done",
+                    "last_error": str(e),
+                })
 
         _logger.warning(
-            "[HRMIS][USER_IMPORT][JOB %s] processed=%s created=%s failed=%s pending_left=%s processing_left=%s",
+            "[HRMIS][USER_IMPORT][JOB %s] batch_processed=%s batch_created=%s batch_failed=%s pending_left=%s processing_left=%s done=%s failed=%s",
             job.id, processed, created, failed,
-            q.length(pending_q), q.length(processing_q),
+            pending_len, processing_len, done_len, failed_len,
         )
 
         return {"processed": processed, "created": created, "failed": failed}
-    
+
     def _finalize_job_with_report(self, job, failed_q: str):
-        if job.state == "done":
+        if job.state == "done" and job.report_attachment_id:
             return
 
         if openpyxl is None:
@@ -212,14 +245,12 @@ class HrmisUserQueueWorker(models.AbstractModel):
         ws.title = "Skipped"
 
         ws.append([
-            "Sen No",
+            "Pers.no.",
             "Row",
-            "Name",
-            "DOB",
-            "Domicile Code",
-            "Base Login",
+            "Name at birth",
+            "Username",
+            "Temp Password",
             "Final Login",
-            "Password",
             "Reason",
             "Job ID",
             "Uploaded By UID",
@@ -228,14 +259,12 @@ class HrmisUserQueueWorker(models.AbstractModel):
 
         for it in failed_items:
             ws.append([
-                it.get("sen_no", ""),
+                it.get("login", ""),
                 it.get("row", ""),
                 it.get("name", ""),
-                it.get("dob", ""),
-                it.get("domicile_code", ""),
-                it.get("_login_base", ""),
+                it.get("login", ""),
+                it.get("temp_password", "") or it.get("password", ""),
                 it.get("_login_final", ""),
-                it.get("_password_base", ""),
                 it.get("error", ""),
                 it.get("job_id", ""),
                 it.get("uploaded_by_uid", ""),
@@ -246,12 +275,10 @@ class HrmisUserQueueWorker(models.AbstractModel):
         wb.save(bio)
         bio.seek(0)
 
-        data_b64 = base64.b64encode(bio.getvalue())
-
         attachment = self.env["ir.attachment"].sudo().create({
             "name": f"user_import_skipped_job_{job.id}.xlsx",
             "type": "binary",
-            "datas": data_b64,
+            "datas": base64.b64encode(bio.getvalue()),
             "mimetype": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         })
 

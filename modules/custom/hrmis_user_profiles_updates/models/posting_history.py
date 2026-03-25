@@ -67,11 +67,16 @@ class HrmisPostingHistory(models.Model):
         readonly=True,
     )
 
-    district_id = fields.Many2one("hrmis.district.master", required=True)
-    facility_id = fields.Many2one(
-        "hrmis.facility.type",
-        domain="[('district_id','=',district_id)]",
+    district_id = fields.Integer(
+        string="Previous District",
+        required=False,
     )
+
+    facility_id = fields.Integer(
+        string="Previous Facility",
+        required=False,
+    )
+
     facility_other_name = fields.Char(string="Other Facility")
 
     designation_id = fields.Many2one("hrmis.designation", required=True)

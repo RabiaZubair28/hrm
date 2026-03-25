@@ -119,6 +119,7 @@ class HrmisQualificationHistory(models.Model):
             ("mph", "MPH"),
             ("mba", "MBA(Health Management)"),
             ("msph", "MSPH"),
+            ("mba(supply chain)", "MBA (Supply Chain)"),
             ("other", "Other"),
         ],
         string="Degree",

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<template id="hide_frontend_backend_nav_for_non_admins"
+              inherit_id="website.layout"
+              name="Show frontend/backend nav to admins only">
+ 
+        <xpath expr="//div[contains(@class, 'o_frontend_to_backend_nav')]" position="attributes">
+<attribute name="groups">base.group_system</attribute>
+</xpath>
+ 
+    </template>
+</odoo>

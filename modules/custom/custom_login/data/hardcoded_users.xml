@@ -152,11 +152,11 @@
         <field name="hrmis_role">employee</field>
         <field name="manager_id">4</field>
     </record>
-    <record id="user_devs" model="res.users">
+    <!-- <record id="user_devs" model="res.users">
         <field name="name">Developer</field>
         <field name="login">devs</field>
         <field name="email">devs.tech@example.com</field>
         <field name="temp_password">DevPass123</field>
         <field name="hrmis_role">section_officer</field>
-    </record>
+    </record> -->
 </odoo>

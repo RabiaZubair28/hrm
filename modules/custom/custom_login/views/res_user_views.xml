@@ -43,8 +43,8 @@
 
 
                     <field name="manager_id"/>
-                    <field name="hrmis_role"/>   <!-- ✅ right here -->
-                    <field name="temp_password"/>
+                    <field name="hrmis_role" required="1"/>   <!-- ✅ right here -->
+                    <field name="temp_password" required="1"/>
                     <field name="is_temp_password"/>
                     <field name="onboarding_state" readonly="1"/>
                 </group>

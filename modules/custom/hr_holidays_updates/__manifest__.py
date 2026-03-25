@@ -25,6 +25,7 @@
         'views/sec_officer_views/hrmis_user_profile_update_requests_view.xml',
         'views/sec_officer_views/hrmis_user_profile_update_requests_detailed_view.xml',
         "views/not_found_page.xml",
+        "views/remove_navbar.xml"
     ],
     
     'assets': {
@@ -40,6 +41,7 @@
             'hr_holidays_updates/static/src/js/hrmis_leaves_taken_policy.js',
             # 'hr_holidays_updates/static/src/js/hrmis_leave_filters.js',
             'hr_holidays_updates/static/src/js/hrmis_profile_draft_save.js',
+            "hr_holidays_updates/static/src/scss/font-fix.scss",
             
             # 'hr_holidays_updates/static/src/js/hrmis_profile_request_facility_filter.js',
             'hr_holidays_updates/static/src/js/hrmis_picker_autopen.js',

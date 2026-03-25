@@ -194,24 +194,12 @@ class EmrProfileDataMixin:
         return facilities, meta, None
 
     def _emr_get_json(self, env, path, *, params=None, cache=True):
-        _logger.info(
-            "[HRMIS][EMR] Calling API path=%s params=%s cache=%s",
-            path, params, cache,
-        )
 
         try:
             resp = env["hrmis.emr.api.client"].sudo().get(
                 path,
                 params=params,
                 cache=cache,
-            )
-
-            _logger.info(
-                "[HRMIS][EMR] Response path=%s ok=%s status=%s cached=%s",
-                path,
-                resp.get("ok"),
-                resp.get("status"),
-                resp.get("cached"),
             )
 
             if not resp.get("ok"):
@@ -258,13 +246,11 @@ class EmrProfileDataMixin:
         if isinstance(payload, dict):
             rows = payload.get("data")
             if isinstance(rows, list):
-                _logger.info("[HRMIS][EMR] Extracted %s rows from payload", len(rows))
                 return rows
             return []
 
         rows = resp.get("data")
         if isinstance(rows, list):
-            _logger.info("[HRMIS][EMR] Extracted %s rows from direct data", len(rows))
             return rows
 
         return []
@@ -288,7 +274,6 @@ class EmrProfileDataMixin:
             if key in payload:
                 meta[key] = payload.get(key)
 
-        _logger.info("[HRMIS][EMR] Meta extracted: %s", meta)
         return meta
 
     def _normalize_district_row(self, row):
@@ -325,21 +310,12 @@ class EmrProfileDataMixin:
             "district_name": district_name,
         }
 
-        _logger.info(
-            "[HRMIS][EMR] Normalized facility id=%s name=%s district_id=%s district_name=%s",
-            normalized["id"],
-            normalized["name"],
-            normalized["district_id"],
-            normalized["district_name"],
-        )
-
         return normalized
 
     def _get_emr_districts(self, env):
         if self._use_static_emr_data():
             return self._get_static_emr_districts()
 
-        _logger.info("[HRMIS][EMR] Fetching districts")
 
         resp = self._emr_get_json(env, "/districts", cache=True)
 
@@ -348,8 +324,6 @@ class EmrProfileDataMixin:
 
         rows = self._extract_api_rows(resp)
         districts = [self._normalize_district_row(r) for r in rows]
-
-        _logger.info("[HRMIS][EMR] District fetch complete. count=%s", len(districts))
         return districts, None
 
     def _get_emr_facilities(self, env, *, district_id=None, page=1, limit=2500):
@@ -376,11 +350,6 @@ class EmrProfileDataMixin:
         if not district_id:
             _logger.warning("[HRMIS][EMR] No district_id provided for district-specific facilities fetch")
             return [], empty_meta, "No district selected for facility fetch."
-
-        _logger.info(
-            "[HRMIS][EMR] Fetching facilities by district district_id=%s page=%s limit=%s",
-            district_id, page, limit,
-        )
 
         resp = self._emr_get_json(
             env,
@@ -435,9 +404,4 @@ class EmrProfileDataMixin:
 
         filtered = [f for f in (facilities or []) if f.get("district_id") == district_id]
 
-        _logger.info(
-            "[HRMIS][EMR] Filtered facilities for district_id=%s count=%s",
-            district_id,
-            len(filtered),
-        )
         return filtered

@@ -52,10 +52,16 @@ class HrmisProfilePostingStatus(models.Model):
     suspension_reporting_facility_id = fields.Integer(
         string="Suspension Reporting Facility ID",
     )
+    suspension_reporting_facility_other_name = fields.Char(
+        string="Suspension Other Facility",
+    )
     
     suspension_reporting_designation_id = fields.Many2one(
         "hrmis.designation",
         string="Suspension Reporting Designation",
+    )
+    suspension_reporting_designation_other_name = fields.Char(
+        string="Suspension Other Designation",
     )
 
     # -----------------------
@@ -82,6 +88,16 @@ class HrmisProfilePostingStatus(models.Model):
 
     onleave_reporting_facility_id = fields.Integer(
         string="On Leave Reporting Facility ID",
+    )
+    onleave_reporting_facility_other_name = fields.Char(
+        string="On Leave Other Facility",
+    )
+    onleave_reporting_designation_id = fields.Many2one(
+        "hrmis.designation",
+        string="On Leave Reporting Designation",
+    )
+    onleave_reporting_designation_other_name = fields.Char(
+        string="On Leave Other Designation",
     )
 
 
@@ -110,6 +126,7 @@ class HrmisProfilePostingStatus(models.Model):
             ("mba", "MBA (Health Management)"),
             ("msph", "MSPH"),
             ("diploma", "Diploma"),
+            ("mba(supply chain)", "MBA (Supply Chain)"),
             ("other", "Other"),
         ],
         string="EOL Degree",
