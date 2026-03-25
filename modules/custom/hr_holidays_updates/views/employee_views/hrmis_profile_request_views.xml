@@ -736,17 +736,25 @@ SUBSTANTIVE POSTING FACILITY
 DESIGNATION
                                       <span class="req">*</span>
                                     </label>
+                                    <t t-set="current_posted_designation" t-value="req.hrmis_designation or current_employee.hrmis_designation"/>
+                                    <t t-set="current_posted_has_exact_designation" t-value="False"/>
                                     <select class="hrmis-input js-other-select" name="hrmis_designation" data-enable-search="1" data-other-name="hrmis_designation_other_name" required="required">
-                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not (req.hrmis_designation or current_employee.hrmis_designation)"> Select Designation </option>
+                                      <option value="" disabled="disabled" hidden="hidden" t-att-selected="not current_posted_designation"> Select Designation </option>
                                       <t t-foreach="designations_unique" t-as="des">
+                                        <t t-if="current_posted_designation and current_posted_designation.id == des.id">
+                                          <t t-set="current_posted_has_exact_designation" t-value="True"/>
+                                        </t>
                                         <t t-set="des_fac_id" t-value="''"/>
                                         <t t-if="'facility_id' in des._fields and des.facility_id">
                                           <t t-set="des_fac_id" t-value="des.facility_id.id"/>
 </t>
-                                        <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-data-facility-id="des_fac_id" t-att-selected="(req.hrmis_designation and req.hrmis_designation.id == des.id) or (current_employee.hrmis_designation and current_employee.hrmis_designation.id == des.id)">
+                                        <option t-att-value="des.id" t-att-data-bps="des.post_BPS or ''" t-att-data-facility-id="des_fac_id" t-att-selected="current_posted_designation and current_posted_designation.id == des.id">
                                           <t t-esc="des.name"/>
                                         </option>
                                       </t>
+                                      <option t-if="req.hrmis_designation and not current_posted_has_exact_designation" t-att-value="req.hrmis_designation.id" t-att-data-bps="req.hrmis_designation.post_BPS or ''" t-att-data-facility-id="req.hrmis_designation.facility_id.id if req.hrmis_designation.facility_id else ''" selected="selected">
+                                        <t t-esc="req.hrmis_designation.name"/>
+                                      </option>
                                       <option value="__other__">Other</option>
                                     </select>
                                     <div class="js-other-wrap" style="display:none; margin-top:6px;">
