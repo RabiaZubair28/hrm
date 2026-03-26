@@ -3066,6 +3066,20 @@ _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
     let hasError = false;
 
     const needsPmdc = _syncPmdcRequiredByCadre(form);
+    const hasExistingCnicUpload = (input) => {
+      if (!(input instanceof HTMLInputElement) || input.type !== "file") return false;
+      if (
+        input.name !== "hrmis_cnic_front" &&
+        input.name !== "hrmis_cnic_back"
+      ) {
+        return false;
+      }
+      const field = input.closest(".hrmis-field");
+      if (!field) return false;
+      return !!Array.from(field.querySelectorAll("div")).find((div) =>
+        /already uploaded:/i.test((div.textContent || "").trim())
+      );
+    };
 
     if (needsPmdc) {
       [
@@ -3095,6 +3109,11 @@ _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
 
         if (!_isActuallyVisible(input) && !input.closest(".js-status-box"))
           return;
+
+        if (hasExistingCnicUpload(input)) {
+          _clearError(input);
+          return;
+        }
 
         if (_isEmpty(input.value)) {
           if (
