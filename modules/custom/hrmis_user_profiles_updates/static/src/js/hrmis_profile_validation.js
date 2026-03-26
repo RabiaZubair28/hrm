@@ -3067,21 +3067,10 @@ _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
 
     const needsPmdc = _syncPmdcRequiredByCadre(form);
     const hasSavedCnicUpload = (input) => {
-      if (!(input instanceof HTMLInputElement) || input.type !== "file")
+      if (!(input instanceof HTMLInputElement) || input.type !== "file") {
         return false;
-      if (input.name === "hrmis_cnic_front") {
-        return (
-          (_qs(form, '[name="existing_hrmis_cnic_front"]')?.value || "") ===
-          "1"
-        );
       }
-      if (input.name === "hrmis_cnic_back") {
-        return (
-          (_qs(form, '[name="existing_hrmis_cnic_back"]')?.value || "") ===
-          "1"
-        );
-      }
-      return false;
+      return (input.dataset.hasExistingFile || "") === "1";
     };
 
     if (needsPmdc) {

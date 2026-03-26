@@ -192,7 +192,6 @@ Address
 CNIC Front Scan
                                 <span class="req">*</span>
                               </label>
-                              <input type="hidden" name="existing_hrmis_cnic_front" t-att-value="'1' if req.hrmis_cnic_front else ''"/>
                               <t t-if="is_draft and req.hrmis_cnic_front">
                                 <div style="font-size:12px;color:#666;margin-bottom:6px;">
 Already uploaded:
@@ -200,7 +199,7 @@ Already uploaded:
                                 </div>
                               </t>
                               <t t-if="is_draft">
-                                <input class="hrmis-input" style="padding-top:8px" type="file" name="hrmis_cnic_front" accept="image/*,.pdf" t-att-required="'required' if not req.hrmis_cnic_front else None"/>
+                                <input class="hrmis-input" style="padding-top:8px" type="file" name="hrmis_cnic_front" accept="image/*,.pdf" t-att-data-has-existing-file="'1' if req.hrmis_cnic_front else '0'" t-att-required="'required' if not req.hrmis_cnic_front else None"/>
                               </t>
                               <t t-if="not is_draft">
                                 <t t-if="req.hrmis_cnic_front">
@@ -231,7 +230,6 @@ PDF uploaded:
 CNIC Back Scan
                                 <span class="req">*</span>
                               </label>
-                              <input type="hidden" name="existing_hrmis_cnic_back" t-att-value="'1' if req.hrmis_cnic_back else ''"/>
                               <t t-if="is_draft and req.hrmis_cnic_back">
                                 <div style="font-size:12px;color:#666;margin-bottom:6px;">
 Already uploaded:
@@ -239,7 +237,7 @@ Already uploaded:
                                 </div>
                               </t>
                               <t t-if="is_draft">
-                                <input class="hrmis-input" style="padding-top:8px" type="file" name="hrmis_cnic_back" accept="image/*,.pdf" t-att-required="'required' if not req.hrmis_cnic_back else None"/>
+                                <input class="hrmis-input" style="padding-top:8px" type="file" name="hrmis_cnic_back" accept="image/*,.pdf" t-att-data-has-existing-file="'1' if req.hrmis_cnic_back else '0'" t-att-required="'required' if not req.hrmis_cnic_back else None"/>
                               </t>
                               <t t-if="not is_draft">
                                 <t t-if="req.hrmis_cnic_back">
