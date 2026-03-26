@@ -192,6 +192,7 @@ Address
 CNIC Front Scan
                                 <span class="req">*</span>
                               </label>
+                              <input type="hidden" name="existing_hrmis_cnic_front" t-att-value="'1' if req.hrmis_cnic_front else ''"/>
                               <t t-if="is_draft and req.hrmis_cnic_front">
                                 <div style="font-size:12px;color:#666;margin-bottom:6px;">
 Already uploaded:
@@ -230,6 +231,7 @@ PDF uploaded:
 CNIC Back Scan
                                 <span class="req">*</span>
                               </label>
+                              <input type="hidden" name="existing_hrmis_cnic_back" t-att-value="'1' if req.hrmis_cnic_back else ''"/>
                               <t t-if="is_draft and req.hrmis_cnic_back">
                                 <div style="font-size:12px;color:#666;margin-bottom:6px;">
 Already uploaded:
