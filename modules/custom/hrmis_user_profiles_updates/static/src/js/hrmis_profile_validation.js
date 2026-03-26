@@ -1078,31 +1078,45 @@ function _initContact(form) {
   contactInput.setAttribute("autocomplete", "off");
   contactInput.setAttribute("maxlength", "11");
 
-  function normalize({ preserveEmpty = true } = {}) {
+  function normalize() {
     let v = (contactInput.value || "").replace(/\D/g, "");
-    if (!v) {
-      contactInput.value = preserveEmpty ? "" : "03";
-      return;
-    }
     if (!v.startsWith("03")) v = "03" + v.replace(/^0+/, "");
     v = v.slice(0, 11);
+    if (v.length < 2) v = "03";
     contactInput.value = v;
   }
 
-  if (!_isEmpty(contactInput.value)) {
+  if (_isEmpty(contactInput.value)) {
+    contactInput.value = "03";
+    contactInput.setSelectionRange?.(2, 2);
+  } else {
     normalize();
   }
 
   contactInput.addEventListener("keydown", (e) => {
+    const pos = contactInput.selectionStart || 0;
+
     const allowed =
-      e.key === "Backspace" ||
-      e.key === "Delete" ||
       e.key === "Tab" ||
       e.key === "ArrowLeft" ||
       e.key === "ArrowRight" ||
       e.key === "Home" ||
       e.key === "End";
     if (allowed) return;
+
+    if (e.key === "Backspace" && pos <= 2) {
+      e.preventDefault();
+      contactInput.value = "03";
+      contactInput.setSelectionRange?.(2, 2);
+      return;
+    }
+
+    if (e.key === "Delete" && pos < 2) {
+      e.preventDefault();
+      contactInput.value = "03";
+      contactInput.setSelectionRange?.(2, 2);
+      return;
+    }
 
     if (e.ctrlKey || e.metaKey) return;
 
@@ -1117,20 +1131,18 @@ function _initContact(form) {
     const text =
       (e.clipboardData || window.clipboardData).getData("text") || "";
     let v = text.replace(/\D/g, "");
-    if (v && !v.startsWith("03")) v = "03" + v.replace(/^0+/, "");
+    if (!v.startsWith("03")) v = "03" + v.replace(/^0+/, "");
     v = v.slice(0, 11);
     contactInput.value = v;
     contactInput.dispatchEvent(new Event("input", { bubbles: true }));
   });
 
   contactInput.addEventListener("focus", () => {
-    if (!_isEmpty(contactInput.value)) {
-      normalize();
-      contactInput.setSelectionRange?.(
-        contactInput.value.length,
-        contactInput.value.length,
-      );
-    }
+    normalize();
+    contactInput.setSelectionRange?.(
+      contactInput.value.length,
+      contactInput.value.length,
+    );
   });
 
   contactInput.addEventListener("input", () => {
@@ -3066,12 +3078,6 @@ _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
     let hasError = false;
 
     const needsPmdc = _syncPmdcRequiredByCadre(form);
-    const hasSavedCnicUpload = (input) => {
-      if (!(input instanceof HTMLInputElement) || input.type !== "file") {
-        return false;
-      }
-      return (input.dataset.hasExistingFile || "") === "1";
-    };
 
     if (needsPmdc) {
       [
@@ -3101,12 +3107,6 @@ _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
 
         if (!_isActuallyVisible(input) && !input.closest(".js-status-box"))
           return;
-
-        if (hasSavedCnicUpload(input)) {
-          _clearError(input);
-          input.setCustomValidity("");
-          return;
-        }
 
         if (_isEmpty(input.value)) {
           if (

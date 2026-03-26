@@ -132,6 +132,11 @@ function _isEmpty(el) {
   if (!el) return true;
 
   if (el instanceof HTMLInputElement && el.type === "file") {
+    const field = el.closest(".hrmis-field");
+    const hasExistingUpload = !!Array.from(
+      field?.querySelectorAll("div, span") || [],
+    ).find((node) => /already uploaded:/i.test((node.textContent || "").trim()));
+    if (hasExistingUpload) return false;
     return !el.files || el.files.length === 0;
   }
 
