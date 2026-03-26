@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 import base64
-
+from markupsafe import Markup
 from datetime import date, timedelta
 from datetime import datetime, time
 import logging
@@ -9,6 +9,8 @@ import re
 import json
 import base64
 from urllib.parse import quote_plus, unquote
+
+from pandas import unique
 from odoo.http import Response
 
 from dateutil.relativedelta import relativedelta
@@ -1379,12 +1381,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             req = env["hrmis.employee.profile.request"].sudo().browse(req.id).exists()
         max_dob_str, max_today_str, max_past_str = self._build_max_date_strings(env)
         pre_fill = self._build_prefill_dict(employee, req)
-        required_designation_ids = self._collect_required_designation_ids(
-            env, employee=employee, req=req
-        )
-        designations_unique = self._get_unique_designations(
-            env, selected_ids=required_designation_ids
-        )
+        designations_unique = self._get_unique_designations(env)
 
         selected_district_id = (
             (pre_fill.get("district_id") if isinstance(pre_fill, dict) else None)
@@ -1421,6 +1418,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         ctx["facilities_json"] = json.dumps(all_facilities)
         ctx["facilities_meta_json"] = json.dumps(facilities_meta)
         ctx["selected_district_id"] = selected_district_id
+        ctx["facilities_json_markup"] = Markup(json.dumps(all_facilities))
 
         ctx = self._with_prefill_ctx(env, employee, req, ctx, prefer_draft=prefer_draft)
         status_prefill_source = (
@@ -1565,68 +1563,35 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return "CNIC Back Scan is required."
 
         return None
-    def _collect_required_designation_ids(self, env, employee=None, req=None):
-        ids = set()
 
-        if employee and employee.exists() and employee.hrmis_designation:
-            ids.add(employee.hrmis_designation.id)
 
-        if req and req.exists():
-            if req.hrmis_designation:
-                ids.add(req.hrmis_designation.id)
-
-            status_rec = req.posting_status_id[:1]
-            if status_rec:
-                for field_name in (
-                    "suspension_reporting_designation_id",
-                    "onleave_reporting_designation_id",
-                    "allowed_designation_id",
-                    "eol_primary_designation_id",
-                ):
-                    designation = getattr(status_rec, field_name, False)
-                    if designation:
-                        ids.add(designation.id)
-
-            Post = env["hrmis.posting.history"].sudo()
-            ids.update(
-                Post.search([("request_id", "=", req.id)]).mapped("designation_id").ids
-            )
-
-        if employee and employee.exists():
-            Post = env["hrmis.posting.history"].sudo()
-            ids.update(
-                Post.search([("employee_id", "=", employee.id)]).mapped("designation_id").ids
-            )
-
-        return [designation_id for designation_id in ids if designation_id]
-
-    def _get_unique_designations(self, env, selected_ids=None):
-        Designation = env["hrmis.designation"].sudo()
-        designations = Designation.search([("active", "=", True)], order="name, id")
+    def _get_unique_designations(self, env):
+        Designation = env["hrmis.level.care.designation"].sudo()
+        designations = Designation.search(
+            [
+                ("active", "=", True),
+                ("is_temp", "=", False),
+            ],
+            order="name, post_BPS, level_of_care, facility_name"
+        )
 
         seen = set()
         unique = []
+
         for d in designations:
-            key = (d.name or "").strip().lower()
-            if key and key not in seen:
+            key = (
+                (d.name or "").strip().lower(),
+                int(d.post_BPS or 0),
+                (d.level_of_care or "").strip().lower(),
+                (d.facility_name or "").strip().lower(),
+            )
+
+            if d.name and key not in seen:
                 seen.add(key)
                 unique.append(d)
 
-        selected_ids = {
-            int(designation_id)
-            for designation_id in (selected_ids or [])
-            if designation_id
-        }
-        included_ids = {designation.id for designation in unique}
-        missing_selected_ids = selected_ids - included_ids
-        if missing_selected_ids:
-            # Keep exact saved records available in the dropdown so prefill can
-            # select the right designation even when another record with the
-            # same name was chosen as the deduplicated representative.
-            unique.extend(Designation.browse(sorted(missing_selected_ids)).exists())
-
         return unique
-
+    
     def _build_max_date_strings(self, env):
         today = date.today()
         max_dob_str = (today - relativedelta(years=18)).strftime("%Y-%m-%d")
@@ -1698,7 +1663,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
         info = None
         if getattr(req, "state", "") == "submitted":
-            info = "You already have a submitted profile update request. You cannot submit another until it is processed. You cannot submit another until it is processed."
+            info = "You already have a submitted profile update request. You cannot submit another until it is processed. "
         _logger.warning(
             "[PROFILE][GET] EMPLOYEE DATA id=%s name=%s "
             "commission_date=%s joining_date=%s birthday=%s "
@@ -2027,7 +1992,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         else:
             designation_id = self._safe_int(designation_val) or False
 
-        designation = env["hrmis.designation"].sudo().browse(designation_id) if designation_id else env["hrmis.designation"]
+        designation = env["hrmis.level.care.designation"].sudo().browse(designation_id) if designation_id else env["hrmis.level.care.designation"]
         return designation_id, cadre_id, bps, designation
 
 
@@ -3545,7 +3510,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             _logger.warning("[TEMP_CREATE] designation blocked: facility_id missing for name=%r", name)
             return False
 
-        Designation = env["hrmis.designation"].sudo()
+        Designation = env["hrmis.level.care.designation"].sudo()
         existing = Designation.search([("name", "=", name), ("facility_id", "=", facility_id)], limit=1)
         if existing:
             return existing.id
@@ -4043,7 +4008,7 @@ class HrmisProfileUpdateRequests(http.Controller):
                 "cadres": request.env["hrmis.cadre"].sudo().search([]),
 
                 # Only active designations (recommended)
-                "designations": request.env["hrmis.designation"].sudo().search([('active', '=', True)], order="name"),
+                "designations": request.env["hrmis.level.care.designation"].sudo().search([('active', '=', True)], order="name"),
 
                 # NEW: for (remaining/total) display facility-wise
                 "remaining_map": remaining_map,
@@ -4109,7 +4074,7 @@ class HrmisProfileUpdateRequests(http.Controller):
                     'districts': request.env['hrmis.district.master'].sudo().search([]),
                     'facilities': request.env['hrmis.facility.type'].sudo().search([]),
                     'cadres': request.env['hrmis.cadre'].sudo().search([]),
-                    'designations': request.env['hrmis.designation'].sudo().search([('active', '=', True)]),
+                    'designations': request.env['hrmis.level.care.designation'].sudo().search([('active', '=', True)]),
                 }
             )
 

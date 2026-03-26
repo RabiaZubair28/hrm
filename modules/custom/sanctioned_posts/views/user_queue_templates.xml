@@ -102,7 +102,7 @@
                     <tr>
                       <th>Pers.no.</th>
                       <th>Row</th>
-                      <th>Name at birth</th>
+                      <th>Personnel Number</th>
                       <th>Username</th>
                       <th>Temp Password</th>
                     </tr>
@@ -134,7 +134,7 @@
                     <tr>
                       <th>Pers.no.</th>
                       <th>Row</th>
-                      <th>Name at birth</th>
+                      <th>Personnel Number</th>
                       <th>Reason</th>
                     </tr>
                   </thead>
@@ -164,7 +164,7 @@
                     <tr>
                       <th>Pers.no.</th>
                       <th>Row</th>
-                      <th>Name at birth</th>
+                      <th>Personnel Number</th>
                       <th>Username</th>
                     </tr>
                   </thead>

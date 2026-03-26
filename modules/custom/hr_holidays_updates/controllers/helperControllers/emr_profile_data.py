@@ -308,9 +308,12 @@ class EmrProfileDataMixin:
             "code": row.get("code") or "",
             "district_id": district_id,
             "district_name": district_name,
+            "facility_type": row.get("facility_type") or "",
+            "level_of_care": row.get("level_of_care") or "",
         }
 
         return normalized
+
 
     def _get_emr_districts(self, env):
         if self._use_static_emr_data():

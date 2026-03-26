@@ -132,6 +132,11 @@ function _isEmpty(el) {
   if (!el) return true;
 
   if (el instanceof HTMLInputElement && el.type === "file") {
+    const field = el.closest(".hrmis-field");
+    const hasExistingUpload = !!Array.from(
+      field?.querySelectorAll("div, span") || [],
+    ).find((node) => /already uploaded:/i.test((node.textContent || "").trim()));
+    if (hasExistingUpload) return false;
     return !el.files || el.files.length === 0;
   }
 
@@ -431,20 +436,48 @@ function _getCurrentPostingFieldsToValidate(form) {
 
     const district = _qs(currentPostingBox, 'select[name="district_id"]');
     const facility = _qs(currentPostingBox, 'select[name="posting_facility_id"]');
+    const facilityOther = _qs(currentPostingBox, 'input[name="facility_other_name"]');
     const designation = _qs(currentPostingBox, 'select[name="hrmis_designation"]');
+    const designationOther = _qs(currentPostingBox, 'input[name="hrmis_designation_other_name"]');
     const startMonth = _qs(currentPostingBox, 'input[name="current_posting_start"]');
 
-    fields.push(district, facility, designation, startMonth);
+    fields.push(district, facility);
+
+    if (facility && String(facility.value || "").trim() === "__other__") {
+      fields.push(facilityOther);
+    }
+
+    fields.push(designation);
+
+    if (designation && String(designation.value || "").trim() === "__other__") {
+      fields.push(designationOther);
+    }
+
+    fields.push(startMonth);
 
     if (_isAllowedToWorkChecked(form)) {
       const allowedBox = _qs(form, "#allowed_to_work_box");
       if (allowedBox) {
         const allowedDistrict = _qs(allowedBox, 'select[name="allowed_district_id"]');
         const allowedFacility = _qs(allowedBox, 'select[name="allowed_facility_id"]');
+        const allowedFacilityOther = _qs(allowedBox, 'input[name="allowed_work_facility_other_name"]');
         const allowedDesignation = _qs(allowedBox, 'select[name="allowed_designation_id"]');
+        const allowedDesignationOther = _qs(allowedBox, 'input[name="allowed_work_designation_other_name"]');
         const allowedStartMonth = _qs(allowedBox, 'input[name="allowed_start_month"]');
 
-        fields.push(allowedDistrict, allowedFacility, allowedDesignation, allowedStartMonth);
+        fields.push(allowedDistrict, allowedFacility);
+
+        if (allowedFacility && String(allowedFacility.value || "").trim() === "__other__") {
+          fields.push(allowedFacilityOther);
+        }
+
+        fields.push(allowedDesignation);
+
+        if (allowedDesignation && String(allowedDesignation.value || "").trim() === "__other__") {
+          fields.push(allowedDesignationOther);
+        }
+
+        fields.push(allowedStartMonth);
       }
     }
 
@@ -465,12 +498,20 @@ function _getCurrentPostingFieldsToValidate(form) {
       suspensionBox,
       'select[name="hrmis_designation"]',
     );
+    const designationOther = _qs(
+      suspensionBox,
+      'input[name="frontend_reporting_designation_other_name"]',
+    );
     const reportingTo = _qs(
       suspensionBox,
       'select[name="frontend_reporting_to"]',
     );
 
     fields.push(suspensionDate, designation);
+
+    if (designation && String(designation.value || "").trim() === "__other__") {
+      fields.push(designationOther);
+    }
 
     if (reportingTo && String(reportingTo.value || "").trim() === "facility") {
       const district = _qs(
@@ -481,8 +522,16 @@ function _getCurrentPostingFieldsToValidate(form) {
         suspensionBox,
         'select[name="frontend_reporting_facility_id"]',
       );
+      const facilityOther = _qs(
+        suspensionBox,
+        'input[name="frontend_reporting_facility_other_name"]',
+      );
 
       fields.push(district, facility);
+
+      if (facility && String(facility.value || "").trim() === "__other__") {
+        fields.push(facilityOther);
+      }
     }
 
     return fields.filter(Boolean);
@@ -510,12 +559,20 @@ function _getCurrentPostingFieldsToValidate(form) {
       onLeaveBox,
       'select[name="hrmis_designation"]',
     );
+    const designationOther = _qs(
+      onLeaveBox,
+      'input[name="hrmis_designation_other_name"]',
+    );
     const reportingTo = _qs(
       onLeaveBox,
       'select[name="frontend_onleave_reporting_to"]',
     );
 
     fields.push(leaveType, startDate, endDate, designation);
+
+    if (designation && String(designation.value || "").trim() === "__other__") {
+      fields.push(designationOther);
+    }
 
     if (reportingTo && String(reportingTo.value || "").trim() === "facility") {
       const district = _qs(
@@ -526,8 +583,16 @@ function _getCurrentPostingFieldsToValidate(form) {
         onLeaveBox,
         'select[name="frontend_onleave_facility_id"]',
       );
+      const facilityOther = _qs(
+        onLeaveBox,
+        'input[name="frontend_onleave_facility_other_name"]',
+      );
 
       fields.push(district, facility);
+
+      if (facility && String(facility.value || "").trim() === "__other__") {
+        fields.push(facilityOther);
+      }
     }
 
     return fields.filter(Boolean);
@@ -539,49 +604,82 @@ function _getCurrentPostingFieldsToValidate(form) {
       return fields.filter(Boolean);
     }
 
-    const degree = _qs(
-      eolBox,
-      'select[name="frontend_eol_degree"]',
-    );
-    const district = _qs(
-      eolBox,
-      'select[name="district_id"]',
-    );
-    const facility = _qs(
-      eolBox,
-      'select[name="facility_id"]',
-    );
-    const designation = _qs(
-      eolBox,
-      'select[name="hrmis_designation"]',
-    );
-    const startMonth = _qs(
-      eolBox,
-      'input[name="current_posting_start"]',
-    );
-    const status = _qs(
-      eolBox,
-      'input[name="frontend_eol_status"]',
-    );
+    const institute = _qs(eolBox, 'select[name="frontend_eol_institute"]');
+    const instituteOther = _qs(eolBox, 'input[name="frontend_eol_institute_other_name"]');
+    const degree = _qs(eolBox, 'select[name="frontend_eol_degree"]');
+    const degreeOther = _qs(eolBox, 'input[name="frontend_eol_degree_other_name"]');
+    const specialization = _qs(eolBox, 'select[name="frontend_eol_specialization_id"]');
+    const specializationOther = _qs(eolBox, 'input[name="frontend_eol_specialization_other_name"]');
+    const district = _qs(eolBox, 'select[name="district_id"]');
+    const facility = _qs(eolBox, 'select[name="facility_id"]');
+    const facilityOther = _qs(eolBox, 'input[name="facility_other_name"]');
+    const designation = _qs(eolBox, 'select[name="hrmis_designation"]');
+    const designationOther = _qs(eolBox, 'input[name="hrmis_designation_other_name"]');
+    const startMonth = _qs(eolBox, 'input[name="current_posting_start"]');
+    const eolStatus = _qs(eolBox, 'select[name="frontend_eol_status"]');
+    const eolEnd = _qs(eolBox, 'input[name="frontend_eol_end"]');
 
-    
+    fields.push(degree);
 
-    fields.push(degree, district, facility, designation, startMonth, status);
+    if (degree && String(degree.value || "").trim() === "__other__") {
+      fields.push(degreeOther);
+    }
+
+    if (institute && String(institute.value || "").trim() === "__other__") {
+      fields.push(instituteOther);
+    }
+
+    if (specialization && String(specialization.value || "").trim() === "__other__") {
+      fields.push(specializationOther);
+    }
+
+    fields.push(district, facility);
+
+    if (facility && String(facility.value || "").trim() === "__other__") {
+      fields.push(facilityOther);
+    }
+
+    fields.push(designation);
+
+    if (designation && String(designation.value || "").trim() === "__other__") {
+      fields.push(designationOther);
+    }
+
+    fields.push(startMonth, eolStatus);
+
+    if (eolStatus && String(eolStatus.value || "").trim() === "completed") {
+      fields.push(eolEnd);
+    }
 
     if (_isAllowedToWorkChecked(form)) {
       const allowedBox = _qs(form, "#allowed_to_work_box");
       if (allowedBox) {
         const allowedDistrict = _qs(allowedBox, 'select[name="allowed_district_id"]');
         const allowedFacility = _qs(allowedBox, 'select[name="allowed_facility_id"]');
+        const allowedFacilityOther = _qs(allowedBox, 'input[name="allowed_work_facility_other_name"]');
         const allowedDesignation = _qs(allowedBox, 'select[name="allowed_designation_id"]');
+        const allowedDesignationOther = _qs(allowedBox, 'input[name="allowed_work_designation_other_name"]');
         const allowedStartMonth = _qs(allowedBox, 'input[name="allowed_start_month"]');
 
-        fields.push(allowedDistrict, allowedFacility, allowedDesignation, allowedStartMonth);
+        fields.push(allowedDistrict, allowedFacility);
+
+        if (allowedFacility && String(allowedFacility.value || "").trim() === "__other__") {
+          fields.push(allowedFacilityOther);
+        }
+
+        fields.push(allowedDesignation);
+
+        if (allowedDesignation && String(allowedDesignation.value || "").trim() === "__other__") {
+          fields.push(allowedDesignationOther);
+        }
+
+        fields.push(allowedStartMonth);
       }
     }
 
     return fields.filter(Boolean);
   }
+
   if (status === "deputation") {
     const deputationBox = _qs(form, "#deputation_box");
     if (!deputationBox) {
@@ -620,8 +718,16 @@ function _getCurrentPostingFieldsToValidate(form) {
       reportedBox,
       'select[name="hrmis_designation"]',
     );
+    const designationOther = _qs(
+      reportedBox,
+      'input[name="hrmis_designation_other_name"]',
+    );
 
     fields.push(designation);
+
+    if (designation && String(designation.value || "").trim() === "__other__") {
+      fields.push(designationOther);
+    }
 
     return fields.filter(Boolean);
   }

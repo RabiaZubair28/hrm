@@ -92,9 +92,11 @@ class EmployeeProfileRequest(models.Model):
 
 
     hrmis_designation = fields.Many2one(
-        'hrmis.designation',
+        'hrmis.level.care.designation',
         string='Designation',
     )
+
+    hrmis_temp_designation = fields.Integer(string="Temp Designation")
 
     hrmis_bps = fields.Integer(
         string="BPS Grade"

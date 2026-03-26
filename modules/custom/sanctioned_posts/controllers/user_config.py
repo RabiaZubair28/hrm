@@ -290,11 +290,11 @@ class HrmisUserConfigController(http.Controller):
             return str(v).strip()
 
         col_pers_no = find_col("Pers.no.", "Pers no", "pers_no", "persno")
-        col_name = find_col("Name at birth", "name at birth", "name")
+        col_name = find_col("Personnel Number", "personnel number", "name")
 
         if col_pers_no is None or col_name is None:
             return self._redirect_err(
-                "Missing required columns. Need: Pers.no., Name at birth."
+                "Missing required columns. Need: Pers.no., Personnel Number."
             )
 
         q = request.env["hrmis.redis.queue"].sudo()

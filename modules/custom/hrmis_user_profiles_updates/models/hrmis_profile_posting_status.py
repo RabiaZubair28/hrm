@@ -57,9 +57,14 @@ class HrmisProfilePostingStatus(models.Model):
     )
     
     suspension_reporting_designation_id = fields.Many2one(
-        "hrmis.designation",
+        "hrmis.level.care.designation",
         string="Suspension Reporting Designation",
     )
+
+    suspension_reporting_designation_temp_id = fields.Integer(
+        string="Suspension Reporting Designation (Temp)"
+    )
+
     suspension_reporting_designation_other_name = fields.Char(
         string="Suspension Other Designation",
     )
@@ -93,8 +98,11 @@ class HrmisProfilePostingStatus(models.Model):
         string="On Leave Other Facility",
     )
     onleave_reporting_designation_id = fields.Many2one(
-        "hrmis.designation",
+        "hrmis.level.care.designation",
         string="On Leave Reporting Designation",
+    )
+    onleave_reporting_designation_temp_id = fields.Integer(
+        string="On Leave Reporting Designation (Temp)"
     )
     onleave_reporting_designation_other_name = fields.Char(
         string="On Leave Other Designation",
@@ -166,8 +174,12 @@ class HrmisProfilePostingStatus(models.Model):
     )
 
     eol_primary_designation_id = fields.Many2one(
-        "hrmis.designation",
+        "hrmis.level.care.designation",
         string="EOL Primary Posting Designation",
+    )
+    
+    eol_primary_designation_temp_id = fields.Integer(
+        string="EOL Primary Designation (Temp)"
     )
 
     eol_primary_bps = fields.Integer(string="EOL Primary Posting BPS")
@@ -190,8 +202,12 @@ class HrmisProfilePostingStatus(models.Model):
 
     allowed_bps = fields.Integer(string="Allowed To Work BPS")
     allowed_designation_id = fields.Many2one(
-        "hrmis.designation",
+        "hrmis.level.care.designation",
         string="Allowed To Work Designation",
+    )
+    
+    allowed_designation_temp_id = fields.Integer(
+        string="Allowed Designation (Temp)"
     )
     allowed_designation_other_name = fields.Char(
         string="Allowed To Work Other Designation",

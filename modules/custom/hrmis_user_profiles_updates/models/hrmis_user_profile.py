@@ -22,7 +22,7 @@ class HrmisUserProfile(models.Model):
     ], string="Gender", required=True)
     cadre = fields.Char(string="Cadre")
     hrmis_designation = fields.Many2one(
-    'hrmis.designation',
+    'hrmis.level.care.designation',
     string='Designation',
     required=True
     )

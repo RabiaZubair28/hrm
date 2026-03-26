@@ -19,7 +19,20 @@
 
                     <t t-else="">
 
-                        <!-- Upload -->
+                        <!-- Flash Messages -->
+                        <t t-if="flash_success">
+                            <div class="alert alert-success mb-3">
+                                <t t-esc="flash_success"/>
+                            </div>
+                        </t>
+
+                        <t t-if="flash_error">
+                            <div class="alert alert-danger mb-3">
+                                <t t-esc="flash_error"/>
+                            </div>
+                        </t>
+
+                        <!-- Main Upload -->
                         <div class="d-flex justify-content-center my-4">
                             <form action="/hrmis/sanctioned_posts/upload_xlsx"
                                   method="post"
@@ -45,6 +58,80 @@
                             </form>
                         </div>
 
+                        <!-- Master Data Uploads -->
+                        <div class="card p-3 my-4" style="border:1px solid #eee; border-radius:10px;">
+                            <div style="font-size:16px; font-weight:700;">Master Data Uploads</div>
+                            <div class="text-muted mt-1" style="font-size:0.9rem;">
+                                Upload facilities and designations files from here.
+                            </div>
+
+                            <div class="d-flex justify-content-center gap-4 flex-wrap mt-3">
+
+                                <!-- Facilities Upload -->
+                                <form action="/hrmis/sanctioned_posts/upload_facilities"
+                                      method="post"
+                                      enctype="multipart/form-data"
+                                      class="text-center m-0">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                                    <input id="facilities_xlsx_file"
+                                           type="file"
+                                           name="facilities_xlsx_file"
+                                           accept=".xlsx"
+                                           class="d-none"
+                                           onchange="this.form.submit()"/>
+
+                                    <label for="facilities_xlsx_file" class="btn btn-outline-primary">
+                                        Upload Facilities XLSX
+                                    </label>
+
+                                    <div class="text-muted mt-2" style="font-size:12px;">
+                                        Facility upload placeholder.
+                                    </div>
+                                </form>
+
+                                <!-- Designations Upload with sheet selection -->
+                                <form action="/hrmis/sanctioned_posts/upload_designations"
+                                      method="post"
+                                      enctype="multipart/form-data"
+                                      class="text-center m-0 hrmis-xlsx-upload-form">
+
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <input type="hidden" name="sheet_name" class="js-sheet-name" value=""/>
+
+                                    <input id="designations_xlsx_file"
+                                           type="file"
+                                           name="designations_xlsx_file"
+                                           accept=".xlsx"
+                                           class="d-none js-xlsx-file"/>
+
+                                    <label for="designations_xlsx_file" class="btn btn-outline-secondary">
+                                        Upload Designations XLSX
+                                    </label>
+
+                                    <div class="mt-2">
+                                        <select class="form-select js-sheet-select"
+                                                style="min-width:220px; display:none;"
+                                                disabled="disabled">
+                                            <option value="" selected="selected" disabled="disabled">Select sheet…</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mt-2 js-sheet-hint text-muted"
+                                         style="font-size:12px; display:none;">
+                                        Select the sheet that contains designation data.
+                                    </div>
+
+                                    <div class="mt-2">
+                                        <button type="submit" class="btn btn-sm btn-dark">
+                                            Process Designations
+                                        </button>
+                                    </div>
+                                </form>
+
+                            </div>
+                        </div>
+
                         <!-- Error -->
                         <t t-if="upload_error">
                             <div class="alert alert-danger">
@@ -62,17 +149,14 @@
                                 </div>
                             </div>
 
-                            <!-- Buttons (ONLY when attachment exists) -->
                             <t t-if="attachment_id">
                                 <div class="d-flex justify-content-center gap-2 my-3 flex-wrap">
 
-                                    <!-- Download Uploaded XLSX -->
                                     <a class="btn btn-outline-success"
                                        t-att-href="'/hrmis/sanctioned_posts/download_xlsx?attachment_id=%s' % attachment_id">
                                         Download Uploaded XLSX
                                     </a>
 
-                                    <!-- Create Users -->
                                     <form action="/hrmis/sanctioned_posts/create_users" method="post" class="text-center m-0">
                                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                         <input type="hidden" name="attachment_id" t-att-value="attachment_id"/>
@@ -88,7 +172,6 @@
                                 </div>
                             </t>
 
-                            <!-- Summary after import -->
                             <t t-if="upload_result.get('created') is not None">
                                 <div class="alert alert-success">
                                     <div><strong>Created:</strong> <t t-esc="upload_result.get('created')"/></div>
@@ -120,7 +203,6 @@
                                 </div>
                             </t>
 
-                            <!-- ✅ NEW: Failed / Skipped download -->
                             <t t-if="failed_attachment_id">
                                 <div class="alert alert-warning mt-2">
                                     Some records were skipped. You can download the skipped list with reasons:
@@ -158,13 +240,12 @@
                             <t t-if="request.env.user.has_group('base.group_system')">
                                 <div class="d-flex justify-content-center my-3">
                                     <a class="btn btn-outline-primary"
-                                    t-att-href="'/hrmis/staff/download_details?ids=all'">
+                                       t-att-href="'/hrmis/staff/download_details?ids=all'">
                                         Download Staff Details
                                     </a>
                                 </div>
                             </t>
 
-                            <!-- Top 10 preview table -->
                             <t t-if="upload_result.get('top10')">
                                 <div class="table-responsive">
                                     <table class="table table-sm table-bordered align-middle">

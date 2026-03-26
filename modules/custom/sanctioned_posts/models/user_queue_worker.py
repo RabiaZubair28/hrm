@@ -247,7 +247,7 @@ class HrmisUserQueueWorker(models.AbstractModel):
         ws.append([
             "Pers.no.",
             "Row",
-            "Name at birth",
+            "Personnel Number",
             "Username",
             "Temp Password",
             "Final Login",

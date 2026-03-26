@@ -45,3 +45,7 @@ class HrmisDesignation(models.Model):
         string="Facility Allocations"
     )
     is_temp = fields.Boolean(default=False)
+
+    facility_name = fields.Char(string="Facility Name")
+    level_of_care = fields.Char(string="Level of Care")
+    old_value = fields.Boolean(default=True)

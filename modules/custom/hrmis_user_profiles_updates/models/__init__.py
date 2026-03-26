@@ -19,3 +19,5 @@ from . import employee_export
 from . import hrmis_profile_posting_status
 # from . import hrmis_training_institue
 from . import hrmis_training_institute
+
+from . import hrmis_level_care_designation

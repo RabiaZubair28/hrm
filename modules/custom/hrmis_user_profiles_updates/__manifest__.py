@@ -34,8 +34,15 @@
 
     'assets': {
         'web.assets_frontend': [
+            'hrmis_user_profiles_updates/static/src/js/hrmis_facility_designation_filter.js',
+            'hrmis_user_profiles_updates/static/src/js/hrmis_facility_desig_prev_filter.js',
+            'hrmis_user_profiles_updates/static/src/js/hrmis_facility_desig_atw.js',
+            'hrmis_user_profiles_updates/static/src/js/hrmis_eol_onleave_facility_designation_filter.js',
+            'hrmis_user_profiles_updates/static/src/js/hrmis_reported_to_hd_unique_designation.js',
+           
             'hrmis_user_profiles_updates/static/src/js/facility_filter.js',
-            'hrmis_user_profiles_updates/static/src/js/hrmis_bps_designation_filter.js',
+            # 'hrmis_user_profiles_updates/static/src/js/hrmis_bps_designation_filter.js',
+            
             
             'hrmis_user_profiles_updates/static/src/js/hrmis_profile_validation.js',
             'hrmis_user_profiles_updates/static/src/js/hrmis_extra_validations.js',

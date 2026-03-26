@@ -44,7 +44,7 @@
             "hr_holidays_updates/static/src/scss/font-fix.scss",
             
             # 'hr_holidays_updates/static/src/js/hrmis_profile_request_facility_filter.js',
-            'hr_holidays_updates/static/src/js/hrmis_picker_autopen.js',
+            # 'hr_holidays_updates/static/src/js/hrmis_picker_autopen.js',
             'hr_holidays_updates/static/src/js/hrmis_other_option.js',
             'hrmis_user_profiles_updates/static/src/js/hrmis_profile_validation.js',
             'hrmis_user_profiles_updates/static/src/js/hrmis_extra_validations.js',
