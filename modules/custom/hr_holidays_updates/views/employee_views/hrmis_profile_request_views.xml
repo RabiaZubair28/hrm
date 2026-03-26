@@ -1479,6 +1479,7 @@ BPS FROM
          maxlength="2"
          name="promotion_bps_from[]"
          required="required"
+         t-att-value="pr.get('bps_from') or ''"
          placeholder="Enter BPS"/>
 </div>
 
@@ -1494,6 +1495,7 @@ BPS FROM
          maxlength="2"
          name="promotion_bps_to[]"
          required="required"
+         t-att-value="pr.get('bps_to') or ''"
          placeholder="Enter BPS"/>
 </div>
 
