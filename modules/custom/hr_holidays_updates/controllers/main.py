@@ -1465,15 +1465,27 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
     def _month_to_date(self, ym):
         """
-        Converts 'YYYY-MM' -> 'YYYY-MM-01' (string), suitable for fields.Date
+        Converts a month-only value to a first-of-month date string when a true
+        Date field still needs it.
+        """
+        ym = self._clean_month(ym)
+        if not ym:
+            return False
+        return f"{ym}-01"
+
+    def _clean_month(self, ym):
+        """
+        Normalize month-only values to 'YYYY-MM'.
+        Accepts either 'YYYY-MM' or legacy 'YYYY-MM-01'.
         """
         ym = (ym or "").strip()
         if not ym:
             return False
-        # basic validation
-        if not re.fullmatch(r"\d{4}-\d{2}", ym):
-            return False
-        return f"{ym}-01"
+        if re.fullmatch(r"\d{4}-\d{2}", ym):
+            return ym
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", ym):
+            return ym[:7]
+        return False
 
     def _validate_profile_request_post(self, post, req, env):
         """
@@ -1521,9 +1533,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         # -----------------------
         # Commission date not future
         # -----------------------
-        comm_str = (post.get("hrmis_commission_date") or "").strip()
+        comm_str = self._clean_month(post.get("hrmis_commission_date"))
         try:
-            comm = fields.Date.to_date(comm_str) if comm_str else None
+            comm = fields.Date.to_date(f"{comm_str}-01") if comm_str else None
         except Exception:
             comm = None
         if not comm:
@@ -1534,9 +1546,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         # -----------------------
         # Joining date not future
         # -----------------------
-        join_str = (post.get("hrmis_joining_date") or "").strip()
+        join_str = self._clean_month(post.get("hrmis_joining_date"))
         try:
-            join = fields.Date.to_date(join_str) if join_str else None
+            join = fields.Date.to_date(f"{join_str}-01") if join_str else None
         except Exception:
             join = None
         if not join:
@@ -2083,8 +2095,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "hrmis_father_name": post.get("hrmis_father_name"),
             "gender": post.get("gender"),
             "birthday": post.get("birthday"),
-            "hrmis_commission_date": post.get("hrmis_commission_date"),
-            "hrmis_joining_date": post.get("hrmis_joining_date"),
+            "hrmis_commission_date": self._clean_month(post.get("hrmis_commission_date")) or False,
+            "hrmis_joining_date": self._clean_month(post.get("hrmis_joining_date")) or False,
             "hrmis_bps": bps,
             "hrmis_cadre": cadre_id,
             "hrmis_designation": designation_id,
@@ -2255,8 +2267,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             raw_start = _get(q_start, i, "")
             raw_end = _get(q_end, i, "")
 
-            s = self._month_to_date(raw_start)
-            e = self._month_to_date(raw_end)
+            s = self._clean_month(raw_start)
+            e = self._clean_month(raw_end)
 
             deg_other = ""
             if _is_other(deg_raw):
@@ -2370,8 +2382,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 "specialization": spec_val or False,
                 "specialization_other_name": spec_other_name or False,
                 "status": status,
-                "start_date": s,
-                "end_date": e or False,
+                "start_month": s,
+                "end_month": e or False,
             }
 
             qual_lines.append(qual_line)
@@ -2469,8 +2481,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
             district_id = self._to_int(raw_district) or False
             bps_val = self._to_int(raw_bps) or False
-            s = self._month_to_date(raw_start)
-            e = self._month_to_date(raw_end)
+            s = self._clean_month(raw_start)
+            e = self._clean_month(raw_end)
 
             facility_id = False
             designation_id = False
@@ -2527,7 +2539,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 designation_id = self._safe_int(raw_desig) or False
 
             _logger.warning(
-                "[PROFILE][POSTING][ROW %s] parsed={district_id:%s facility_id:%s designation_id:%s bps:%s start_date:%s end_date:%s}",
+                "[PROFILE][POSTING][ROW %s] parsed={district_id:%s facility_id:%s designation_id:%s bps:%s start_month:%s end_month:%s}",
                 i, district_id, facility_id, designation_id, bps_val, s, e
             )
 
@@ -2550,8 +2562,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 "designation_id": designation_id,
                 "designation_other_name": raw_des_other if self._is_other(raw_desig) else False,
                 "bps": bps_val,
-                "start_date": s,
-                "end_date": e or False,
+                "start_month": s,
+                "end_month": e or False,
             })
 
             _logger.warning("[PROFILE][POSTING][ROW %s] accepted -> %s", i, post_lines[-1])
@@ -2779,7 +2791,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 allowed_facility_id,
             ),
             "allowed_designation_other_name": allowed_designation_other_name or False,
-            "allowed_start_month": self._month_to_date(post.get("allowed_start_month") or "") or False,
+            "allowed_start_month": self._clean_month(post.get("allowed_start_month")) or False,
 
             # EOL Primary Posting (as you had)
             "eol_primary_district_id": m2o_int(post.get("frontend_eol_primary_district_id")),
@@ -2788,7 +2800,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "eol_primary_bps": int(post.get("frontend_eol_primary_bps") or 0) if (post.get("frontend_eol_primary_bps") or "").strip() else 0,
 
              # Deputation
-            "deputation_start": self._month_to_date(post.get("frontend_deputation_start") or "") or False,
+            "deputation_start": self._clean_month(post.get("frontend_deputation_start")) or False,
             "deputation_department": (post.get("frontend_deputation_department") or "").strip() or False,
             "deputation_district_id": deputation_district_id,
             "deputation_designation": (post.get("frontend_deputation_designation") or "").strip() or False,
@@ -2816,7 +2828,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         for i in range(max(len(pr_from), len(pr_to), len(pr_date))):
             b_from = self._to_int(pr_from[i] if i < len(pr_from) else "")
             b_to = self._to_int(pr_to[i] if i < len(pr_to) else "")
-            pdate = self._month_to_date(pr_date[i] if i < len(pr_date) else "")
+            pdate = self._clean_month(pr_date[i] if i < len(pr_date) else "")
 
             if not (b_from or b_to or pdate):
                 continue
@@ -2836,7 +2848,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 "employee_id": employee.id,
                 "bps_from": b_from,
                 "bps_to": b_to,
-                "promotion_date": pdate,
+                "promotion_month": pdate,
             })
 
         return promo_lines, None
@@ -2847,8 +2859,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         l_end = form.getlist("leave_end[]")
 
         # Joining date boundary: disallow leaves before joining month.
-        join_raw = (post.get("hrmis_joining_date") or "").strip() or getattr(employee, "hrmis_joining_date", "") or ""
-        join_dt = fields.Date.to_date(join_raw) if join_raw else None
+        join_raw = self._clean_month(post.get("hrmis_joining_date")) or self._clean_month(getattr(employee, "hrmis_joining_date", "")) or ""
+        join_dt = fields.Date.to_date(f"{join_raw}-01") if join_raw else None
         join_month_start = None
         try:
             if join_dt:
@@ -3166,9 +3178,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         Promo = env["hrmis.promotion.history"].sudo()
         Leave = env["hrmis.leave.history"].sudo()
 
-        qual_recs = Qual.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
-        post_recs = Post.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
-        promo_recs = Promo.search([("employee_id", "=", employee.id)], order="promotion_date asc, id asc")
+        qual_recs = Qual.search([("employee_id", "=", employee.id)], order="start_month asc, id asc")
+        post_recs = Post.search([("employee_id", "=", employee.id)], order="start_month asc, id asc")
+        promo_recs = Promo.search([("employee_id", "=", employee.id)], order="promotion_month asc, id asc")
         leave_recs = Leave.search([("employee_id", "=", employee.id)], order="start_date asc, id asc")
 
         prefill_qual = [{
@@ -3179,9 +3191,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "institute_id": q.training_institute_id.id if q.training_institute_id else 0,
             "institute_code": q.qual_institute_code or "",
             "institute_other": q.training_institute_other_name or "",
-            "start_month": self._ym(q.start_date),
-            "end_month": self._ym(q.end_date),
-            "status": q.status or ("completed" if q.end_date else "ongoing"),
+            "start_month": self._ym(q.start_month),
+            "end_month": self._ym(q.end_month),
+            "status": q.status or ("completed" if q.end_month else "ongoing"),
         } for q in qual_recs]
 
         prefill_post = [{
@@ -3191,14 +3203,14 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "designation_id": OTHER_TOKEN if (getattr(q, "designation_other_name", "") or "").strip() else (q.designation_id.id if q.designation_id else 0),
             "designation_other_name": getattr(q, "designation_other_name", "") or "",
             "bps": int(q.bps or 0),
-            "start_month": self._ym(q.start_date),
-            "end_month": self._ym(q.end_date),
+            "start_month": self._ym(q.start_month),
+            "end_month": self._ym(q.end_month),
         } for q in post_recs]
 
         prefill_promo = [{
             "bps_from": int(p.bps_from or 0),
             "bps_to": int(p.bps_to or 0),
-            "promotion_month": self._ym(p.promotion_date),
+            "promotion_month": self._ym(p.promotion_month),
         } for p in promo_recs]
 
         prefill_leave = [{
@@ -3229,9 +3241,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         Promo = env["hrmis.promotion.history"].sudo()
         Leave = env["hrmis.leave.history"].sudo()
 
-        qual_recs = Qual.search([("request_id", "=", req.id)], order="start_date asc, id asc")
-        post_recs = Post.search([("request_id", "=", req.id)], order="start_date asc, id asc")
-        promo_recs = Promo.search([("request_id", "=", req.id)], order="promotion_date asc, id asc")
+        qual_recs = Qual.search([("request_id", "=", req.id)], order="start_month asc, id asc")
+        post_recs = Post.search([("request_id", "=", req.id)], order="start_month asc, id asc")
+        promo_recs = Promo.search([("request_id", "=", req.id)], order="promotion_month asc, id asc")
         leave_recs = Leave.search([("request_id", "=", req.id)], order="start_date asc, id asc")
 
         prefill_qual = [{
@@ -3242,9 +3254,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "institute_id": q.training_institute_id.id if q.training_institute_id else 0,
             "institute_code": q.qual_institute_code or "",
             "institute_other": q.training_institute_other_name or "",
-            "start_month": self._ym(q.start_date),
-            "end_month": self._ym(q.end_date),
-            "status": q.status or ("completed" if q.end_date else "ongoing"),
+            "start_month": self._ym(q.start_month),
+            "end_month": self._ym(q.end_month),
+            "status": q.status or ("completed" if q.end_month else "ongoing"),
         } for q in qual_recs]
 
         prefill_post = [{
@@ -3254,14 +3266,14 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "designation_id": OTHER_TOKEN if (getattr(q, "designation_other_name", "") or "").strip() else (q.designation_id.id if q.designation_id else 0),
             "designation_other_name": getattr(q, "designation_other_name", "") or "",
             "bps": int(q.bps or 0),
-            "start_month": self._ym(q.start_date),
-            "end_month": self._ym(q.end_date),
+            "start_month": self._ym(q.start_month),
+            "end_month": self._ym(q.end_month),
         } for q in post_recs]
 
         prefill_promo = [{
             "bps_from": int(p.bps_from or 0),
             "bps_to": int(p.bps_to or 0),
-            "promotion_month": self._ym(p.promotion_date),
+            "promotion_month": self._ym(p.promotion_month),
         } for p in promo_recs]
 
         prefill_leave = [{

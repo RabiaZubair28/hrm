@@ -1,10 +1,15 @@
+import re
+
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
+
+
+_YM_RE = re.compile(r"^\d{4}-\d{2}$")
 
 class HrmisPostingHistory(models.Model):
     _name = "hrmis.posting.history"
     _description = "Posting History"
-    _order = "start_date desc, id desc"
+    _order = "start_month desc, id desc"
 
     request_id = fields.Many2one(
         "hrmis.employee.profile.request",
@@ -38,11 +43,15 @@ class HrmisPostingHistory(models.Model):
     designation_other_name = fields.Char(string="Other Designation")
     bps = fields.Integer(string="BPS", required=True)
 
-    start_date = fields.Date(required=True, index=True)
-    end_date = fields.Date(index=True)
+    start_month = fields.Char(required=True, index=True)
+    end_month = fields.Char(index=True)
 
-    @api.constrains("start_date", "end_date")
+    @api.constrains("start_month", "end_month")
     def _check_dates(self):
         for rec in self:
-            if rec.end_date and rec.start_date and rec.end_date < rec.start_date:
-                raise ValidationError("End date cannot be earlier than Start date.")
+            if rec.start_month and not _YM_RE.fullmatch(rec.start_month):
+                raise ValidationError("Start month must be in YYYY-MM format.")
+            if rec.end_month and not _YM_RE.fullmatch(rec.end_month):
+                raise ValidationError("End month must be in YYYY-MM format.")
+            if rec.end_month and rec.start_month and rec.end_month < rec.start_month:
+                raise ValidationError("End month cannot be earlier than Start month.")
