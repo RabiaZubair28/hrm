@@ -1,5 +1,9 @@
+import re
+
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
+
+_MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
 
 class HrmisProfilePostingStatus(models.Model):
@@ -212,12 +216,12 @@ class HrmisProfilePostingStatus(models.Model):
     allowed_designation_other_name = fields.Char(
         string="Allowed To Work Other Designation",
     )
-    allowed_start_month = fields.Date(
+    allowed_start_month = fields.Char(
         string="Allowed To Work Start Month",
-        help="Store as first day of month (YYYY-MM-01).",
+        help="Store as YYYY-MM.",
     )
     #Deputation details
-    deputation_start = fields.Date(string="Deputation Start Date")
+    deputation_start = fields.Char(string="Deputation Start Month")
     deputation_department = fields.Char(string="Deputation Department")
     deputation_district_id = fields.Integer(string="Deputation District ID")
     deputation_designation = fields.Char(string="Deputation Designation")
@@ -317,3 +321,31 @@ class HrmisProfilePostingStatus(models.Model):
             if r.onleave_reporting_to == "health_department":
                 r.onleave_reporting_district_id = False
                 r.onleave_reporting_facility_id = False
+
+    @api.model
+    def _normalize_month_value(self, value):
+        raw = str(value or "").strip()
+        if not raw:
+            return False
+        if _MONTH_RE.fullmatch(raw):
+            return raw
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+            return raw[:7]
+        return raw
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if "allowed_start_month" in vals:
+                vals["allowed_start_month"] = self._normalize_month_value(vals.get("allowed_start_month"))
+            if "deputation_start" in vals:
+                vals["deputation_start"] = self._normalize_month_value(vals.get("deputation_start"))
+        return super().create(vals_list)
+
+    def write(self, vals):
+        vals = dict(vals or {})
+        if "allowed_start_month" in vals:
+            vals["allowed_start_month"] = self._normalize_month_value(vals.get("allowed_start_month"))
+        if "deputation_start" in vals:
+            vals["deputation_start"] = self._normalize_month_value(vals.get("deputation_start"))
+        return super().write(vals)

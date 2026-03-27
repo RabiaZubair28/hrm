@@ -1475,6 +1475,17 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return False
         return f"{ym}-01"
 
+    def _month_or_date_for_date_input(self, value):
+        """
+        Render YYYY-MM values safely inside existing <input type="date"> controls.
+        """
+        raw = (value or "").strip() if isinstance(value, str) else value
+        if not raw:
+            return ""
+        if isinstance(raw, str) and re.fullmatch(r"\d{4}-\d{2}$", raw):
+            return f"{raw}-01"
+        return raw
+
     def _validate_profile_request_post(self, post, req, env):
         """
         Validations (server-side):
@@ -1608,8 +1619,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "hrmis_father_name": req.hrmis_father_name or employee.hrmis_father_name or "",
             "gender": req.gender or employee.gender or "",
             "birthday": req.birthday or employee.birthday or "",
-            "hrmis_commission_date": req.hrmis_commission_date or employee.hrmis_commission_date or "",
-            "hrmis_joining_date": req.hrmis_joining_date or employee.hrmis_joining_date or "",
+            "hrmis_commission_date": self._month_or_date_for_date_input(req.hrmis_commission_date or employee.hrmis_commission_date or ""),
+            "hrmis_joining_date": self._month_or_date_for_date_input(req.hrmis_joining_date or employee.hrmis_joining_date or ""),
             "hrmis_bps": req.hrmis_bps or employee.hrmis_bps or "",
             "hrmis_cadre": (req.hrmis_cadre.id if req.hrmis_cadre else (employee.hrmis_cadre.id if employee.hrmis_cadre else False)),
             "hrmis_designation": (req.hrmis_designation.id if req.hrmis_designation else (employee.hrmis_designation.id if employee.hrmis_designation else False)),
@@ -1657,7 +1668,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 "qualification_date": employee.qualification_date,
                 "year_qualification": employee.year_qualification,
                 "date_promotion": employee.date_promotion,
-                "hrmis_commission_date": employee.hrmis_commission_date,
+                "hrmis_commission_date": ((employee.hrmis_commission_date or "")[:7] if employee.hrmis_commission_date else False),
+                "hrmis_joining_date": ((employee.hrmis_joining_date or "")[:7] if employee.hrmis_joining_date else False),
                 
             })
 
@@ -4090,8 +4102,8 @@ class HrmisProfileUpdateRequests(http.Controller):
             'hrmis_father_name': post.get('hrmis_father_name'),
             'gender': post.get('gender'),
             'birthday': post.get('birthday'),
-            'hrmis_commission_date': post.get('hrmis_commission_date'),
-            'hrmis_joining_date': post.get('hrmis_joining_date'),
+            'hrmis_commission_date': (post.get('hrmis_commission_date') or '').strip()[:7] or False,
+            'hrmis_joining_date': (post.get('hrmis_joining_date') or '').strip()[:7] or False,
             'hrmis_bps': int(post.get('hrmis_bps') or 0),
             'hrmis_cadre': m2o(post.get('hrmis_cadre')),
             'hrmis_designation': m2o(post.get('hrmis_designation')),

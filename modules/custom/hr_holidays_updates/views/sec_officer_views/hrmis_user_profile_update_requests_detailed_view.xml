@@ -92,7 +92,7 @@
                                        name="hrmis_commission_date"
                                        class="hrmis-input"
                                        t-att-max="today_str"
-                                       t-att-value="req.hrmis_commission_date"
+                                       t-att-value="(req.hrmis_commission_date + '-01') if (req.hrmis_commission_date and len(req.hrmis_commission_date) == 7) else req.hrmis_commission_date"
                                        required="required"/>
                             </div>
                             <!-- Service -->
@@ -102,7 +102,7 @@
                                        name="hrmis_joining_date"
                                        class="hrmis-input"
                                        t-att-max="today_str"
-                                       t-att-value="req.hrmis_joining_date"
+                                       t-att-value="(req.hrmis_joining_date + '-01') if (req.hrmis_joining_date and len(req.hrmis_joining_date) == 7) else req.hrmis_joining_date"
                                        required="required"/>
                             </div>
                             <!-- Posting -->

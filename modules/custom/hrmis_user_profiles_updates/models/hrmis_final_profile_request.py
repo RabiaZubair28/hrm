@@ -1,3 +1,5 @@
+import re
+
 from odoo import models, fields, api
 from odoo.exceptions import UserError, ValidationError
 from datetime import date
@@ -64,9 +66,9 @@ class EmployeeProfileRequest(models.Model):
     birthday = fields.Date(
         string="Date of Birth",
     )
-    hrmis_commission_date = fields.Date(string="Commision Date")
+    hrmis_commission_date = fields.Char(string="Commision Date")
    
-    hrmis_joining_date = fields.Date(
+    hrmis_joining_date = fields.Char(
         string="Joining Date",
     )
     # -----------------------
@@ -187,6 +189,42 @@ class EmployeeProfileRequest(models.Model):
         string="Posting Status Detail",
     )
 
+    _MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
+
+    @api.model
+    def _normalize_month_value(self, value):
+        raw = str(value or "").strip()
+        if not raw:
+            return False
+        if self._MONTH_RE.fullmatch(raw):
+            return raw
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+            return raw[:7]
+        return raw
+
+    @api.model
+    def _normalize_month_fields(self, vals):
+        vals = dict(vals or {})
+        for field_name in ("hrmis_commission_date", "hrmis_joining_date"):
+            if field_name in vals:
+                vals[field_name] = self._normalize_month_value(vals.get(field_name))
+        return vals
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        normalized_vals_list = [self._normalize_month_fields(vals) for vals in vals_list]
+        return super().create(normalized_vals_list)
+
+    def write(self, vals):
+        return super().write(self._normalize_month_fields(vals))
+
+    @api.model
+    def _month_to_employee_date(self, value):
+        month_value = self._normalize_month_value(value)
+        if month_value and self._MONTH_RE.fullmatch(month_value):
+            return f"{month_value}-01"
+        return month_value
+
     @api.model
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
@@ -200,7 +238,7 @@ class EmployeeProfileRequest(models.Model):
             'hrmis_employee_id': employee.hrmis_employee_id,
             'hrmis_cnic': employee.hrmis_cnic,
             'hrmis_father_name': employee.hrmis_father_name,
-            'hrmis_joining_date': employee.hrmis_joining_date,
+            'hrmis_joining_date': self._normalize_month_value(employee.hrmis_joining_date),
             'gender': employee.gender,
             'hrmis_cadre': employee.hrmis_cadre,
             'hrmis_designation': employee.hrmis_designation,
@@ -218,6 +256,7 @@ class EmployeeProfileRequest(models.Model):
             "qualification_date": employee.qualification_date,
             "date_promotion": employee.date_promotion,
             "year_qualification": employee.year_qualification,
+            "hrmis_commission_date": self._normalize_month_value(employee.hrmis_commission_date),
             
             "hrmis_pmdc_no": employee.hrmis_pmdc_no,
             "hrmis_pmdc_issue_date": employee.hrmis_pmdc_issue_date,
@@ -313,11 +352,11 @@ class EmployeeProfileRequest(models.Model):
             'hrmis_employee_id': self.hrmis_employee_id,
             'hrmis_cnic': self.hrmis_cnic,
             'hrmis_father_name': self.hrmis_father_name,
-            'hrmis_joining_date': self.hrmis_joining_date,
+            'hrmis_joining_date': self._month_to_employee_date(self.hrmis_joining_date),
             'hrmis_bps': self.hrmis_bps,
             'gender': self.gender,
             'birthday': self.birthday,
-            'hrmis_commission_date': self.hrmis_commission_date,
+            'hrmis_commission_date': self._month_to_employee_date(self.hrmis_commission_date),
             'hrmis_cadre': self.hrmis_cadre.id if self.hrmis_cadre else False,
             'hrmis_designation': self.hrmis_designation,
 

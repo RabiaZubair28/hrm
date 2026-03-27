@@ -104,7 +104,7 @@ Domicile
 Commission Year
                                 <span class="req">*</span>
                               </label>
-                              <input class="hrmis-input" type="date" name="hrmis_commission_date" t-att-max="max_today_str" t-att-required="'required' if is_draft else None" t-att-value="req.hrmis_commission_date or current_employee.hrmis_commission_date or ''" t-att-readonly="'readonly' if not is_draft else None"/>
+                              <input class="hrmis-input" type="date" name="hrmis_commission_date" t-att-max="max_today_str" t-att-required="'required' if is_draft else None" t-att-value="((req.hrmis_commission_date or current_employee.hrmis_commission_date or '') + '-01') if ((req.hrmis_commission_date or current_employee.hrmis_commission_date or '') and len(str(req.hrmis_commission_date or current_employee.hrmis_commission_date or '')) == 7) else (req.hrmis_commission_date or current_employee.hrmis_commission_date or '')" t-att-readonly="'readonly' if not is_draft else None"/>
                             </div>
                             <div class="hrmis-field">
                               <label>
@@ -118,7 +118,7 @@ Merit Number
 Joining Date
                                 <span class="req">*</span>
                               </label>
-                              <input class="hrmis-input" type="date" name="hrmis_joining_date" t-att-max="max_today_str" t-att-required="'required' if is_draft else None" t-att-value="req.hrmis_joining_date or current_employee.hrmis_joining_date or ''" t-att-readonly="'readonly' if not is_draft else None"/>
+                              <input class="hrmis-input" type="date" name="hrmis_joining_date" t-att-max="max_today_str" t-att-required="'required' if is_draft else None" t-att-value="((req.hrmis_joining_date or current_employee.hrmis_joining_date or '') + '-01') if ((req.hrmis_joining_date or current_employee.hrmis_joining_date or '') and len(str(req.hrmis_joining_date or current_employee.hrmis_joining_date or '')) == 7) else (req.hrmis_joining_date or current_employee.hrmis_joining_date or '')" t-att-readonly="'readonly' if not is_draft else None"/>
                             </div>
                             <div class="hrmis-field">
                               <label>

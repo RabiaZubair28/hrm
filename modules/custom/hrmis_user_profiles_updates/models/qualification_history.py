@@ -71,8 +71,12 @@
 #                 raise ValidationError("End Date cannot be earlier than Start Date.")
 
 
+import re
+
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
+
+_MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 class HrmisQualificationHistory(models.Model):
     _name = "hrmis.qualification.history"
     _description = "Qualification History"
@@ -175,13 +179,48 @@ class HrmisQualificationHistory(models.Model):
 ], string="Specialization")
     specialization_other_name = fields.Char(string="Other Specialization")
     
-    # ✅ controller creates start_date/end_date (YYYY-MM-01)
-    start_date = fields.Date(required=True, index=True)
-    end_date = fields.Date(index=True)
+    # Keep same field names; store month-only values as YYYY-MM.
+    start_date = fields.Char(required=True, index=True)
+    end_date = fields.Char(index=True)
+
+    @api.model
+    def _normalize_month(self, value):
+        raw = str(value or "").strip()
+        if not raw:
+            return False
+        if _MONTH_RE.fullmatch(raw):
+            return raw
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+            return raw[:7]
+        return raw
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        normalized = []
+        for vals in vals_list:
+            vals = dict(vals)
+            if "start_date" in vals:
+                vals["start_date"] = self._normalize_month(vals.get("start_date"))
+            if "end_date" in vals:
+                vals["end_date"] = self._normalize_month(vals.get("end_date"))
+            normalized.append(vals)
+        return super().create(normalized)
+
+    def write(self, vals):
+        vals = dict(vals)
+        if "start_date" in vals:
+            vals["start_date"] = self._normalize_month(vals.get("start_date"))
+        if "end_date" in vals:
+            vals["end_date"] = self._normalize_month(vals.get("end_date"))
+        return super().write(vals)
 
     @api.constrains("start_date", "end_date")
     def _check_dates(self):
         for rec in self:
+            if rec.start_date and not _MONTH_RE.fullmatch(rec.start_date):
+                raise ValidationError("Start month must be in YYYY-MM format.")
+            if rec.end_date and not _MONTH_RE.fullmatch(rec.end_date):
+                raise ValidationError("End month must be in YYYY-MM format.")
             if rec.end_date and rec.start_date and rec.end_date < rec.start_date:
-                raise ValidationError("End date cannot be earlier than Start date.")
+                raise ValidationError("End month cannot be earlier than Start month.")
 
