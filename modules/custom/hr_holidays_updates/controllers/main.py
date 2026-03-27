@@ -1475,6 +1475,20 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             return False
         return f"{ym}-01"
 
+    def _clean_month(self, ym):
+        """
+        Normalize month-only values to 'YYYY-MM'.
+        Accepts either 'YYYY-MM' or legacy 'YYYY-MM-01'.
+        """
+        ym = (ym or "").strip()
+        if not ym:
+            return False
+        if re.fullmatch(r"\d{4}-\d{2}", ym):
+            return ym
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", ym):
+            return ym[:7]
+        return False
+
     def _validate_profile_request_post(self, post, req, env):
         """
         Validations (server-side):
@@ -2255,8 +2269,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             raw_start = _get(q_start, i, "")
             raw_end = _get(q_end, i, "")
 
-            s = self._month_to_date(raw_start)
-            e = self._month_to_date(raw_end)
+            s = self._clean_month(raw_start)
+            e = self._clean_month(raw_end)
 
             deg_other = ""
             if _is_other(deg_raw):
@@ -2469,8 +2483,8 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
 
             district_id = self._to_int(raw_district) or False
             bps_val = self._to_int(raw_bps) or False
-            s = self._month_to_date(raw_start)
-            e = self._month_to_date(raw_end)
+            s = self._clean_month(raw_start)
+            e = self._clean_month(raw_end)
 
             facility_id = False
             designation_id = False
@@ -2779,7 +2793,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
                 allowed_facility_id,
             ),
             "allowed_designation_other_name": allowed_designation_other_name or False,
-            "allowed_start_month": self._month_to_date(post.get("allowed_start_month") or "") or False,
+            "allowed_start_month": self._clean_month(post.get("allowed_start_month") or "") or False,
 
             # EOL Primary Posting (as you had)
             "eol_primary_district_id": m2o_int(post.get("frontend_eol_primary_district_id")),
@@ -2788,7 +2802,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "eol_primary_bps": int(post.get("frontend_eol_primary_bps") or 0) if (post.get("frontend_eol_primary_bps") or "").strip() else 0,
 
              # Deputation
-            "deputation_start": self._month_to_date(post.get("frontend_deputation_start") or "") or False,
+            "deputation_start": self._clean_month(post.get("frontend_deputation_start") or "") or False,
             "deputation_department": (post.get("frontend_deputation_department") or "").strip() or False,
             "deputation_district_id": deputation_district_id,
             "deputation_designation": (post.get("frontend_deputation_designation") or "").strip() or False,
@@ -2816,7 +2830,7 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         for i in range(max(len(pr_from), len(pr_to), len(pr_date))):
             b_from = self._to_int(pr_from[i] if i < len(pr_from) else "")
             b_to = self._to_int(pr_to[i] if i < len(pr_to) else "")
-            pdate = self._month_to_date(pr_date[i] if i < len(pr_date) else "")
+            pdate = self._clean_month(pr_date[i] if i < len(pr_date) else "")
 
             if not (b_from or b_to or pdate):
                 continue
