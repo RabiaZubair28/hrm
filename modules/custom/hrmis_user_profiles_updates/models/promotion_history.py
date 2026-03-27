@@ -44,6 +44,7 @@ import re
 
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
+from psycopg2 import sql
 
 
 _MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
@@ -95,3 +96,28 @@ class HrmisPromotionHistory(models.Model):
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", month_val):
             vals["promotion_date"] = month_val[:7]
         return super().write(vals)
+
+    def _auto_init(self):
+        res = super()._auto_init()
+        table = self._table
+        cr = self.env.cr
+        cr.execute(
+            """
+            SELECT data_type
+            FROM information_schema.columns
+            WHERE table_name = %s AND column_name = 'promotion_date'
+            """,
+            [table],
+        )
+        row = cr.fetchone()
+        if row and row[0] == "date":
+            cr.execute(
+                sql.SQL(
+                    """
+                    ALTER TABLE {table}
+                    ALTER COLUMN promotion_date TYPE varchar
+                    USING to_char(promotion_date, 'YYYY-MM')
+                    """
+                ).format(table=sql.Identifier(table))
+            )
+        return res

@@ -82,6 +82,20 @@ class HrmisQualificationHistory(models.Model):
     _description = "Qualification History"
     _order = "start_date asc, id asc"
 
+    def _auto_init(self):
+        res = super()._auto_init()
+        self.env.cr.execute(
+            """
+            ALTER TABLE hrmis_qualification_history
+            ALTER COLUMN start_date TYPE varchar USING LEFT(start_date::text, 7),
+            ALTER COLUMN end_date TYPE varchar USING CASE
+                WHEN end_date IS NULL THEN NULL
+                ELSE LEFT(end_date::text, 7)
+            END
+            """
+        )
+        return res
+
     request_id = fields.Many2one(
         "hrmis.employee.profile.request",
         string="Request",

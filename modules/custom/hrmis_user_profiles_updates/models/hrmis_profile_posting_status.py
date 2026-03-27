@@ -349,3 +349,22 @@ class HrmisProfilePostingStatus(models.Model):
         if "deputation_start" in vals:
             vals["deputation_start"] = self._normalize_month_value(vals.get("deputation_start"))
         return super().write(vals)
+
+    def _auto_init(self):
+        cr = self.env.cr
+        cr.execute(
+            """
+            ALTER TABLE hrmis_profile_posting_status
+            ALTER COLUMN allowed_start_month TYPE varchar,
+            ALTER COLUMN deputation_start TYPE varchar
+            USING CASE
+                WHEN allowed_start_month IS NOT NULL THEN to_char(allowed_start_month, 'YYYY-MM')
+                ELSE NULL
+            END,
+            USING CASE
+                WHEN deputation_start IS NOT NULL THEN to_char(deputation_start, 'YYYY-MM')
+                ELSE NULL
+            END
+            """
+        )
+        return super()._auto_init()

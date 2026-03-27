@@ -86,3 +86,17 @@ class HrmisPostingHistory(models.Model):
         if "end_date" in vals:
             vals["end_date"] = self._normalize_month_value(vals.get("end_date"))
         return super().write(vals)
+
+    def _auto_init(self):
+        res = super()._auto_init()
+        self.env.cr.execute(
+            """
+            ALTER TABLE hrmis_posting_history
+            ALTER COLUMN start_date TYPE varchar USING to_char(start_date, 'YYYY-MM'),
+            ALTER COLUMN end_date TYPE varchar USING CASE
+                WHEN end_date IS NULL THEN NULL
+                ELSE to_char(end_date, 'YYYY-MM')
+            END
+            """
+        )
+        return res

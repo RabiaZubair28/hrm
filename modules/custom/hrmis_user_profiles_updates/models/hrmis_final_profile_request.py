@@ -10,6 +10,22 @@ class EmployeeProfileRequest(models.Model):
     _description = 'Employee Profile Update Request'
     _inherit = ['mail.thread']
     _order = 'id desc'
+    
+    def _auto_init(self):
+        res = super()._auto_init()
+        for column_name in ("hrmis_commission_date", "hrmis_joining_date"):
+            self.env.cr.execute(
+                f"""
+                ALTER TABLE {self._table}
+                ALTER COLUMN {column_name} TYPE varchar
+                USING CASE
+                    WHEN {column_name} IS NULL THEN NULL
+                    ELSE to_char({column_name}, 'YYYY-MM')
+                END
+                """
+            )
+        return res
+
     employee_id = fields.Many2one(
         'hr.employee',
         readonly=True
