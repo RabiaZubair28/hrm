@@ -212,12 +212,12 @@ class HrmisProfilePostingStatus(models.Model):
     allowed_designation_other_name = fields.Char(
         string="Allowed To Work Other Designation",
     )
-    allowed_start_month = fields.Char(
+    allowed_start_month = fields.Date(
         string="Allowed To Work Start Month",
-        help="Store as YYYY-MM.",
+        help="Store as first day of month (YYYY-MM-01).",
     )
     #Deputation details
-    deputation_start = fields.Char(string="Deputation Start Month")
+    deputation_start = fields.Date(string="Deputation Start Date")
     deputation_department = fields.Char(string="Deputation Department")
     deputation_district_id = fields.Integer(string="Deputation District ID")
     deputation_designation = fields.Char(string="Deputation Designation")

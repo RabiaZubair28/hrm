@@ -71,12 +71,8 @@
 #                 raise ValidationError("End Date cannot be earlier than Start Date.")
 
 
-import re
-
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
-
-_YM_RE = re.compile(r"^\d{4}-\d{2}$")
 class HrmisQualificationHistory(models.Model):
     _name = "hrmis.qualification.history"
     _description = "Qualification History"
@@ -179,16 +175,13 @@ class HrmisQualificationHistory(models.Model):
 ], string="Specialization")
     specialization_other_name = fields.Char(string="Other Specialization")
     
-    start_date = fields.Char(required=True, index=True)
-    end_date = fields.Char(index=True)
+    # ✅ controller creates start_date/end_date (YYYY-MM-01)
+    start_date = fields.Date(required=True, index=True)
+    end_date = fields.Date(index=True)
 
     @api.constrains("start_date", "end_date")
     def _check_dates(self):
         for rec in self:
-            if rec.start_date and not _YM_RE.fullmatch(rec.start_date):
-                raise ValidationError("Start month must be in YYYY-MM format.")
-            if rec.end_date and not _YM_RE.fullmatch(rec.end_date):
-                raise ValidationError("End month must be in YYYY-MM format.")
             if rec.end_date and rec.start_date and rec.end_date < rec.start_date:
-                raise ValidationError("End month cannot be earlier than Start month.")
+                raise ValidationError("End date cannot be earlier than Start date.")
 

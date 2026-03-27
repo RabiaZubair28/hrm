@@ -40,17 +40,13 @@
 #         for rec in self:
 #             if rec.bps_to <= rec.bps_from:
 #                 raise ValidationError("BPS To must be greater than BPS From.")
-import re
-
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
-
-_YM_RE = re.compile(r"^\d{4}-\d{2}$")
 
 class HrmisPromotionHistory(models.Model):
     _name = "hrmis.promotion.history"
     _description = "Promotion History"
-    _order = "promotion_month desc, id desc"
+    _order = "promotion_date desc, id desc"
 
     request_id = fields.Many2one(
         "hrmis.employee.profile.request",
@@ -70,12 +66,11 @@ class HrmisPromotionHistory(models.Model):
     bps_from = fields.Integer(required=True)
     bps_to = fields.Integer(required=True)
 
-    promotion_month = fields.Char(required=True, index=True)
+    # ✅ controller uses promotion_date
+    promotion_date = fields.Date(required=True, index=True)
 
     @api.constrains("bps_from", "bps_to")
     def _check_bps(self):
         for rec in self:
             if rec.bps_to <= rec.bps_from:
                 raise ValidationError("BPS To must be greater than BPS From.")
-            if rec.promotion_month and not _YM_RE.fullmatch(rec.promotion_month):
-                raise ValidationError("Promotion month must be in YYYY-MM format.")

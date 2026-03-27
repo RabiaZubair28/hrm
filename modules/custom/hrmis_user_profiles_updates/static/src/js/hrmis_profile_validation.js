@@ -209,13 +209,15 @@ function _writeMonthValueToInput(inp, ym) {
     inp.value = "";
     return;
   }
-  inp.value = t === "date" ? ym : ym;
+  if (t === "date")
+    inp.value = `${ym}-01`; // important
+  else inp.value = ym;
 }
 
 /* ---------------------------------------------------------
  * Month UI proxy for DATE fields (Commission/Joining)
  *  - Shows month picker (YYYY-MM)
- *  - Hidden original stays enabled and submits YYYY-MM
+ *  - Hidden original stays enabled and submits YYYY-MM-01
  * --------------------------------------------------------- */
 function _toLocalYmd(d) {
   if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
@@ -255,7 +257,7 @@ function _attachMonthProxy(dateInput) {
 
   function syncToOriginal() {
     const mv = (proxy.value || "").trim();
-    dateInput.value = mv || "";
+    dateInput.value = mv ? `${mv}-01` : "";
   }
 
   proxy.addEventListener("input", () => {
