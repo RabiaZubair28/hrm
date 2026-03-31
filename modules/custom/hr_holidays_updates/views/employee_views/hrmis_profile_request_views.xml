@@ -193,37 +193,36 @@ Address
 CNIC Front Scan
                                 <span class="req">*</span>
                               </label>
+                              <t t-set="front_fn" t-value="(req.hrmis_cnic_front_filename or '')"/>
+                              <t t-set="front_is_pdf" t-value="front_fn.lower().endswith('.pdf')"/>
+                              <t t-set="front_url" t-value="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_front?download=true' % req.id"/>
                               <t t-if="is_draft and req.hrmis_cnic_front">
                                 <div style="font-size:12px;color:#666;margin-bottom:6px;">
 Already uploaded:
-                                  <t t-esc="req.hrmis_cnic_front_filename or 'CNIC Front'"/>
+                                  <t t-esc="front_fn or 'CNIC Front'"/>
                                 </div>
                               </t>
                               <t t-if="is_draft">
-                                <input class="hrmis-input" style="padding-top:8px" type="file" name="hrmis_cnic_front" accept="image/*,.pdf" t-att-required="'required' if not req.hrmis_cnic_front else None"/>
+                                <input class="hrmis-input" style="padding-top:8px" type="file" name="hrmis_cnic_front" accept="image/*,.pdf" t-att-required="'required' if not req.hrmis_cnic_front else None" t-att-data-existing-url="front_url if req.hrmis_cnic_front else None" t-att-data-existing-file-name="front_fn if req.hrmis_cnic_front else None" t-att-data-existing-is-image="'0' if front_is_pdf else '1' if req.hrmis_cnic_front else None"/>
                               </t>
-                              <t t-if="not is_draft">
-                                <t t-if="req.hrmis_cnic_front">
-                                  <t t-set="front_fn" t-value="(req.hrmis_cnic_front_filename or '')"/>
-                                  <t t-set="front_is_pdf" t-value="front_fn.lower().endswith('.pdf')"/>
-                                  <div class="mt-2">
-                                    <t t-if="not front_is_pdf">
-                                      <img t-att-src="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_front?download=true' % req.id" style="max-width:100%; max-height:220px; border:1px solid #ddd; padding:6px; border-radius:10px;"/>
-                                    </t>
-                                    <t t-if="front_is_pdf">
-                                      <div class="hrmis-help" style="margin-top:6px;">
+                              <t t-if="req.hrmis_cnic_front">
+                                <div class="mt-2">
+                                  <t t-if="not front_is_pdf">
+                                    <img t-att-src="front_url" style="max-width:100%; max-height:220px; border:1px solid #ddd; padding:6px; border-radius:10px;"/>
+                                  </t>
+                                  <t t-if="front_is_pdf">
+                                    <div class="hrmis-help" style="margin-top:6px;">
 PDF uploaded:
-                                        <t t-esc="front_fn"/>
-                                      </div>
-                                    </t>
-                                    <div class="my-2">
-                                      <a class="hrmis-btn hrmis-btn--secondary" t-att-href="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_front?download=true' % req.id" target="_blank"> View / Download </a>
+                                      <t t-esc="front_fn"/>
                                     </div>
+                                  </t>
+                                  <div class="my-2">
+                                    <a class="hrmis-btn hrmis-btn--secondary" t-att-href="front_url" target="_blank"> View / Download </a>
                                   </div>
-                                </t>
-                                <t t-if="not req.hrmis_cnic_front">
-                                  <span class="text-muted">No CNIC front uploaded.</span>
-                                </t>
+                                </div>
+                              </t>
+                              <t t-if="not req.hrmis_cnic_front">
+                                <span class="text-muted">No CNIC front uploaded.</span>
                               </t>
                             </div>
                             <div class="hrmis-field">
@@ -231,37 +230,36 @@ PDF uploaded:
 CNIC Back Scan
                                 <span class="req">*</span>
                               </label>
+                              <t t-set="back_fn" t-value="(req.hrmis_cnic_back_filename or '')"/>
+                              <t t-set="back_is_pdf" t-value="back_fn.lower().endswith('.pdf')"/>
+                              <t t-set="back_url" t-value="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_back?download=true' % req.id"/>
                               <t t-if="is_draft and req.hrmis_cnic_back">
                                 <div style="font-size:12px;color:#666;margin-bottom:6px;">
 Already uploaded:
-                                  <t t-esc="req.hrmis_cnic_back_filename or 'CNIC Back'"/>
+                                  <t t-esc="back_fn or 'CNIC Back'"/>
                                 </div>
                               </t>
                               <t t-if="is_draft">
-                                <input class="hrmis-input" style="padding-top:8px" type="file" name="hrmis_cnic_back" accept="image/*,.pdf" t-att-required="'required' if not req.hrmis_cnic_back else None"/>
+                                <input class="hrmis-input" style="padding-top:8px" type="file" name="hrmis_cnic_back" accept="image/*,.pdf" t-att-required="'required' if not req.hrmis_cnic_back else None" t-att-data-existing-url="back_url if req.hrmis_cnic_back else None" t-att-data-existing-file-name="back_fn if req.hrmis_cnic_back else None" t-att-data-existing-is-image="'0' if back_is_pdf else '1' if req.hrmis_cnic_back else None"/>
                               </t>
-                              <t t-if="not is_draft">
-                                <t t-if="req.hrmis_cnic_back">
-                                  <t t-set="back_fn" t-value="(req.hrmis_cnic_back_filename or '')"/>
-                                  <t t-set="back_is_pdf" t-value="back_fn.lower().endswith('.pdf')"/>
-                                  <div class="mt-2">
-                                    <t t-if="not back_is_pdf">
-                                      <img t-att-src="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_back?download=true' % req.id" style="max-width:100%; max-height:220px; border:1px solid #ddd; padding:6px; border-radius:10px;"/>
-                                    </t>
-                                    <t t-if="back_is_pdf">
-                                      <div class="hrmis-help" style="margin-top:6px;">
+                              <t t-if="req.hrmis_cnic_back">
+                                <div class="mt-2">
+                                  <t t-if="not back_is_pdf">
+                                    <img t-att-src="back_url" style="max-width:100%; max-height:220px; border:1px solid #ddd; padding:6px; border-radius:10px;"/>
+                                  </t>
+                                  <t t-if="back_is_pdf">
+                                    <div class="hrmis-help" style="margin-top:6px;">
 PDF uploaded:
-                                        <t t-esc="back_fn"/>
-                                      </div>
-                                    </t>
-                                    <div class="my-2">
-                                      <a class="hrmis-btn hrmis-btn--secondary" t-att-href="'/web/content/hrmis.employee.profile.request/%s/hrmis_cnic_back?download=true' % req.id" target="_blank"> View / Download </a>
+                                      <t t-esc="back_fn"/>
                                     </div>
+                                  </t>
+                                  <div class="my-2">
+                                    <a class="hrmis-btn hrmis-btn--secondary" t-att-href="back_url" target="_blank"> View / Download </a>
                                   </div>
-                                </t>
-                                <t t-if="not req.hrmis_cnic_back">
-                                  <span class="text-muted">No CNIC back uploaded.</span>
-                                </t>
+                                </div>
+                              </t>
+                              <t t-if="not req.hrmis_cnic_back">
+                                <span class="text-muted">No CNIC back uploaded.</span>
                               </t>
                             </div>
                           </div>

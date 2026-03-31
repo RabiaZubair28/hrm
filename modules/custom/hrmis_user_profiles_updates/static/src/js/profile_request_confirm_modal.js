@@ -124,6 +124,51 @@ function _imgPreviewHtml(inputEl) {
   `;
 }
 
+function _existingFileName(inputEl) {
+  return (inputEl?.dataset?.existingFileName || "").trim();
+}
+
+function _existingFileUrl(inputEl) {
+  return (inputEl?.dataset?.existingUrl || "").trim();
+}
+
+function _existingIsImage(inputEl) {
+  return (inputEl?.dataset?.existingIsImage || "").trim() === "1";
+}
+
+function _existingPreviewHtml(inputEl) {
+  const url = _existingFileUrl(inputEl);
+  const fileName = _existingFileName(inputEl);
+  if (!url || !fileName) return "";
+
+  if (_existingIsImage(inputEl)) {
+    return `
+      <div style="display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;">
+        <div style="border:1px solid #ddd; border-radius:8px; padding:6px; background:#fff;">
+          <img
+            src="${_escapeHtml(url)}"
+            alt="${_escapeHtml(fileName)}"
+            style="max-width:220px; max-height:160px; border-radius:6px; display:block;"
+          />
+          <div style="font-size:12px; color:#666; margin-top:6px;">
+            ${_escapeHtml(fileName)}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div style="font-size:12px; color:#666;">
+      Saved file: <a href="${_escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${_escapeHtml(fileName)}</a>
+    </div>
+  `;
+}
+
+function _filePreviewHtml(inputEl) {
+  return _imgPreviewHtml(inputEl) || _existingPreviewHtml(inputEl) || "";
+}
+
 function _ul(items) {
   if (!items || !items.length) return "-";
   const li = items
@@ -359,8 +404,8 @@ function _buildSummary(form, tbody) {
 
   const cnicFrontInput = _qs(form, 'input[name="hrmis_cnic_front"]');
   const cnicBackInput = _qs(form, 'input[name="hrmis_cnic_back"]');
-  const cnicFrontName = _fileName(cnicFrontInput);
-  const cnicBackName = _fileName(cnicBackInput);
+  const cnicFrontName = _fileName(cnicFrontInput) || _existingFileName(cnicFrontInput);
+  const cnicBackName = _fileName(cnicBackInput) || _existingFileName(cnicBackInput);
 
   _addRow(tbody, "Personal No", employeeId);
   _addRow(tbody, "CNIC", cnic);
@@ -382,8 +427,8 @@ function _buildSummary(form, tbody) {
   // _addRow(tbody, "Postal Code", postalCode);
 
   if (cnicFrontName || cnicBackName) {
-    _addRow(tbody, "CNIC Front Preview", _imgPreviewHtml(cnicFrontInput) || "-");
-    _addRow(tbody, "CNIC Back Preview", _imgPreviewHtml(cnicBackInput) || "-");
+    _addRow(tbody, "CNIC Front Preview", _filePreviewHtml(cnicFrontInput) || "-");
+    _addRow(tbody, "CNIC Back Preview", _filePreviewHtml(cnicBackInput) || "-");
   }
 
   // ============ Posting Status (ONLY once; no duplicate "Substantive Posting — ..." rows) ============
