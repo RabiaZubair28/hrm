@@ -154,14 +154,27 @@ function _postingBaselineYmd(form) {
 // -----------------------
 function _normalizePmdc(raw) {
   const s = String(raw || "").toUpperCase();
-  const digits = (s.match(/\d/g) || []).join("").slice(0, 5);
-  const letters = (s.match(/[A-Z]/g) || []).join("");
-  const letter = letters.slice(0, 1);
+  const digits = (s.match(/\d/g) || []).join("");
+  const letter = ((s.match(/[A-Z]/g) || [])[0] || "");
 
-  if (digits.length < 5) return digits;
-  // 5 digits reached: show hyphen even before letter
-  if (!letter) return `${digits}-`;
-  return `${digits}-${letter}`;
+  // Long format: 000000-00-X
+  if (digits.length >= 6) {
+    const a = digits.slice(0, 6);
+    const b = digits.slice(6, 8);
+
+    if (a.length < 6) return a;
+    if (b.length === 0) return a;              // changed
+    if (b.length < 2) return `${a}-${b}`;
+    if (!letter) return `${a}-${b}`;           // changed
+    return `${a}-${b}-${letter}`;
+  }
+
+  // Short format: 00000-X
+  const a = digits.slice(0, 5);
+
+  if (a.length < 5) return a;
+  if (!letter) return a;                       // changed
+  return `${a}-${letter}`;
 }
 
 function _validatePmdc(el, { strict = false, showHint = false } = {}) {
@@ -172,43 +185,49 @@ function _validatePmdc(el, { strict = false, showHint = false } = {}) {
     .toUpperCase();
   const touched = el.dataset.touched === "1";
 
-  // Don't show anything by default until touched (unless explicitly asked)
   if (!touched && !showHint) {
     _clearError(el);
     el.setCustomValidity("");
     return true;
   }
 
-  // Always clear first
   _clearError(el);
   el.setCustomValidity("");
 
-  // If empty: show hint only when user focused/clicked
   if (_isEmpty(v)) {
     if (touched && showHint) {
-      _showError(el, "PMDC format is 00000-X (e.g., 72465-S)");
+      _showError(
+        el,
+        "PMDC format must be either 00000-X or 000000-00-X (e.g., 72465-S or 724651-04-M)"
+      );
     }
-    return true; // optional field: don't block
+    return true;
   }
 
-  const fullOk = /^\d{5}-[A-Z]$/.test(v);
-  const partialOk = /^\d{0,5}(-)?([A-Z])?$/.test(v) || /^\d{5}-$/.test(v);
+  const fullOk =
+    /^\d{5}-[A-Z]$/.test(v) ||
+    /^\d{6}-\d{2}-[A-Z]$/.test(v);
 
-  // While typing: show persistent hint/error until complete
+  const partialOk =
+    /^\d{0,5}(-)?([A-Z])?$/.test(v) ||
+    /^\d{0,6}(-)?(\d{0,2})?(-)?([A-Z])?$/.test(v);
+
   if (!fullOk) {
-    _showError(el, "PMDC format is 00000-X (e.g., 72465-S)");
+    _showError(
+      el,
+      "PMDC format must be either 00000-X or 000000-00-X (e.g., 72465-S or 724651-04-M)"
+    );
   }
 
-  // Only block submission when strict OR when user leaves field with invalid value
   if (strict && !fullOk) {
-    const msg = "PMDC No. must be like 72465-S";
+    const msg = "PMDC No. must be like 72465-S or 724651-04-M";
     el.setCustomValidity(msg);
     return false;
   }
 
-  // If not strict: allow partial typing
   if (!strict && !partialOk) {
-    const msg = "PMDC format is 00000-X (e.g., 72465-S)";
+    const msg =
+      "PMDC format must be either 00000-X or 000000-00-X (e.g., 72465-S or 724651-04-M)";
     el.setCustomValidity(msg);
     return false;
   }
@@ -877,50 +896,77 @@ function _initExtraValidations() {
   }
 
   if (pmdc) {
-    // show hint only after first focus
     pmdc.addEventListener("focus", () => {
       pmdc.dataset.touched = "1";
-      // If empty, show format hint but don't block submit (optional field)
+
       if (_isEmpty(pmdc.value)) {
         _clearError(pmdc);
         pmdc.setCustomValidity("");
-        _showError(pmdc, "PMDC format is 00000-X (e.g., 72465-S)");
+        _showError(
+          pmdc,
+          "PMDC format must be either 00000-X or 000000-00-X (e.g., 72465-S or 724651-04-M)"
+        );
       } else {
         _validatePmdc(pmdc, { strict: false, showHint: true });
       }
     });
-
+    
     pmdc.addEventListener("input", () => {
+      pmdc.dataset.touched = "1";
+
       const next = _normalizePmdc(pmdc.value);
       if (next !== pmdc.value) pmdc.value = next;
 
-      // only show messages after user has interacted
-      if (pmdc.dataset.touched === "1") {
-        _validatePmdc(pmdc, { strict: false, showHint: true });
+      if (_isEmpty(pmdc.value)) {
+        _clearError(pmdc);
+        pmdc.setCustomValidity("");
+        return;
+      }
+
+      _validatePmdc(pmdc, { strict: false, showHint: true });
+    });
+
+    pmdc.addEventListener("change", () => {
+      pmdc.dataset.touched = "1";
+
+      if (_isEmpty(pmdc.value)) {
+        _clearError(pmdc);
+        pmdc.setCustomValidity("");
+        return;
+      }
+
+      _validatePmdc(pmdc, { strict: true, showHint: true });
+    });
+
+    pmdc.addEventListener("blur", () => {
+      pmdc.dataset.touched = "1";
+
+      if (!_isEmpty(pmdc.value)) {
+        _validatePmdc(pmdc, { strict: true, showHint: true });
       } else {
-        // no default warnings before touch
         _clearError(pmdc);
         pmdc.setCustomValidity("");
       }
     });
 
-    pmdc.addEventListener("blur", () => {
-      // On blur: if user typed something, enforce full format
-      if (!_isEmpty(pmdc.value)) {
-        _validatePmdc(pmdc, { strict: true, showHint: true });
-      } else {
-        // if empty, clear error (optional field)
-        _clearError(pmdc);
-        pmdc.setCustomValidity("");
-      }
-    });
+    // IMPORTANT FIX:
+    // If value already exists after save/reload/login, validate it immediately.
+    if (!_isEmpty(pmdc.value)) {
+      pmdc.dataset.touched = "1";
+      _validatePmdc(pmdc, { strict: false, showHint: true });
+    }
   }
 
   if (email) {
     email.addEventListener("input", () => _validateEmail(email));
     email.addEventListener("blur", () => _validateEmail(email));
-  }
+    email.addEventListener("change", () => _validateEmail(email));
 
+    if (!_isEmpty(email.value)) {
+      _validateEmail(email);
+    }
+  }
+  
   if (postal) {
     postal.setAttribute("inputmode", "numeric");
     postal.setAttribute("maxlength", "5");
@@ -933,7 +979,6 @@ function _initExtraValidations() {
     postal.addEventListener("blur", () => _validatePostal(postal));
   }
 
-  // PMDC dates + prev posting + status/substantive/allowed depend on joining date
   const joining = _qs(form, 'input[name="hrmis_joining_date"]');
   if (joining) {
     joining.addEventListener("change", () => {
@@ -948,7 +993,6 @@ function _initExtraValidations() {
     postingStartMonth.addEventListener("input", () => _syncStatusDates(form));
   }
 
-  // PMDC date events
   const issue = _qs(form, 'input[name="hrmis_pmdc_issue_date"]');
   const expiry = _qs(form, 'input[name="hrmis_pmdc_expiry_date"]');
   if (issue) issue.addEventListener("change", () => _syncPmdcDates(form));
@@ -968,7 +1012,6 @@ function _initExtraValidations() {
       fnSync(form);
     });
     el.addEventListener("mousedown", () => {
-      // helps when clicking a disabled input (some browsers)
       el.dataset.touched = "1";
       fnSync(form);
     });
@@ -982,7 +1025,6 @@ function _initExtraValidations() {
     });
   }
 
-  // Mark touched + sync for status date fields
   const statusSelectors = [
     'input[name="frontend_suspension_date"]',
     'input[name="frontend_onleave_start"]',
@@ -994,10 +1036,7 @@ function _initExtraValidations() {
     _markTouchedAndSync(form, _qs(form, sel), _syncStatusDates);
   });
 
-  // Mark touched + sync for substantive/allowed fields (multiple possible names)
-  // IMPORTANT: also attach to month inputs in your QWeb
   const subAllowedSelectors = [
-    // Legacy date-based names
     'input[name="substantive_start_date"]',
     'input[name="substantive_end_date"]',
     'input[name="hrmis_substantive_start_date"]',
@@ -1014,8 +1053,6 @@ function _initExtraValidations() {
     'input[name="frontend_allowed_to_work_end"]',
     'input[name="frontend_allowed_to_work_start_date"]',
     'input[name="frontend_allowed_to_work_end_date"]',
-
-    // Your QWeb month inputs
     'input[type="month"][name="current_posting_start"]',
     'input[type="month"][name="allowed_start_month"]',
     'input[type="month"][name="allowed_end_month"]',
@@ -1027,11 +1064,6 @@ function _initExtraValidations() {
     });
   });
 
-  // Initial sync
-  // IMPORTANT: this will now show Joining warnings BY DEFAULT ON LOAD for:
-  // - Suspension date
-  // - current_posting_start month input(s)
-  // - allowed_start_month month input
   _syncPmdcDates(form);
   _syncAllPrevPosting(form);
   _syncStatusDates(form);

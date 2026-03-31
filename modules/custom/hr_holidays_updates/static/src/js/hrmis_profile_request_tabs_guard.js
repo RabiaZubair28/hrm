@@ -217,8 +217,125 @@ function _cadreNeedsPMDC(form) {
   );
 }
 
-function _validateEmployeeField(el) {
+function _validateEmployeeField(el, form) {
   if (!el) return true;
+
+  // PMDC:
+  // - format must be valid for ANY cadre if value exists
+  // - required only for selected cadres
+  if (el.matches('input[name="hrmis_pmdc_no"]')) {
+    const v = String(el.value || "").trim().toUpperCase();
+    const needsPmdc = _cadreNeedsPMDC(form);
+
+    // required only for selected cadres
+    if (needsPmdc && v === "") {
+      if (typeof el.setCustomValidity === "function") {
+        el.setCustomValidity("PMDC No. is required.");
+      }
+      _markEmployeeInvalid(el);
+      return false;
+    }
+
+    // optional for other cadres if empty
+    if (v === "") {
+      if (typeof el.setCustomValidity === "function") {
+        el.setCustomValidity("");
+      }
+      _clearEmployeeInvalid(el);
+      return true;
+    }
+
+    // if any value exists, validate format for ALL cadres
+    let ok = true;
+
+    if (typeof _validatePmdc === "function") {
+      ok = _validatePmdc(el, { strict: true, showHint: true });
+    } else {
+      ok =
+        /^\d{5}-[A-Z]$/.test(v) ||
+        /^\d{6}-\d{2}-[A-Z]$/.test(v);
+
+      if (typeof el.setCustomValidity === "function") {
+        el.setCustomValidity(
+          ok ? "" : "PMDC No. must be like 72465-S or 724651-04-M"
+        );
+      }
+    }
+
+    if (!ok) {
+      _markEmployeeInvalid(el);
+      return false;
+    }
+
+    if (typeof el.checkValidity === "function" && !el.checkValidity()) {
+      _markEmployeeInvalid(el);
+      return false;
+    }
+
+    _clearEmployeeInvalid(el);
+    return true;
+  }
+
+  // PMDC issue/expiry required only when cadre needs PMDC
+  if (
+    el.matches('input[name="hrmis_pmdc_issue_date"]') ||
+    el.matches('input[name="hrmis_pmdc_expiry_date"]')
+  ) {
+    if (!_cadreNeedsPMDC(form)) {
+      if (typeof el.setCustomValidity === "function") {
+        el.setCustomValidity("");
+      }
+      _clearEmployeeInvalid(el);
+      return true;
+    }
+
+    if (_isEmpty(el)) {
+      _markEmployeeInvalid(el);
+      return false;
+    }
+
+    if (typeof el.checkValidity === "function" && !el.checkValidity()) {
+      _markEmployeeInvalid(el);
+      return false;
+    }
+
+    _clearEmployeeInvalid(el);
+    return true;
+  }
+
+  // Email final submit validation
+  if (el.matches('input[name="hrmis_email"]')) {
+    const v = String(el.value || "").trim();
+
+    if (v === "") {
+      if (typeof el.setCustomValidity === "function") {
+        el.setCustomValidity("Email is required.");
+      }
+      _markEmployeeInvalid(el);
+      return false;
+    }
+
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    if (!emailOk) {
+      if (typeof el.setCustomValidity === "function") {
+        el.setCustomValidity("Please enter a valid email address.");
+      }
+      _markEmployeeInvalid(el);
+      return false;
+    }
+
+    if (typeof el.setCustomValidity === "function") {
+      el.setCustomValidity("");
+    }
+
+    if (typeof el.checkValidity === "function" && !el.checkValidity()) {
+      _markEmployeeInvalid(el);
+      return false;
+    }
+
+    _clearEmployeeInvalid(el);
+    return true;
+  }
 
   if (_isEmpty(el)) {
     _markEmployeeInvalid(el);
@@ -273,9 +390,9 @@ function _getEmployeeFieldsToValidate(form) {
 
   fields.push(bps);
   fields.push(contactNo);
-
+  fields.push(pmdcNo);
   if (_cadreNeedsPMDC(form)) {
-    fields.push(pmdcNo);
+    
     fields.push(pmdcIssue);
     fields.push(pmdcExpiry);
   }
@@ -292,7 +409,7 @@ function _findFirstInvalidEmployeeField(form) {
   const fields = _getEmployeeFieldsToValidate(form);
 
   for (const field of fields) {
-    if (!_validateEmployeeField(field)) {
+    if (!_validateEmployeeField(field, form)) {
       return field;
     }
   }
@@ -1310,6 +1427,9 @@ function _bind() {
   const form = _qs(document, "#profile_update_form");
   const btn = _qs(document, "#btn_open_confirm_modal");
   if (!form || !btn) return;
+  
+  form.setAttribute("novalidate", "novalidate");
+  form.noValidate = true; 
 
   if (btn.dataset.hrmisFullGuardBound === "1") return;
   btn.dataset.hrmisFullGuardBound = "1";

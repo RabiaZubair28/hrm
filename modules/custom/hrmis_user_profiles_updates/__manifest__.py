@@ -4,7 +4,7 @@
     'summary': "Staff Personal Information Profile - Read Only for Employees",
     'category': 'Human Resources',
     'author': "Humza Aqeel Shaikh",
-    'depends': ['hr'],
+    'depends': ['hr', 'hrmis_core'],
     'data': [
         # Security always first
         'security/ir.model.access.csv',

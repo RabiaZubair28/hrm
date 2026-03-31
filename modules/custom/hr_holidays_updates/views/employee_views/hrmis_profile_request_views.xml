@@ -101,7 +101,7 @@ Domicile
                             </div>
                             <div class="hrmis-field">
                               <label>
-Commission Year
+Commission Year (Month/Year)
                                 <span class="req">*</span>
                               </label>
                               <input class="hrmis-input" type="date" name="hrmis_commission_date" t-att-max="max_today_str" t-att-required="'required' if is_draft else None" t-att-value="req.hrmis_commission_date or current_employee.hrmis_commission_date or ''" t-att-readonly="'readonly' if not is_draft else None"/>
@@ -115,7 +115,7 @@ Merit Number
                             </div>
                             <div class="hrmis-field">
                               <label>
-Joining Date
+Joining Date (Month/Year)
                                 <span class="req">*</span>
                               </label>
                               <input class="hrmis-input" type="date" name="hrmis_joining_date" t-att-max="max_today_str" t-att-required="'required' if is_draft else None" t-att-value="req.hrmis_joining_date or current_employee.hrmis_joining_date or ''" t-att-readonly="'readonly' if not is_draft else None"/>
@@ -128,7 +128,7 @@ Cadre
                               <t t-set="current_cadre" t-value="req.hrmis_cadre or current_employee.hrmis_cadre"/>
                               <select class="hrmis-input js-other-select" name="hrmis_cadre" data-enable-search="1" data-other-name="hrmis_cadre_other_name" t-att-required="'required' if is_draft else None" t-att-disabled="'disabled' if not is_draft else None">
                                 <option value="" disabled="disabled" hidden="hidden" t-att-selected="not current_cadre">Select Cadre</option>
-                                <t t-foreach="env['hrmis.cadre'].search([], order='name')" t-as="cadre">
+                                <t t-foreach="env['hrmis.cadre'].search([('is_temp', '=', False)], order='name')" t-as="cadre">
                                   <option t-att-value="cadre.id" t-att-selected="current_cadre and current_cadre.id == cadre.id">
                                     <t t-esc="cadre.name"/>
                                   </option>

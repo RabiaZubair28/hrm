@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="hrmis_employees_page" name="HRMIS Employees Page">
+        <t t-call="hr_holidays_updates.hrmis_ui_layout">
+            <div class="container-fluid hrmis-employees-page">
+                <div class="hrmis-employees-header">
+                    <div>
+                        <h2 class="hrmis-employees-title">Employees</h2>
+                        <p class="hrmis-employees-subtitle">
+                            Basic employee profile requests listing with search, filters, and pagination.
+                        </p>
+                    </div>
+                    <div class="hrmis-employees-summary">
+                        <span class="hrmis-summary-pill">
+                            Total: <strong><t t-esc="total"/></strong>
+                        </span>
+                        <span class="hrmis-summary-pill">
+                            Per page: <strong><t t-esc="page_size"/></strong>
+                        </span>
+                    </div>
+                </div>
+
+                <form method="get" action="/hrmis/employees" class="hrmis-employees-filters">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-lg-4 col-md-6">
+                            <label class="form-label">Search</label>
+                            <input type="text"
+                                   name="q"
+                                   class="form-control"
+                                   t-att-value="q"
+                                   placeholder="Merit no, CNIC, PMDC, employee, login, contact..."/>
+                        </div>
+
+                        <div class="col-lg-2 col-md-6">
+                            <label class="form-label">State</label>
+                            <select name="state" class="form-select">
+                                <option value="">All</option>
+                                <t t-foreach="state_options" t-as="opt">
+                                    <option t-att-value="opt[0]" t-att-selected="state == opt[0] and 'selected' or None">
+                                        <t t-esc="opt[1]"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+
+                        <div class="col-lg-2 col-md-6">
+                            <label class="form-label">Gender</label>
+                            <select name="gender" class="form-select">
+                                <option value="">All</option>
+                                <t t-foreach="gender_options" t-as="opt">
+                                    <option t-att-value="opt[0]" t-att-selected="gender == opt[0] and 'selected' or None">
+                                        <t t-esc="opt[1]"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+
+                        <div class="col-lg-2 col-md-6">
+                            <label class="form-label">Current Status</label>
+                            <select name="current_status" class="form-select">
+                                <option value="">All</option>
+                                <t t-foreach="current_status_options" t-as="opt">
+                                    <option t-att-value="opt[0]" t-att-selected="current_status == opt[0] and 'selected' or None">
+                                        <t t-esc="opt[1]"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+
+                        <div class="col-lg-2 col-md-6">
+                            <label class="form-label">Cadre</label>
+                            <select name="cadre_id" class="form-select">
+                                <option value="">All</option>
+                                <t t-foreach="cadres" t-as="cadre">
+                                    <option t-att-value="cadre.id" t-att-selected="cadre_id == cadre.id and 'selected' or None">
+                                        <t t-esc="cadre.name"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+
+                        <div class="col-12 hrmis-filter-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa fa-search me-1"/> Apply
+                            </button>
+                            <a href="/hrmis/employees" class="btn btn-light border hrmis-btn-reset">
+                                Reset
+                            </a>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="hrmis-table-wrap">
+                    <div class="table-responsive">
+                        <table class="table hrmis-employees-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Merit / Identity</th>
+                                    <th>Employee</th>
+                                    <th>Job Info</th>
+                                    <th>Posting</th>
+                                    <th>Contact</th>
+                                    <th>Status</th>
+                                    <th class="text-center">Quick View</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-if="rows">
+                                    <t t-foreach="rows" t-as="row">
+                                        <tr t-att-class="'gender-row gender-' + (row['gender'] or 'other')">
+                                            <td>
+                                                <div class="hrmis-cell-stack">
+                                                    <div>
+                                                        <span class="hrmis-label">Merit:</span>
+                                                        <strong><t t-esc="row['merit_number']"/></strong>
+                                                    </div>
+                                                    <div>
+                                                        <span class="hrmis-label">CNIC:</span>
+                                                        <t t-esc="row['cnic']"/>
+                                                    </div>
+                                                    <div>
+                                                        <span class="hrmis-label">PMDC:</span>
+                                                        <t t-esc="row['pmdc_no']"/>
+                                                    </div>
+                                                    <div class="mt-1">
+                                                        <span t-att-class="'badge rounded-pill gender-badge gender-badge-' + (row['gender'] or 'other')">
+                                                            <t t-esc="row['gender_label']"/>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td>
+                                                <div class="hrmis-cell-stack">
+                                                    <div class="hrmis-employee-name">
+                                                        <t t-esc="row['employee_name']"/>
+                                                    </div>
+                                                    <div>
+                                                        <span class="hrmis-label">Login:</span>
+                                                        <span class="text-muted"><t t-esc="row['login']"/></span>
+                                                    </div>
+                                                    <div>
+                                                        <span class="hrmis-label">Domicile:</span>
+                                                        <t t-esc="row['domicile']"/>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td>
+                                                <div class="hrmis-cell-stack">
+                                                    <div>
+                                                        <span class="hrmis-label">Cadre:</span>
+                                                        <t t-esc="row['cadre_name']"/>
+                                                    </div>
+                                                    <div>
+                                                        <span class="hrmis-label">Designation:</span>
+                                                        <span t-att-class="row['designation_is_other'] and 'hrmis-highlight-other' or ''">
+                                                            <t t-esc="row['designation_name']"/>
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span class="hrmis-label">BPS:</span>
+                                                        <t t-esc="row['bps']"/>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td>
+                                                <div class="hrmis-cell-stack">
+                                                    <div>
+                                                        <span class="hrmis-label">District:</span>
+                                                        <t t-esc="row['district_name']"/>
+                                                    </div>
+                                                    <div>
+                                                        <span class="hrmis-label">Facility:</span>
+                                                        <span t-att-class="row['facility_is_other'] and 'hrmis-highlight-other' or ''">
+                                                            <t t-esc="row['facility_name']"/>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td>
+                                                <div class="hrmis-cell-stack">
+                                                    <div>
+                                                        <span class="hrmis-label">Contact:</span>
+                                                        <t t-esc="row['contact_info']"/>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td>
+                                                <div class="hrmis-cell-stack">
+                                                    <div>
+                                                        <span t-att-class="'badge rounded-pill state-badge state-' + (row['state'] or 'draft')">
+                                                            <t t-esc="row['state_label']"/>
+                                                        </span>
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <span class="hrmis-label">Current:</span>
+                                                        <t t-esc="row['current_status_label']"/>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td class="text-center">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-primary hrmis-open-quick-view"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#hrmisEmployeeQuickViewModal"
+                                                        t-att-data-employee_name="row['employee_name']"
+                                                        t-att-data-login="row['login']"
+                                                        t-att-data-merit_number="row['merit_number']"
+                                                        t-att-data-cnic="row['cnic']"
+                                                        t-att-data-pmdc_no="row['pmdc_no']"
+                                                        t-att-data-gender="row['gender_label']"
+                                                        t-att-data-cadre_name="row['cadre_name']"
+                                                        t-att-data-designation_name="row['designation_name']"
+                                                        t-att-data-bps="row['bps']"
+                                                        t-att-data-district_name="row['district_name']"
+                                                        t-att-data-facility_name="row['facility_name']"
+                                                        t-att-data-contact_info="row['contact_info']"
+                                                        t-att-data-domicile="row['domicile']"
+                                                        t-att-data-state_label="row['state_label']"
+                                                        t-att-data-current_status_label="row['current_status_label']">
+                                                    View
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                                <t t-if="not rows">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            No records found for the selected filters.
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="hrmis-pagination-wrap">
+                    <t t-call="website.pager"/>
+                </div>
+
+                <t t-call="sanctioned_posts.hrmis_employee_quick_view_modal"/>
+            </div>
+        </t>
+    </template>
+
+    <template id="hrmis_employee_quick_view_modal" name="HRMIS Employee Quick View Modal">
+        <div class="modal fade" id="hrmisEmployeeQuickViewModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Employee Quick View</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"/>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6"><strong>Name:</strong> <span data-field="employee_name">-</span></div>
+                            <div class="col-md-6"><strong>Login:</strong> <span data-field="login">-</span></div>
+
+                            <div class="col-md-6"><strong>Merit Number:</strong> <span data-field="merit_number">-</span></div>
+                            <div class="col-md-6"><strong>CNIC:</strong> <span data-field="cnic">-</span></div>
+
+                            <div class="col-md-6"><strong>PMDC No:</strong> <span data-field="pmdc_no">-</span></div>
+                            <div class="col-md-6"><strong>Gender:</strong> <span data-field="gender">-</span></div>
+
+                            <div class="col-md-6"><strong>Cadre:</strong> <span data-field="cadre_name">-</span></div>
+                            <div class="col-md-6"><strong>Designation:</strong> <span data-field="designation_name">-</span></div>
+
+                            <div class="col-md-6"><strong>BPS:</strong> <span data-field="bps">-</span></div>
+                            <div class="col-md-6"><strong>District:</strong> <span data-field="district_name">-</span></div>
+
+                            <div class="col-md-6"><strong>Facility:</strong> <span data-field="facility_name">-</span></div>
+                            <div class="col-md-6"><strong>Contact Info:</strong> <span data-field="contact_info">-</span></div>
+
+                            <div class="col-md-6"><strong>Domicile:</strong> <span data-field="domicile">-</span></div>
+                            <div class="col-md-6"><strong>State:</strong> <span data-field="state_label">-</span></div>
+
+                            <div class="col-md-12"><strong>Current Status:</strong> <span data-field="current_status_label">-</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</odoo>

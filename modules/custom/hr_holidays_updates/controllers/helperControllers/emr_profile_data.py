@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging
+import os
+
+from odoo.addons.hrmis_core.constants.emr_districts import STATIC_DISTRICTS
+from odoo.addons.hrmis_core.constants.emr_facilities import STATIC_FACILITIES
 
 _logger = logging.getLogger(__name__)
 
@@ -8,160 +12,34 @@ class EmrProfileDataMixin:
     """
     EMR-backed helper mixin for profile form data.
 
-    Important:
-    - Rest of app should only use normalized rows
-    - Endpoint choice stays hidden inside helper
-    - When API changes later, only _get_all_emr_facilities() / _get_emr_facilities()
-      should need adjustment
+    Behavior:
+    - APP_ENV=local -> use static fallback data
+    - APP_ENV anything else (or empty/missing) -> use EMR API
     """
-    # =========================================================
-    # TEMP STATIC FALLBACK
-    # Set to False when EMR APIs are back
-    # =========================================================
-    _USE_EMR_STATIC_FALLBACK = False
 
-    _STATIC_DISTRICTS = [
-        {"id": 1, "name": "Karachi"},
-        {"id": 2, "name": "Hyderabad"},
-        {"id": 3, "name": "Sukkur"},
-        {"id": 4, "name": "Larkana"},
-        {"id": 5, "name": "Mirpurkhas"},
-        {"id": 6, "name": "Shaheed Benazirabad"},
-        {"id": 7, "name": "Khairpur"},
-        {"id": 8, "name": "Ghotki"},
-        {"id": 9, "name": "Badin"},
-        {"id": 10, "name": "Tharparkar"},
-    ]
+    _STATIC_DISTRICTS = STATIC_DISTRICTS
+    _STATIC_FACILITIES = STATIC_FACILITIES
 
-    _STATIC_FACILITIES = [
-        {
-            "id": 2019,
-            "name": "Jinnah Postgraduate Medical Centre",
-            "code": "JPMC",
-            "district": {"id": 1, "name": "Karachi"},
-        },
-        {
-            "id": 2020,
-            "name": "Civil Hospital Karachi",
-            "code": "CHK",
-            "district": {"id": 1, "name": "Karachi"},
-        },
-        {
-            "id": 2021,
-            "name": "Abbasi Shaheed Hospital",
-            "code": "ASH",
-            "district": {"id": 1, "name": "Karachi"},
-        },
-        {
-            "id": 2022,
-            "name": "Sindh Government Hospital Liaquatabad",
-            "code": "SGHL",
-            "district": {"id": 1, "name": "Karachi"},
-        },
-        {
-            "id": 2023,
-            "name": "Liaquat University Hospital",
-            "code": "LUH",
-            "district": {"id": 2, "name": "Hyderabad"},
-        },
-        {
-            "id": 2024,
-            "name": "Civil Hospital Hyderabad",
-            "code": "CHY",
-            "district": {"id": 2, "name": "Hyderabad"},
-        },
-        {
-            "id": 2025,
-            "name": "Taluka Hospital Latifabad",
-            "code": "THL",
-            "district": {"id": 2, "name": "Hyderabad"},
-        },
-        {
-            "id": 2026,
-            "name": "Sukkur Civil Hospital",
-            "code": "SCH",
-            "district": {"id": 3, "name": "Sukkur"},
-        },
-        {
-            "id": 2027,
-            "name": "Ghulam Muhammad Mahar Medical Hospital",
-            "code": "GMMMH",
-            "district": {"id": 3, "name": "Sukkur"},
-        },
-        {
-            "id": 2028,
-            "name": "Taluka Hospital Rohri",
-            "code": "THR",
-            "district": {"id": 3, "name": "Sukkur"},
-        },
-        {
-            "id": 2029,
-            "name": "Chandka Medical College Hospital",
-            "code": "CMCH",
-            "district": {"id": 4, "name": "Larkana"},
-        },
-        {
-            "id": 2030,
-            "name": "District Headquarters Hospital Larkana",
-            "code": "DHHL",
-            "district": {"id": 4, "name": "Larkana"},
-        },
-        {
-            "id": 2031,
-            "name": "Civil Hospital Mirpurkhas",
-            "code": "CHM",
-            "district": {"id": 5, "name": "Mirpurkhas"},
-        },
-        {
-            "id": 2032,
-            "name": "Taluka Hospital Digri",
-            "code": "THD",
-            "district": {"id": 5, "name": "Mirpurkhas"},
-        },
-        {
-            "id": 2033,
-            "name": "Peoples Medical University Hospital",
-            "code": "PMUH",
-            "district": {"id": 6, "name": "Shaheed Benazirabad"},
-        },
-        {
-            "id": 2034,
-            "name": "Civil Hospital Nawabshah",
-            "code": "CHN",
-            "district": {"id": 6, "name": "Shaheed Benazirabad"},
-        },
-        {
-            "id": 2035,
-            "name": "Civil Hospital Khairpur",
-            "code": "CHKP",
-            "district": {"id": 7, "name": "Khairpur"},
-        },
-        {
-            "id": 2036,
-            "name": "District Headquarters Hospital Ghotki",
-            "code": "DHHG",
-            "district": {"id": 8, "name": "Ghotki"},
-        },
-        {
-            "id": 2037,
-            "name": "Civil Hospital Badin",
-            "code": "CHB",
-            "district": {"id": 9, "name": "Badin"},
-        },
-        {
-            "id": 2038,
-            "name": "District Headquarters Hospital Mithi",
-            "code": "DHHM",
-            "district": {"id": 10, "name": "Tharparkar"},
-        },
-    ]
+    def _get_app_env(self):
+        return (os.getenv("APP_ENV") or "").strip().lower()
 
-    def _use_static_emr_data(self):
-        return bool(getattr(self, "_USE_EMR_STATIC_FALLBACK", False))
+    def _use_static_emr_data(self, env=None):
+        app_env = self._get_app_env()
+        use_static = app_env == "local"
+
+        _logger.warning(
+            "[HRMIS][EMR] APP_ENV=%s use_static=%s",
+            app_env or "<empty>",
+            use_static,
+        )
+        return use_static
 
     def _get_static_emr_districts(self):
         _logger.warning("[HRMIS][EMR] Using STATIC district fallback data")
-        districts = [self._normalize_district_row(r) for r in (self._STATIC_DISTRICTS or [])]
+        districts = [
+            self._normalize_district_row(r)
+            for r in (self._STATIC_DISTRICTS or [])
+        ]
         return districts, None
 
     def _get_static_emr_facilities(self, district_id=None, page=1, limit=2500):
@@ -194,7 +72,6 @@ class EmrProfileDataMixin:
         return facilities, meta, None
 
     def _emr_get_json(self, env, path, *, params=None, cache=True):
-
         try:
             resp = env["hrmis.emr.api.client"].sudo().get(
                 path,
@@ -206,7 +83,10 @@ class EmrProfileDataMixin:
                 msg = resp.get("message") or "EMR request failed."
 
                 if "not allowed for this client" in msg.lower():
-                    msg = "This server is not authorized to access the EMR service. Please contact IT support or the system administrator."
+                    msg = (
+                        "This server is not authorized to access the EMR service. "
+                        "Please contact IT support or the system administrator."
+                    )
 
                 _logger.error("[HRMIS][EMR] API ERROR path=%s message=%s", path, msg)
 
@@ -302,7 +182,7 @@ class EmrProfileDataMixin:
             or ""
         )
 
-        normalized = {
+        return {
             "id": row.get("id"),
             "name": row.get("name") or "",
             "code": row.get("code") or "",
@@ -312,13 +192,9 @@ class EmrProfileDataMixin:
             "level_of_care": row.get("level_of_care") or "",
         }
 
-        return normalized
-
-
     def _get_emr_districts(self, env):
-        if self._use_static_emr_data():
+        if self._use_static_emr_data(env):
             return self._get_static_emr_districts()
-
 
         resp = self._emr_get_json(env, "/districts", cache=True)
 
@@ -330,36 +206,64 @@ class EmrProfileDataMixin:
         return districts, None
 
     def _get_emr_facilities(self, env, *, district_id=None, page=1, limit=2500):
-        """
-        Preferred district-specific fetch.
-
-        Returns:
-            (facilities, meta, error_message)
-        """
-        if self._use_static_emr_data():
+        if self._use_static_emr_data(env):
             return self._get_static_emr_facilities(
                 district_id=district_id,
                 page=page,
                 limit=limit,
             )
 
+        resp = self._emr_get_json(
+            env,
+            "/facilities",
+            params={"page": page, "limit": limit},
+            cache=True,
+        )
+
         empty_meta = {
-            "page": 1,
+            "page": page,
             "limit": limit,
             "count": 0,
             "lastPage": 1,
         }
 
-        if not district_id:
-            _logger.warning("[HRMIS][EMR] No district_id provided for district-specific facilities fetch")
-            return [], empty_meta, "No district selected for facility fetch."
+        if not resp.get("ok"):
+            return [], empty_meta, resp.get("message") or "Failed to fetch facilities from EMR."
+
+        rows = self._extract_api_rows(resp)
+        meta = self._extract_api_meta(resp)
+        facilities = [self._normalize_facility_row(r) for r in rows]
+
+        if district_id:
+            facilities = self._filter_facilities_by_district(
+                facilities,
+                district_id=district_id,
+            )
+            meta["count"] = len(facilities)
+
+        return facilities, meta, None
+
+    def _get_all_emr_facilities(self, env, *, page=1, limit=2500):
+        if self._use_static_emr_data(env):
+            return self._get_static_emr_facilities(
+                district_id=None,
+                page=page,
+                limit=limit,
+            )
 
         resp = self._emr_get_json(
             env,
-            f"/facilities",
+            "/facilities",
             params={"page": page, "limit": limit},
             cache=True,
         )
+
+        empty_meta = {
+            "page": page,
+            "limit": limit,
+            "count": 0,
+            "lastPage": 1,
+        }
 
         if not resp.get("ok"):
             return [], empty_meta, resp.get("message") or "Failed to fetch facilities from EMR."
@@ -369,31 +273,6 @@ class EmrProfileDataMixin:
         facilities = [self._normalize_facility_row(r) for r in rows]
 
         return facilities, meta, None
-
-    def _get_all_emr_facilities(self, env, *, page=1, limit=2500):
-        """
-        Temporary fallback implementation.
-        """
-        if self._use_static_emr_data():
-            return self._get_static_emr_facilities(
-                district_id=None,
-                page=page,
-                limit=limit,
-            )
-
-        fallback_district_id = 1
-
-        _logger.warning(
-            "[HRMIS][EMR] _get_all_emr_facilities is temporarily using fallback district endpoint district_id=%s",
-            fallback_district_id,
-        )
-
-        return self._get_emr_facilities(
-            env,
-            district_id=fallback_district_id,
-            page=page,
-            limit=limit,
-        )
 
     def _filter_facilities_by_district(self, facilities, district_id=None):
         if not district_id:
@@ -405,6 +284,7 @@ class EmrProfileDataMixin:
             _logger.warning("[HRMIS][EMR] Invalid district_id for filtering: %s", district_id)
             return []
 
-        filtered = [f for f in (facilities or []) if f.get("district_id") == district_id]
-
-        return filtered
+        return [
+            f for f in (facilities or [])
+            if f.get("district_id") == district_id
+        ]

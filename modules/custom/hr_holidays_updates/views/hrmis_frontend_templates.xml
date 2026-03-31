@@ -175,6 +175,8 @@
                     t-value="current_employee and ((('facility_id' in current_employee._fields and current_employee.facility_id and current_employee.facility_id.name) or ('hrmis_facility_id' in current_employee._fields and current_employee.hrmis_facility_id and current_employee.hrmis_facility_id.name) or '')) or ''" />
                 <t t-set="district_name"
                     t-value="current_employee and ((('district_id' in current_employee._fields and current_employee.district_id and current_employee.district_id.name) or ('hrmis_district_id' in current_employee._fields and current_employee.hrmis_district_id and current_employee.hrmis_district_id.name) or '')) or ''" />
+                <t t-set="is_local_static_mode"
+                    t-value="request.env['hrmis.server.env'].sudo().is_local_server()" />
                 <div class="hrmis-body">
                     <div class="hrmis-drawer-backdrop js-hrmis-drawer-backdrop" aria-hidden="true" />
                     <aside class="hrmis-sidebar">
@@ -263,11 +265,26 @@
                                     <img src="https://res.cloudinary.com/dxokfhkhu/image/upload/v1772994253/ICONS_1_-01_b6kfzg.svg" alt="Menu"
          style="width:20px; height:20px; display:block;" />
                                 </button>
-                                <div style="display: flex; flex-direction: column; ">
-       
-                                    <div class="hrmis-panel__title hrmis-pr-title"> Welcome
-                                        <t
-                                            t-esc="request.env.user.name" /> !
+                               <div style="display:flex; flex-direction:column;">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <div class="hrmis-panel__title hrmis-pr-title">
+                                            Welcome <t t-esc="request.env.user.name" /> !
+                                        </div>
+
+                                        <t t-if="is_local_static_mode">
+                                            <span
+                                                title="LOCAL mode: districts/facilities are being served from static data files"
+                                                style="
+                                                    display:inline-block;
+                                                    width:10px;
+                                                    height:10px;
+                                                    border-radius:50%;
+                                                    background:#dc3545;
+                                                    box-shadow:0 0 0 1px rgba(0,0,0,0.15);
+                                                    flex:0 0 10px;
+                                                "
+                                            />
+                                        </t>
                                     </div>
                                 </div>
                             </div>

@@ -1,0 +1,202 @@
+.hrmis-employees-page {
+    padding-top: 24px;
+    padding-bottom: 32px;
+}
+
+.hrmis-employees-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.hrmis-employees-title {
+    margin: 0 0 4px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.hrmis-employees-subtitle {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.hrmis-employees-summary {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.hrmis-summary-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.hrmis-employees-filters {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.hrmis-filter-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.hrmis-btn-reset {
+    min-width: 90px;
+}
+
+.hrmis-table-wrap {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 14px rgba(15, 23, 42, 0.05);
+}
+
+.hrmis-employees-table {
+    margin-bottom: 0;
+}
+
+.hrmis-employees-table thead th {
+    background: #f8fafc;
+    color: #111827;
+    font-size: 13px;
+    font-weight: 700;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.hrmis-employees-table tbody tr {
+    border-left: 6px solid transparent;
+    transition: background-color 0.18s ease;
+}
+
+.hrmis-employees-table tbody tr:hover {
+    background: #fafcff;
+}
+
+.hrmis-employees-table tbody td {
+    vertical-align: top;
+    padding-top: 14px;
+    padding-bottom: 14px;
+}
+
+.gender-row.gender-male {
+    border-left-color: #7dd3fc;
+}
+
+.gender-row.gender-female {
+    border-left-color: #f9a8d4;
+}
+
+.gender-row.gender-other {
+    border-left-color: #cbd5e1;
+}
+
+.hrmis-cell-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 150px;
+}
+
+.hrmis-label {
+    color: #6b7280;
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+.hrmis-employee-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.gender-badge {
+    font-size: 11px;
+    padding: 6px 10px;
+}
+
+.gender-badge-male {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.gender-badge-female {
+    background: #fce7f3;
+    color: #9d174d;
+}
+
+.gender-badge-other {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.state-badge {
+    font-size: 11px;
+    padding: 6px 10px;
+}
+
+.state-draft {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.state-submitted {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.state-approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.state-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.hrmis-highlight-other {
+    display: inline-block;
+    background: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fdba74;
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-weight: 600;
+}
+
+.hrmis-pagination-wrap {
+    margin-top: 18px;
+}
+
+@media (max-width: 991px) {
+    .hrmis-employees-title {
+        font-size: 24px;
+    }
+
+    .hrmis-filter-actions {
+        flex-wrap: wrap;
+    }
+
+    .hrmis-cell-stack {
+        min-width: 120px;
+    }
+}

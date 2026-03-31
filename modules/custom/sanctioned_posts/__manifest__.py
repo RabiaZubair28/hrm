@@ -13,11 +13,15 @@
         "views/user_config_templates.xml",    
         "views/user_queue_templates.xml",
         "data/ir_cron.xml",
+         'views/hrmis_employees_nav.xml',
+        'views/hrmis_employees_templates.xml',
     ],
     'assets': {
     'web.assets_frontend': [
         'sanctioned_posts/static/src/js/hrmis_user_config_xlsx_sheet_picker.js',
         'sanctioned_posts/static/src/js/xlsx.full.min.js',
+        'sanctioned_posts/static/src/css/hrmis_employees.css',
+        'sanctioned_posts/static/src/js/hrmis_employees.js',
     ],
 },
     

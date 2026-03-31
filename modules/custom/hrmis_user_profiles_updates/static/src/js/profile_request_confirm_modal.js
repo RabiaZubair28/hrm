@@ -59,8 +59,33 @@ function _addRow(tbody, label, value) {
   tbody.appendChild(tr);
 }
 
+const MONTH_YEAR_FIELD_NAMES = new Set([
+  "hrmis_commission_date",
+  "hrmis_joining_date",
+  "current_posting_start",
+  "allowed_start_month",
+  "frontend_deputation_start",
+  "frontend_eol_end",
+  "posting_start[]",
+  "posting_end[]",
+  "qualification_start[]",
+  "qualification_end[]",
+  "promotion_date[]",
+]);
+
+function _toMonthYear(v) {
+  const raw = (v || "").trim();
+  if (!raw) return "";
+
+  const match = raw.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/);
+  if (!match) return raw;
+
+  const [, year, month] = match;
+  return `${month}/${year}`;
+}
+
 function _fmtMonth(v) {
-  return (v || "").trim() || "-";
+  return _toMonthYear(v) || "-";
 }
 
 function _fmtDate(v) {
@@ -182,6 +207,12 @@ function _getControlValue(controlEl, fieldEl) {
 
   const tag = (controlEl.tagName || "").toLowerCase();
   const type = (controlEl.getAttribute("type") || "").toLowerCase();
+  const name = (controlEl.getAttribute("name") || "").trim();
+  const label = _getFieldLabel(fieldEl);
+  const isMonthYearField =
+    type === "month" ||
+    MONTH_YEAR_FIELD_NAMES.has(name) ||
+    /month\s*\/\s*year/i.test(label);
 
   if (tag === "select") {
     // ✅ if Other selected, show typed other value
@@ -197,6 +228,7 @@ function _getControlValue(controlEl, fieldEl) {
     if (type === "checkbox") return _fmtCheckbox(controlEl);
     if (type === "radio") return controlEl.checked ? "Yes" : "No";
     if (type === "file") return _fileName(controlEl) || "-";
+    if (isMonthYearField) return _fmtMonth(controlEl.value);
     return (controlEl.value || "").trim();
   }
 
@@ -336,9 +368,9 @@ function _buildSummary(form, tbody) {
   _addRow(tbody, "Gender", _getSelectedText(genderSel));
   _addRow(tbody, "Date of Birth", birthday);
   _addRow(tbody, "Domicile", _getSelectedText(domicileSel));
-  _addRow(tbody, "Commission Year", commission);
+  _addRow(tbody, "Commission Year", _fmtMonth(commission));
   _addRow(tbody, "Merit Number", merit);
-  _addRow(tbody, "Joining Date", joining);
+  _addRow(tbody, "Joining Date", _fmtMonth(joining));
   _addRow(tbody, "Cadre", _getSelectedText(cadreSel));
   _addRow(tbody, "Contact Number", contact);
 
@@ -347,7 +379,7 @@ function _buildSummary(form, tbody) {
   _addRow(tbody, "PMDC Expiry Date", _fmtDate(pmdcExpiry));
   _addRow(tbody, "Email", email);
   _addRow(tbody, "Address", address);
-  _addRow(tbody, "Postal Code", postalCode);
+  // _addRow(tbody, "Postal Code", postalCode);
 
   if (cnicFrontName || cnicBackName) {
     _addRow(tbody, "CNIC Front Preview", _imgPreviewHtml(cnicFrontInput) || "-");
