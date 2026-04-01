@@ -661,7 +661,32 @@
   border-right: 1px solid #cfd7da;
 }
 
+.hrmis-checkbox-wrap {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  box-sizing: border-box;
+}
 
+.hrmis-check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  width: 100%;
+  cursor: pointer;
+}
+
+.hrmis-check-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
 
 @media (max-width: 1200px) {
   .hrmis-topbar {

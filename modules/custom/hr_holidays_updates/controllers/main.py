@@ -1521,15 +1521,34 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         # -----------------------
         # Commission date not future
         # -----------------------
+        service_regularized = bool(post.get("service_regularized"))
+        service_regularized_date_str = (post.get("service_regularized_date") or "").strip()
+
+        if service_regularized:
+            try:
+                service_regularized_date = fields.Date.to_date(service_regularized_date_str) if service_regularized_date_str else None
+            except Exception:
+                service_regularized_date = None
+
+            if not service_regularized_date:
+                return "Service Regularization Date is required."
+            if service_regularized_date > fields.Date.today():
+                return "Service Regularization Date cannot be in the future."
+
+        # -----------------------
+        # Commission date (conditional on commission exam)
+        # -----------------------
+        commision_exam = bool(post.get("commision_exam"))
         comm_str = (post.get("hrmis_commission_date") or "").strip()
-        try:
-            comm = fields.Date.to_date(comm_str) if comm_str else None
-        except Exception:
-            comm = None
-        if not comm:
-            return "Invalid Commission Date."
-        if comm > fields.Date.today():
-            return "Commission Date cannot be in the future."
+        if commision_exam:
+            try:
+                comm = fields.Date.to_date(comm_str) if comm_str else None
+            except Exception:
+                comm = None
+            if not comm:
+                return "Commission Date is required."
+            if comm > fields.Date.today():
+                return "Commission Date cannot be in the future."
 
         # -----------------------
         # Joining date not future
@@ -1624,6 +1643,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "qualification_date": req.qualification_date or employee.qualification_date or "",
             "year_qualification": req.year_qualification or employee.year_qualification or "",
             "date_promotion": req.date_promotion or employee.date_promotion or "",
+            "service_regularized": req.service_regularized or False,
+            "service_regularized_date": req.service_regularized_date or "",
+            "commision_exam": req.commision_exam or False,
         }
    
 
@@ -1891,19 +1913,19 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             )
 
         return None
+    
+
     def _validate_required_fields_or_form_error(self, env, employee, req, post):
         required_fields = {
             "hrmis_cnic": "CNIC",
             "hrmis_father_name": "Father's Name",
             "gender": "Gender",
             "hrmis_joining_date": "Joining Date",
-            "hrmis_commission_date": "Commission Date",
             "hrmis_merit_number": "Merit Number",
             "hrmis_cadre": "Cadre",
             "birthday": "Date Of Birth",
             "hrmis_cnic_front": "CNIC Front Scan",
             "hrmis_cnic_back": "CNIC Back Scan",
-            "hrmis_merit_number": "Merit Number",
             "hrmis_contact_info": "Contact Number",
             "hrmis_domicile": "Domicile",
         }
@@ -1911,13 +1933,19 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
         missing = []
         for field, label in required_fields.items():
             if field in ("hrmis_cnic_front", "hrmis_cnic_back"):
-                already = bool(getattr(req, field, False))  # already uploaded on req
+                already = bool(getattr(req, field, False))
                 file_obj = request.httprequest.files.get(field)
                 if not already and not file_obj:
                     missing.append(label)
             else:
                 if not (post.get(field) or "").strip():
                     missing.append(label)
+
+        if post.get("service_regularized") and not (post.get("service_regularized_date") or "").strip():
+            missing.append("Service Regularization Date")
+
+        if post.get("commision_exam") and not (post.get("hrmis_commission_date") or "").strip():
+            missing.append("Commission Date")
 
         if missing:
             return self._render_profile_form(
@@ -2084,6 +2112,9 @@ class HrmisProfileRequestController(EmrProfileDataMixin, http.Controller):
             "gender": post.get("gender"),
             "birthday": post.get("birthday"),
             "hrmis_commission_date": post.get("hrmis_commission_date"),
+            "service_regularized": bool(post.get("service_regularized")),
+            "service_regularized_date": post.get("service_regularized_date") or False,
+            "commision_exam": bool(post.get("commision_exam")),
             "hrmis_joining_date": post.get("hrmis_joining_date"),
             "hrmis_bps": bps,
             "hrmis_cadre": cadre_id,

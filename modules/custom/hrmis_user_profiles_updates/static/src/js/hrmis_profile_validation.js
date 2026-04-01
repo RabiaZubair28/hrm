@@ -2914,9 +2914,12 @@ _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
 
   const joiningInput = _qs(form, '[name="hrmis_joining_date"]');
   const commissionInput = _qs(form, '[name="hrmis_commission_date"]');
+  const serviceRegularizedInput = _qs(form, '[name="service_regularized_date"]');
+
   const joiningUI = joiningInput ? _attachMonthProxy(joiningInput) : null;
-  const commissionUI = commissionInput
-    ? _attachMonthProxy(commissionInput)
+  const commissionUI = commissionInput ? _attachMonthProxy(commissionInput) : null;
+  const serviceRegularizedUI = serviceRegularizedInput
+    ? _attachMonthProxy(serviceRegularizedInput)
     : null;
 
   _initPostingPrevChain(form);
@@ -2970,7 +2973,7 @@ _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
     joiningInput.addEventListener("change", () => {
       toggle();
       _validateCurrentPostingStart(form);
-      _validateJoiningCommission(form);
+      // _validateJoiningCommission(form);
       _validateDobCommission(form);
       _promoRows().forEach((r) => _syncPromoRowConstraints(form, r));
       _syncPostingBpsConstraints(form);
@@ -2988,46 +2991,79 @@ _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
     toggle();
   }
 
+  // if (joiningInput && commissionInput && joiningUI && commissionUI) {
+  //   const syncMinMax = () => {
+  //     const jmv = (joiningUI.value || "").trim();
+  //     const cmv = (commissionUI.value || "").trim();
+
+  //     _syncCommissionMinFromDob(form);
+
+  //     commissionUI.setAttribute("max", _todayMonth());
+  //     commissionInput.setAttribute("max", _todayLocalYmd());
+
+  //     const hasCommission = !_isEmpty(cmv);
+
+  //     joiningUI.disabled = !hasCommission;
+
+  //     if (!hasCommission) {
+  //       joiningUI.value = "";
+  //       joiningInput.value = "";
+  //       _clearError(joiningUI);
+  //       _clearError(commissionUI);
+  //       _setHint(
+  //         joiningUI,
+  //         "Select Commission Date first to enable Joining Date.",
+  //       );
+  //       return;
+  //     } else {
+  //       _setHint(joiningUI, "");
+  //     }
+
+  //     joiningUI.setAttribute("min", cmv);
+  //     joiningInput.setAttribute("min", `${cmv}-01`);
+
+  //     if (!_isEmpty(jmv)) {
+  //       commissionUI.setAttribute("max", jmv);
+  //       commissionInput.setAttribute("max", `${jmv}-01`);
+  //     } else {
+  //       commissionUI.setAttribute("max", _todayMonth());
+  //       commissionInput.setAttribute("max", _todayLocalYmd());
+  //     }
+
+  //     _validateJoiningCommission(form);
+  //     _validateDobCommission(form);
+  //   };
+
+  //   commissionUI.addEventListener("change", syncMinMax);
+  //   joiningUI.addEventListener("change", syncMinMax);
+  //   syncMinMax();
+  // }
+
   if (joiningInput && commissionInput && joiningUI && commissionUI) {
     const syncMinMax = () => {
       const jmv = (joiningUI.value || "").trim();
-      const cmv = (commissionUI.value || "").trim();
 
+      // Commission date should still respect DOB rule
       _syncCommissionMinFromDob(form);
 
+      // Joining date is fully independent
+      joiningUI.disabled = false;
+      _setHint(joiningUI, "");
+
+      // Joining date can go up to current month
+      joiningUI.setAttribute("max", _todayMonth());
+      joiningInput.setAttribute("max", _todayLocalYmd());
+
+      // Commission date can also go up to current month
       commissionUI.setAttribute("max", _todayMonth());
       commissionInput.setAttribute("max", _todayLocalYmd());
 
-      const hasCommission = !_isEmpty(cmv);
-
-      joiningUI.disabled = !hasCommission;
-
-      if (!hasCommission) {
-        joiningUI.value = "";
-        joiningInput.value = "";
-        _clearError(joiningUI);
-        _clearError(commissionUI);
-        _setHint(
-          joiningUI,
-          "Select Commission Date first to enable Joining Date.",
-        );
-        return;
-      } else {
-        _setHint(joiningUI, "");
-      }
-
-      joiningUI.setAttribute("min", cmv);
-      joiningInput.setAttribute("min", `${cmv}-01`);
-
+      // Optional: if joining exists, commission cannot be after joining
       if (!_isEmpty(jmv)) {
         commissionUI.setAttribute("max", jmv);
         commissionInput.setAttribute("max", `${jmv}-01`);
-      } else {
-        commissionUI.setAttribute("max", _todayMonth());
-        commissionInput.setAttribute("max", _todayLocalYmd());
       }
 
-      _validateJoiningCommission(form);
       _validateDobCommission(form);
     };
 
@@ -3097,21 +3133,23 @@ _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
 
         if (_isEmpty(input.value)) {
           if (
-            input.name === "hrmis_joining_date" &&
-            joiningInput?._hrmisMonthProxy
-          ) {
-            _showError(joiningInput._hrmisMonthProxy, "This field is required");
-          } else if (
-            input.name === "hrmis_commission_date" &&
-            commissionInput?._hrmisMonthProxy
-          ) {
-            _showError(
-              commissionInput._hrmisMonthProxy,
-              "This field is required",
-            );
-          } else {
-            _showError(input, "This field is required");
-          }
+              input.name === "hrmis_joining_date" &&
+              joiningInput?._hrmisMonthProxy
+            ) {
+              _showError(joiningInput._hrmisMonthProxy, "This field is required");
+            } else if (
+              input.name === "hrmis_commission_date" &&
+              commissionInput?._hrmisMonthProxy
+            ) {
+              _showError(commissionInput._hrmisMonthProxy, "This field is required");
+            } else if (
+              input.name === "service_regularized_date" &&
+              serviceRegularizedInput?._hrmisMonthProxy
+            ) {
+              _showError(serviceRegularizedInput._hrmisMonthProxy, "This field is required");
+            } else {
+              _showError(input, "This field is required");
+            }
           hasError = true;
         }
       },
@@ -3134,7 +3172,7 @@ _digitsOnly(_qs(form, '[name="hrmis_merit_number"]'), { maxLen: 20 });
     }
 
     if (!_validateCurrentPostingStart(form)) hasError = true;
-    if (!_validateJoiningCommission(form)) hasError = true;
+    // if (!_validateJoiningCommission(form)) hasError = true;
     if (!_validateDobCommission(form)) hasError = true;
 
     if (_validateRepeatables(form)) hasError = true;

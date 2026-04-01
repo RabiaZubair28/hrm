@@ -359,6 +359,9 @@ function _getEmployeeFieldsToValidate(form) {
   const gender = _qs(form, 'select[name="gender"]');
   const dob = _qs(form, 'input[name="birthday"]');
   const domicile = _qs(form, 'select[name="hrmis_domicile"]');
+  const serviceRegularized = _qs(form, 'input[name="service_regularized"]');
+  const serviceRegularizedDate = _qs(form, 'input[name="service_regularized_date"]');
+  const commisionExam = _qs(form, 'input[name="commision_exam"]');
   const commissionDate = _qs(form, 'input[name="hrmis_commission_date"]');
   const meritNumber = _qs(form, 'input[name="hrmis_merit_number"]');
   const joiningDate = _qs(form, 'input[name="hrmis_joining_date"]');
@@ -379,7 +382,15 @@ function _getEmployeeFieldsToValidate(form) {
   fields.push(gender);
   fields.push(dob);
   fields.push(domicile);
-  fields.push(commissionDate);
+
+  if (serviceRegularized && serviceRegularized.checked) {
+    fields.push(serviceRegularizedDate);
+  }
+
+  if (commisionExam && commisionExam.checked) {
+    fields.push(commissionDate);
+  }
+  // fields.push(commissionDate);
   fields.push(meritNumber);
   fields.push(joiningDate);
   fields.push(cadre);
@@ -424,6 +435,9 @@ function _bindEmployeeClearOnInput(form) {
     'select[name="gender"]',
     'input[name="birthday"]',
     'select[name="hrmis_domicile"]',
+    'input[name="service_regularized"]',
+    'input[name="service_regularized_date"]',
+    'input[name="commision_exam"]',
     'input[name="hrmis_commission_date"]',
     'input[name="hrmis_merit_number"]',
     'input[name="hrmis_joining_date"]',

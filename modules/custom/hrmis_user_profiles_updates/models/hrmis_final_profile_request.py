@@ -65,7 +65,11 @@ class EmployeeProfileRequest(models.Model):
         string="Date of Birth",
     )
     hrmis_commission_date = fields.Date(string="Commision Date")
-   
+    service_regularized = fields.Boolean(default=False)
+    service_regularized_date = fields.Date(string="Service Regularization Date")
+    commision_exam = fields.Boolean(default=False)
+
+
     hrmis_joining_date = fields.Date(
         string="Joining Date",
     )
@@ -266,6 +270,13 @@ class EmployeeProfileRequest(models.Model):
             for f in required_fields
             if not getattr(self, f)
         ]
+
+        # Conditional checks
+        if self.service_regularized and not self.service_regularized_date:
+            missing.append(self._fields['service_regularized_date'].string)
+
+        if self.commision_exam and not self.hrmis_commission_date:
+            missing.append(self._fields['hrmis_commission_date'].string)
 
         if missing:
             raise UserError(

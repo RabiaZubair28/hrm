@@ -71,6 +71,7 @@ const MONTH_YEAR_FIELD_NAMES = new Set([
   "qualification_start[]",
   "qualification_end[]",
   "promotion_date[]",
+  "service_regularized_date",
 ]);
 
 function _toMonthYear(v) {
@@ -122,6 +123,51 @@ function _imgPreviewHtml(inputEl) {
       </div>
     </div>
   `;
+}
+
+function _existingFileName(inputEl) {
+  return (inputEl?.dataset?.existingFileName || "").trim();
+}
+
+function _existingFileUrl(inputEl) {
+  return (inputEl?.dataset?.existingUrl || "").trim();
+}
+
+function _existingIsImage(inputEl) {
+  return (inputEl?.dataset?.existingIsImage || "").trim() === "1";
+}
+
+function _existingPreviewHtml(inputEl) {
+  const url = _existingFileUrl(inputEl);
+  const fileName = _existingFileName(inputEl);
+  if (!url || !fileName) return "";
+
+  if (_existingIsImage(inputEl)) {
+    return `
+      <div style="display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;">
+        <div style="border:1px solid #ddd; border-radius:8px; padding:6px; background:#fff;">
+          <img
+            src="${_escapeHtml(url)}"
+            alt="${_escapeHtml(fileName)}"
+            style="max-width:220px; max-height:160px; border-radius:6px; display:block;"
+          />
+          <div style="font-size:12px; color:#666; margin-top:6px;">
+            ${_escapeHtml(fileName)}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div style="font-size:12px; color:#666;">
+      Saved file: <a href="${_escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${_escapeHtml(fileName)}</a>
+    </div>
+  `;
+}
+
+function _filePreviewHtml(inputEl) {
+  return _imgPreviewHtml(inputEl) || _existingPreviewHtml(inputEl) || "";
 }
 
 function _ul(items) {
@@ -359,8 +405,12 @@ function _buildSummary(form, tbody) {
 
   const cnicFrontInput = _qs(form, 'input[name="hrmis_cnic_front"]');
   const cnicBackInput = _qs(form, 'input[name="hrmis_cnic_back"]');
-  const cnicFrontName = _fileName(cnicFrontInput);
-  const cnicBackName = _fileName(cnicBackInput);
+  const serviceRegularizedChk = _qs(form, 'input[name="service_regularized"]');
+  const serviceRegularizedDate = _qs(form, 'input[name="service_regularized_date"]')?.value?.trim();
+
+  const commisionExamChk = _qs(form, 'input[name="commision_exam"]');
+  const cnicFrontName = _fileName(cnicFrontInput) || _existingFileName(cnicFrontInput);
+  const cnicBackName = _fileName(cnicBackInput) || _existingFileName(cnicBackInput);
 
   _addRow(tbody, "Personal No", employeeId);
   _addRow(tbody, "CNIC", cnic);
@@ -368,6 +418,17 @@ function _buildSummary(form, tbody) {
   _addRow(tbody, "Gender", _getSelectedText(genderSel));
   _addRow(tbody, "Date of Birth", birthday);
   _addRow(tbody, "Domicile", _getSelectedText(domicileSel));
+
+  
+  _addRow(tbody, "Was your service regularized?", _fmtCheckbox(serviceRegularizedChk));
+  _addRow(
+    tbody,
+    "Service Regularization Date",
+    serviceRegularizedChk && serviceRegularizedChk.checked ? _fmtMonth(serviceRegularizedDate) : "-"
+  );
+
+  _addRow(tbody, "Did you clear commission exam?", _fmtCheckbox(commisionExamChk));
+
   _addRow(tbody, "Commission Year", _fmtMonth(commission));
   _addRow(tbody, "Merit Number", merit);
   _addRow(tbody, "Joining Date", _fmtMonth(joining));
@@ -382,8 +443,8 @@ function _buildSummary(form, tbody) {
   // _addRow(tbody, "Postal Code", postalCode);
 
   if (cnicFrontName || cnicBackName) {
-    _addRow(tbody, "CNIC Front Preview", _imgPreviewHtml(cnicFrontInput) || "-");
-    _addRow(tbody, "CNIC Back Preview", _imgPreviewHtml(cnicBackInput) || "-");
+    _addRow(tbody, "CNIC Front Preview", _filePreviewHtml(cnicFrontInput) || "-");
+    _addRow(tbody, "CNIC Back Preview", _filePreviewHtml(cnicBackInput) || "-");
   }
 
   // ============ Posting Status (ONLY once; no duplicate "Substantive Posting — ..." rows) ============
@@ -583,6 +644,116 @@ function _hideModal(modalEl) {
   if (backdrop) backdrop.remove();
 }
 
+function _toggleDependentDateField(checkboxEl) {
+  if (!checkboxEl) return;
+
+  const targetSel = checkboxEl.getAttribute("data-target");
+  const inputSel = checkboxEl.getAttribute("data-date-input");
+
+  const wrap = targetSel ? document.querySelector(targetSel) : null;
+  const input = inputSel ? document.querySelector(inputSel) : null;
+
+  if (!wrap || !input) return;
+
+  const isChecked = checkboxEl.checked;
+
+  wrap.style.display = isChecked ? "block" : "none";
+
+  if (isChecked) {
+    input.setAttribute("required", "required");
+  } else {
+    input.removeAttribute("required");
+    input.setCustomValidity("");
+    input.value = "";
+  }
+}
+
+function _bindDependentDateFields(root) {
+  const toggles = _qsa(root || document, ".js-toggle-date-field");
+  toggles.forEach((chk) => {
+    if (chk.dataset.boundToggleDate === "1") return;
+    chk.dataset.boundToggleDate = "1";
+
+    _toggleDependentDateField(chk);
+
+    chk.addEventListener("change", function () {
+      _toggleDependentDateField(this);
+    });
+  });
+}
+
+function _validateDependentDateFields(form) {
+  const toggles = _qsa(form, ".js-toggle-date-field");
+  let isValid = true;
+
+  toggles.forEach((chk) => {
+    const targetSel = chk.getAttribute("data-target");
+    const inputSel = chk.getAttribute("data-date-input");
+
+    const wrap = targetSel ? document.querySelector(targetSel) : null;
+    const input = inputSel ? document.querySelector(inputSel) : null;
+
+    if (!wrap || !input) return;
+
+    if (chk.checked) {
+      if (!(input.value || "").trim()) {
+        input.setCustomValidity("This date field is required when checkbox is checked.");
+        input.reportValidity();
+        isValid = false;
+      } else {
+        input.setCustomValidity("");
+      }
+    } else {
+      input.setCustomValidity("");
+    }
+  });
+
+  return isValid;
+}
+
+function _bindDependentDateFields(root) {
+  const toggles = _qsa(root || document, ".js-toggle-date-field");
+  toggles.forEach((chk) => {
+    if (chk.dataset.boundToggleDate === "1") return;
+    chk.dataset.boundToggleDate = "1";
+
+    _toggleDependentDateField(chk);
+
+    chk.addEventListener("change", function () {
+      _toggleDependentDateField(this);
+    });
+  });
+}
+
+function _validateDependentDateFields(form) {
+  const toggles = _qsa(form, ".js-toggle-date-field");
+  let isValid = true;
+
+  toggles.forEach((chk) => {
+    const targetSel = chk.getAttribute("data-target");
+    const inputSel = chk.getAttribute("data-date-input");
+
+    const wrap = targetSel ? document.querySelector(targetSel) : null;
+    const input = inputSel ? document.querySelector(inputSel) : null;
+
+    if (!wrap || !input) return;
+
+    if (chk.checked) {
+      if (!(input.value || "").trim()) {
+        input.setCustomValidity("This date field is required when checkbox is checked.");
+        input.reportValidity();
+        isValid = false;
+      } else {
+        input.setCustomValidity("");
+      }
+    } else {
+      input.setCustomValidity("");
+    }
+  });
+
+  return isValid;
+}
+
 function _initConfirmModal() {
   const panel = _qs(document, ".hrmis-panel");
   if (!panel) {
@@ -606,6 +777,9 @@ function _initConfirmModal() {
     });
     return;
   }
+
+    _bindDependentDateFields(document);
+
 
   if (openBtn.dataset.hrmiscfmBound === "1") {
     console.log("[HRMIS ConfirmModal] already bound; skipping rebind");
@@ -635,10 +809,13 @@ function _initConfirmModal() {
     ev.preventDefault();
     
 
-    if (!form.reportValidity()) {
-      console.log("[HRMIS ConfirmModal] form validation failed; not opening modal");
-      return;
-    }
+        const nativeValid = form.reportValidity();
+        const dependentValid = _validateDependentDateFields(form);
+
+        if (!nativeValid || !dependentValid) {
+          console.log("[HRMIS ConfirmModal] form validation failed; not opening modal");
+          return;
+        }
 
     _buildSummary(form, tbody);
     _showModal(modalEl);
