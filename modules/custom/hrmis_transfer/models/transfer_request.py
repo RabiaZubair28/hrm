@@ -5,6 +5,15 @@ from odoo.exceptions import UserError
 import logging
 _logger = logging.getLogger(__name__)
 
+
+REQUESTED_DESIGNATION_SELECTION = [
+    ("medical_officer", "Medical Officer"),
+    ("women_medical_officer", "Women Medical Officer"),
+    ("specialist", "Specialist"),
+    ("administrator", "Administrator"),
+]
+
+
 class HrmisTransferRequest(models.Model):
     _name = "hrmis.transfer.request"
     _description = "Transfer Request"
@@ -42,12 +51,37 @@ class HrmisTransferRequest(models.Model):
         required=True,
         
     )
+    current_emr_district_id = fields.Integer(
+        string="Current District EMR ID",
+        copy=False,
+    )
+    current_emr_district_name = fields.Char(
+        string="Current District (EMR)",
+        copy=False,
+    )
     current_facility_id = fields.Many2one(
         "hrmis.facility.type",
         string="Current Facility",
         required=True,
         
         domain="[('district_id', '=', current_district_id)]",
+    )
+    current_emr_facility_id = fields.Integer(
+        string="Current Facility EMR ID",
+        copy=False,
+    )
+    current_emr_facility_name = fields.Char(
+        string="Current Facility (EMR)",
+        copy=False,
+    )
+    current_emr_facility_code = fields.Char(
+        string="Current Facility EMR Code",
+        copy=False,
+    )
+    current_designation_id = fields.Many2one(
+        "hrmis.level.care.designation",
+        string="Current Designation",
+        copy=False,
     )
 
     required_district_id = fields.Many2one(
@@ -56,12 +90,45 @@ class HrmisTransferRequest(models.Model):
         required=True,
         
     )
+    required_emr_district_id = fields.Integer(
+        string="Required District EMR ID",
+        copy=False,
+    )
+    required_emr_district_name = fields.Char(
+        string="Required District (EMR)",
+        copy=False,
+    )
     required_facility_id = fields.Many2one(
         "hrmis.facility.type",
         string="Required Facility",
         required=True,
         
         domain="[('district_id', '=', required_district_id)]",
+    )
+    required_emr_facility_id = fields.Integer(
+        string="Required Facility EMR ID",
+        copy=False,
+    )
+    required_emr_facility_name = fields.Char(
+        string="Required Facility (EMR)",
+        copy=False,
+    )
+    required_emr_facility_code = fields.Char(
+        string="Required Facility EMR Code",
+        copy=False,
+    )
+    requested_designation = fields.Selection(
+        REQUESTED_DESIGNATION_SELECTION,
+        string="Required Designation",
+        required=True,
+    )
+    supporting_attachment_ids = fields.Many2many(
+        "ir.attachment",
+        "hrmis_transfer_request_ir_attachment_rel",
+        "transfer_request_id",
+        "attachment_id",
+        string="Supporting Documents",
+        copy=False,
     )
 
     justification = fields.Text(string="Justification", required=True)
@@ -142,12 +209,15 @@ class HrmisTransferRequest(models.Model):
     def _onchange_employee_id(self):
         for rec in self:
             if not rec.employee_id:
+                rec.current_designation_id = False
                 continue
             # Auto-fill current posting from employee profile when present.
             if "district_id" in rec.employee_id._fields and rec.employee_id.district_id:
                 rec.current_district_id = rec.employee_id.district_id
             if "facility_id" in rec.employee_id._fields and rec.employee_id.facility_id:
                 rec.current_facility_id = rec.employee_id.facility_id
+            if "hrmis_designation" in rec.employee_id._fields and rec.employee_id.hrmis_designation:
+                rec.current_designation_id = rec.employee_id.hrmis_designation
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -158,6 +228,11 @@ class HrmisTransferRequest(models.Model):
         for vals in vals_list:
             if vals.get("name", "New") == "New":
                 vals["name"] = seq.next_by_code("hrmis.transfer.request") or "/"
+            employee_id = vals.get("employee_id")
+            if employee_id and not vals.get("current_designation_id"):
+                employee = self.env["hr.employee"].sudo().browse(employee_id).exists()
+                if employee and getattr(employee, "hrmis_designation", False):
+                    vals["current_designation_id"] = employee.hrmis_designation.id
         recs = super().create(vals_list)
         return recs
 

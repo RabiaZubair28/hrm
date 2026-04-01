@@ -10,8 +10,10 @@
                 <field name="employee_id"/>
                 <field name="current_district_id"/>
                 <field name="current_facility_id"/>
+                <field name="current_designation_id"/>
                 <field name="required_district_id"/>
                 <field name="required_facility_id"/>
+                <field name="requested_designation"/>
                 <field name="state"/>
                 <field name="pending_with"/>
             </list>
@@ -42,13 +44,29 @@
                     <group string="Current Posting" col="2">
                         <field name="current_district_id"/>
                         <field name="current_facility_id"/>
+                        <field name="current_designation_id" readonly="1"/>
+                        <field name="current_emr_district_id" readonly="1"/>
+                        <field name="current_emr_district_name" readonly="1"/>
+                        <field name="current_emr_facility_id" readonly="1"/>
+                        <field name="current_emr_facility_name" readonly="1"/>
+                        <field name="current_emr_facility_code" readonly="1"/>
                     </group>
                     <group string="Required Posting" col="2">
                         <field name="required_district_id"/>
                         <field name="required_facility_id"/>
+                        <field name="requested_designation"/>
+                        <field name="required_designation_id" readonly="1"/>
+                        <field name="required_emr_district_id" readonly="1"/>
+                        <field name="required_emr_district_name" readonly="1"/>
+                        <field name="required_emr_facility_id" readonly="1"/>
+                        <field name="required_emr_facility_name" readonly="1"/>
+                        <field name="required_emr_facility_code" readonly="1"/>
                     </group>
                     <group>
                         <field name="justification" placeholder="Enter justification..."/>
+                    </group>
+                    <group string="Supporting Documents">
+                        <field name="supporting_attachment_ids" widget="many2many_binary"/>
                     </group>
 
                     <group string="Audit" col="2">
